@@ -1,0 +1,42 @@
+version: 1
+captured_at: "2026-07-15"
+artifact_integrity:
+  - requirements.runtime.lock
+  - requirements.lock
+components:
+  anythingllm:
+    repository: https://github.com/Mintplex-Labs/anything-llm
+    release: v1.15.0
+    commit: 70e0d2eb1dcb08cbb18a44b927d94f8667f57a7f
+    license: MIT
+    integration: external query API only
+  haystack:
+    repository: https://github.com/deepset-ai/haystack
+    release: v2.31.0
+    commit: df44022bbd85d38123b76350f639803068f43aba
+    license: Apache-2.0
+  duckdb:
+    repository: https://github.com/duckdb/duckdb
+    release: v1.5.4
+    commit: 08e34c447bae34eaee3723cac61f2878b6bdf787
+    license: MIT
+  polars:
+    repository: https://github.com/pola-rs/polars
+    release: py-1.42.1
+    commit: 0df0c25d4db895ec8cad773bedc4e98400e3135e
+    license: MIT
+  pandera:
+    repository: https://github.com/unionai-oss/pandera
+    release: v0.31.1
+    commit: df7cb7d8282e20cca0fc13f166bb7d99e48c5a3f
+    license: MIT
+  sqlglot:
+    repository: https://github.com/tobymao/sqlglot
+    release: v27.29.0
+    commit: f67bc16e400101e0beea6b68d250f0147400a218
+    license: MIT
+  lucide:
+    repository: https://github.com/lucide-icons/lucide
+    release: 1.24.0
+    commit: b5b5d95933790a311aa6b7ed232fc8469934acdf
+    license: ISC

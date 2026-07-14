@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project Copilot Workbench</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="brand-block">
+          <div class="brand-mark" aria-hidden="true">PC</div>
+          <div>
+            <strong>Project Copilot</strong>
+            <span>Workbench</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item is-active" type="button" data-view="knowledge">
+            <img src="/static/icons/book-open.svg" alt="">
+            <span>Knowledge</span>
+          </button>
+          <button class="nav-item" type="button" data-view="analytics">
+            <img src="/static/icons/chart-no-axes-combined.svg" alt="">
+            <span>Data analysis</span>
+          </button>
+          <button class="nav-item" type="button" data-view="security">
+            <img src="/static/icons/shield-check.svg" alt="">
+            <span>Security</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-status">
+          <span class="status-dot"></span>
+          <div>
+            <strong>Local web app</strong>
+            <span>{{ egress_display }}</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Active project</span>
+            <h1>{{ package.display_name }}</h1>
+          </div>
+          <div class="topbar-badges" aria-label="Runtime policy">
+            <span class="badge badge-green">{{ knowledge_provider_display }}</span>
+            <span class="badge badge-amber">Read-only data</span>
+          </div>
+        </header>
+
+        <section class="workspace-view is-visible" data-view-panel="knowledge" data-testid="knowledge-panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Document evidence</span>
+              <h2>Knowledge query</h2>
+            </div>
+            <span class="provider-label">{{ knowledge_provider_display }}</span>
+          </div>
+
+          <div class="knowledge-layout">
+            <div class="query-surface">
+              <form id="knowledge-form" class="prompt-form">
+                <label for="knowledge-question">Question</label>
+                <div class="prompt-row">
+                  <textarea id="knowledge-question" name="question" rows="3" required>供水温度设定值是多少？</textarea>
+                  <button type="submit" class="primary-button">
+                    <img src="/static/icons/send.svg" alt="">
+                    <span>Query</span>
+                  </button>
+                </div>
+              </form>
+              <div id="knowledge-answer" class="answer-block" aria-live="polite">
+                <span class="answer-label">Answer</span>
+                <p>Select Query to retrieve cited project evidence.</p>
+              </div>
+            </div>
+
+            <aside class="sources-panel" aria-label="Evidence sources">
+              <div class="panel-title">
+                <h3>Sources</h3>
+                <span id="source-count">0</span>
+              </div>
+              <div id="source-list" class="source-list">
+                <p class="empty-state">No evidence selected.</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view-panel="analytics">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Validated telemetry</span>
+              <h2>Data analysis</h2>
+            </div>
+            <span class="provider-label">DuckDB + Polars</span>
+          </div>
+
+          <div class="metric-strip">
+            <div class="metric-item">
+              <span>Rows</span>
+              <strong>{{ metrics.row_count }}</strong>
+            </div>
+            <div class="metric-item">
+              <span>Average power</span>
+              <strong>{{ "%.1f"|format(metrics.average_power_kw) }} kW</strong>
+            </div>
+            <div class="metric-item">
+              <span>Average delta T</span>
+              <strong>{{ "%.2f"|format(metrics.average_delta_t_c) }} C</strong>
+            </div>
+            <div class="metric-item">
+              <span>Average COP</span>
+              <strong>{{ "%.2f"|format(metrics.average_cop) }}</strong>
+            </div>
+          </div>
+
+          <form id="analysis-form" class="analysis-form">
+            <label for="analysis-question">Approved analysis request</label>
+            <div class="prompt-row">
+              <input id="analysis-question" name="question" value="哪个时刻的负荷最高？" required>
+              <button type="submit" class="primary-button">
+                <img src="/static/icons/chart-no-axes-combined.svg" alt="">
+                <span>Analyze</span>
+              </button>
+            </div>
+            <div class="quick-queries" aria-label="Approved analysis intents">
+              <button type="button" data-question="哪个时刻的负荷最高？">Peak load</button>
+              <button type="button" data-question="请查看 COP 效率趋势">COP trend</button>
+              <button type="button" data-question="显示功率趋势">Power trend</button>
+              <button type="button" data-question="显示供回水温差趋势">Delta T</button>
+            </div>
+          </form>
+
+          <div class="analysis-output">
+            <div class="analysis-summary">
+              <span class="answer-label">Result</span>
+              <h3 id="analysis-title">Waiting for analysis</h3>
+              <p id="analysis-summary">Only approved, read-only analysis intents are available.</p>
+              <code id="analysis-sql"></code>
+            </div>
+            <div id="analysis-chart" class="chart-surface" aria-label="Analysis chart">
+              <p class="empty-state">No series selected.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view-panel="security">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Fail-closed defaults</span>
+              <h2>Security policy</h2>
+            </div>
+            <span class="provider-label">Project Package v0.1</span>
+          </div>
+
+          <div class="policy-table" role="table" aria-label="Security capabilities">
+            <div role="row"><span role="cell">Knowledge egress</span><strong role="cell">{{ egress_display }}</strong></div>
+            <div role="row"><span role="cell">Downstream approval</span><strong role="cell">{{ "Acknowledged" if downstream_approval_acknowledged else "Not used" }}</strong></div>
+            <div role="row"><span role="cell">Free-form NL2SQL</span><strong role="cell">Blocked</strong></div>
+            <div role="row"><span role="cell">Shell and Python execution</span><strong role="cell">Unavailable</strong></div>
+            <div role="row"><span role="cell">DuckDB access</span><strong role="cell">Read-only SELECT</strong></div>
+            <div role="row"><span role="cell">Knowledge telemetry</span><strong role="cell">Disabled</strong></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

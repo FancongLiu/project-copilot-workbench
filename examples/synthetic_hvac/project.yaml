@@ -1,0 +1,11 @@
+schema_version: "0.1"
+project_id: synthetic-hvac-demo
+display_name: Synthetic HVAC Plant
+documents:
+  root: docs/source
+datasets:
+  root: datasets/raw
+security:
+  allow_network: false
+  allow_nl2sql: false
+  allow_approved_provider: false

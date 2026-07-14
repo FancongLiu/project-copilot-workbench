@@ -1,0 +1,7 @@
+$env:PROJECT_COPILOT_KNOWLEDGE_PROVIDER = "anythingllm"
+$env:PROJECT_COPILOT_ALLOWED_HOSTS = "anythingllm.internal.example"
+$env:PROJECT_COPILOT_ACK_DOWNSTREAM_APPROVED = "true"
+$env:ANYTHINGLLM_BASE_URL = "https://anythingllm.internal.example/api"
+$env:ANYTHINGLLM_API_KEY = "set-in-approved-secret-store"
+$env:ANYTHINGLLM_WORKSPACE_SLUG = "approved-project"
+$env:HAYSTACK_TELEMETRY_ENABLED = "False"

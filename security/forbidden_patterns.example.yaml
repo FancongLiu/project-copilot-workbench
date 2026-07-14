@@ -1,0 +1,15 @@
+version: 1
+forbidden_file_names:
+  - .env
+  - credentials.json
+  - secrets.yaml
+forbidden_runtime_suffixes:
+  - .duckdb
+  - .sqlite
+  - .sqlite3
+review_required:
+  - internal hostnames
+  - customer or company names
+  - real equipment models
+  - real schema and field names
+  - screenshots and evaluation answers

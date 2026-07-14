@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "project-copilot-workbench"
+version = "0.1.0"
+description = "A public-safe web workbench for project knowledge and governed data analysis."
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+dependencies = [
+  "duckdb==1.5.4",
+  "fastapi==0.139.0",
+  "filelock==3.29.0",
+  "haystack-ai==2.31.0",
+  "httpx==0.28.1",
+  "jieba==0.42.1",
+  "jinja2==3.1.6",
+  "openai==2.37.0",
+  "pandera[polars]==0.31.1",
+  "polars==1.42.1",
+  "pydantic==2.13.4",
+  "pyyaml==6.0.3",
+  "sqlglot==27.29.0",
+  "starlette==1.3.1",
+  "uvicorn==0.40.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "playwright==1.60.0",
+  "pytest==9.0.3",
+  "ruff==0.15.13",
+]
+
+[project.scripts]
+project-copilot = "project_copilot.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  "ignore:the default behavior of `how='horizontal'`:DeprecationWarning:pandera.backends.polars.checks",
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/project_copilot"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"examples/synthetic_hvac" = "project_copilot/demo_project"
