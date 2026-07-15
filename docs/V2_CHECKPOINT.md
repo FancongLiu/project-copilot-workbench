@@ -28,8 +28,9 @@ append-only transition summary.
 ## Current state
 
 - Branch: `main`, base commit `41d1b448bdfc0c6288f51b146a96ccb4610fda73`
-  before V2 edits. First delivery commit `6559256` exists locally and has not
-  been pushed; the current release-blocker remediation is not yet committed.
+  before V2 edits. Delivery commit `6559256` and verified remediation commit
+  `19003d56c5801f5c937d9ceb890ccee6ae690bdd` exist locally and have not yet been
+  pushed.
 - Runtime/Cron/inbox/outbox state has not been modified.
 - V2 workspace, import, retrieval, bounded Agent, governed analytics, company
   model/embedding configuration, Web UI, CLI, synthetic corpus, evaluation and
@@ -116,7 +117,7 @@ follow-up research instead of silently expanding the current implementation.
 
 ## Next actions
 
-1. Create the remediation commit and push `main` without force.
+1. Push `main` without force.
 2. Monitor GitHub Actions to green, record commit/CI
    evidence, and leave the final loopback trial server available.
 
@@ -133,4 +134,4 @@ follow-up research instead of silently expanding the current implementation.
 | A7 tests/CI/browser/wheel | local passed, CI pending | 149 passed, 4 optional skips; final browser and rebuilt wheel smoke passed |
 | A8 scanners/audit/SBOM/license/public data | local passed, CI pending | audit, license, SBOM and release guard passed |
 | A9 independent review | verified | final release rereview Critical 0, Important 0 |
-| A10 commit/push/trial server | pending | git SHA, remote ref, health URL |
+| A10 commit/push/trial server | commit/server ready, push pending | `19003d56...`; healthy `127.0.0.1:8788` |
