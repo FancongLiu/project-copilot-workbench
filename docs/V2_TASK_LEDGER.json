@@ -5,9 +5,9 @@
   "objective_authority": "company/runtime/project_copilot_v2_handoff_20260715.md",
   "checkpoint_projection": "docs/V2_CHECKPOINT.md",
   "event_log": "docs/V2_TASK_EVENTS.jsonl",
-  "status": "active",
-  "revision": 21,
-  "event_sequence": 40,
+  "status": "complete",
+  "revision": 22,
+  "event_sequence": 41,
   "concurrency_limit": 3,
   "write_owner": "root",
   "safety_boundaries": [
@@ -256,7 +256,7 @@
     {
       "id": "V2-09",
       "title": "Final verification, commit, non-force push, GitHub CI, and trial server",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["V2-08"],
       "acceptance": ["A7", "A8", "A9", "A10"],
       "evidence": [
@@ -269,6 +269,8 @@
         "GitHub Actions run 29451735488: all jobs except documents passed; documents exposed pip-tools unsafe-package exclusion of torch's setuptools dependency",
         "e35ee2acdea4622ecbc2f0fde9943e43d5ba81e4 ci: lock document build tooling",
         "GitHub Actions run 29453989896: Windows/Ubuntu/package/browser/secrets and build-tool validation passed; real Docling smoke exposed an outdated layout-old prefetch against the v2.113.0 Heron default",
+        "3351573099350f97c296517c5fe47b0b0a980aca fix: prefetch Docling Heron assets",
+        "GitHub Actions run 29455068161: Windows, Ubuntu, documents, browser, package/SBOM/license and secrets all passed",
         "working tree locks setuptools==83.0.0 with hashes and documents a researched source-lock/final-wheel-offline-lock deployment boundary",
         "clean build/release/smoke paths fail if reused and dist must contain exactly one application wheel",
         "independent offline release rereview: Critical 0, Important 0",
@@ -283,20 +285,18 @@
     "A4": "verified_local",
     "A5": "verified_local",
     "A6": "verified_local",
-    "A7": "verified_local_pending_github_ci",
-    "A8": "verified_local_pending_github_ci",
+    "A7": "verified_local_and_github_ci",
+    "A8": "verified_local_and_github_ci",
     "A9": "verified_independent_review",
-    "A10": "planned"
+    "A10": "verified_commit_push_and_trial_server"
   },
-  "current_blockers": [
-    "Commit and push the Docling v2.113.0 Heron artifact correction, then obtain a fully green GitHub Actions run."
-  ],
-  "next_slice_ids": ["V2-09"],
+  "current_blockers": [],
+  "next_slice_ids": [],
   "forbidden_inheritance": [
     "raw task history",
     "raw Agent transcripts",
     "stale process IDs",
     "real company data or secrets"
   ],
-  "updated_at": "2026-07-16T06:14:00+08:00"
+  "updated_at": "2026-07-16T06:27:00+08:00"
 }

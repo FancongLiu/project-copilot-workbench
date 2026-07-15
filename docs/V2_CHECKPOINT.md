@@ -36,7 +36,7 @@ append-only transition summary.
 - Runtime/Cron/inbox/outbox state has not been modified.
 - V2 workspace, import, retrieval, bounded Agent, governed analytics, company
   model/embedding configuration, Web UI, CLI, synthetic corpus, evaluation and
-  deployment documentation are implemented in the working tree.
+  deployment documentation are implemented on remote `main`.
 - Desktop and 320px mobile Playwright acceptance passed against the final
   restarted loopback server, including create/switch/import, query, source
   deletion success/failure, Telemetry, defrost, refusal, focus and project-race
@@ -128,8 +128,12 @@ append-only transition summary.
   `docling-layout-heron`, while the prefetch script still downloaded
   `docling-layout-old`. Official Docling source and Hugging Face evidence bind
   the correct folder to immutable Heron commit
-  `8f39ad3c0b4c58e9c2d2c84a38465abf757272d8`; the TDD correction is now in the
-  working tree.
+  `8f39ad3c0b4c58e9c2d2c84a38465abf757272d8`.
+- Commit `3351573099350f97c296517c5fe47b0b0a980aca` contains that correction.
+  Final GitHub Actions run `29455068161` is fully green across Windows, Ubuntu,
+  real offline Docling PDF/DOCX, browser, package/SBOM/license, and Gitleaks.
+  The branch is pushed without force and the loopback trial server remains
+  healthy with network egress disabled.
 
 ## Durable delivery loop from Chairman guidance
 
@@ -158,9 +162,9 @@ follow-up research instead of silently expanding the current implementation.
 
 ## Next actions
 
-1. Commit and push the Docling 2.113.0 Heron artifact correction.
-2. Monitor the replacement GitHub Actions run to green, record commit/CI
-   evidence, and leave the final loopback trial server available.
+No required V2 delivery work remains. Company localization should follow
+`docs/company-agent-handoff.md` from the exact approved commit and release
+manifest; new product ideas belong in a separate bounded follow-up.
 
 ## Acceptance evidence ledger
 
@@ -172,7 +176,7 @@ follow-up research instead of silently expanding the current implementation.
 | A4 multi-step cited answers | verified local | 23-case frozen evaluation set including defrost replay boundaries |
 | A5 governed analytics tools | implemented | typed operations + SQL policy tests |
 | A6 refusal/clarification | implemented | hostile and missing-evidence cases |
-| A7 tests/CI/browser/wheel | local passed, CI pending | 150 passed, 4 optional skips; final browser and rebuilt wheel smoke passed |
-| A8 scanners/audit/SBOM/license/public data | local passed, CI pending | audit, license, SBOM and release guard passed |
+| A7 tests/CI/browser/wheel | verified local + GitHub | 150 passed, 4 optional skips; run `29455068161` all green |
+| A8 scanners/audit/SBOM/license/public data | verified local + GitHub | audit, license, SBOM, release guard and Gitleaks passed |
 | A9 independent review | verified | final release rereview Critical 0, Important 0 |
-| A10 commit/push/trial server | latest remediation pending push; server healthy | remote `d59cf85...`; healthy `127.0.0.1:8788` |
+| A10 commit/push/trial server | verified | remote `3351573...`; healthy `127.0.0.1:8788` |
