@@ -1,0 +1,3 @@
+# Commissioning meeting — 2026-07-10
+
+The team reviewed the closed A-012 evidence and the 93.0 percent peak-load observation from 2026-07-01 15:00. Decision D-014 approved changing the CH-01 occupied chilled-water supply target from 7.0 to 6.5 degrees Celsius, effective 2026-07-11. The reason was to create additional high-load temperature margin in the synthetic acceptance scenario. The decision did not change the 55 kPa differential-pressure target. Action A-014 was assigned to Lin Qiao to collect and review 72 hours of post-change observations and attach the result to closeout; the action was still open at the 2026-07-13 meeting.

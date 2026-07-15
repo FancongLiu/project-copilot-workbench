@@ -19,13 +19,32 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
   letter-spacing: 0;
 }
 
 button {
   cursor: pointer;
+  min-height: 40px;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #f0b429;
+  outline-offset: 3px;
 }
 
 .app-shell {
@@ -248,6 +267,12 @@ h3 {
   gap: 18px;
 }
 
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 18px;
+}
+
 .query-surface,
 .sources-panel,
 .analysis-form,
@@ -283,7 +308,8 @@ h3 {
 }
 
 textarea,
-input {
+input,
+select {
   width: 100%;
   min-width: 0;
   border: 1px solid #bec9c4;
@@ -300,9 +326,58 @@ textarea {
 }
 
 textarea:focus,
-input:focus {
+input:focus,
+select:focus {
   border-color: #299168;
   box-shadow: 0 0 0 3px #dcefe7;
+}
+
+.compact-surface {
+  min-height: 0;
+}
+
+.stack-form {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e5e3;
+}
+
+.stack-form .primary-button {
+  min-height: 42px;
+}
+
+.inventory-panel {
+  min-height: 470px;
+}
+
+.source-item button,
+.panel-title button {
+  border: 1px solid #cad3cf;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #405049;
+  padding: 6px 9px;
+  margin-top: 9px;
+}
+
+.trace-panel {
+  border-top: 1px solid #e0e5e3;
+  padding-top: 18px;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.35fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #edf0ef;
+  font-size: 12px;
+}
+
+.activity-row span {
+  color: #66736e;
 }
 
 .primary-button {
@@ -557,9 +632,13 @@ input:focus {
   }
 
   .brand-block > div:last-child,
-  .nav-item span,
   .sidebar-status div {
     display: none;
+  }
+
+  .nav-item span {
+    display: block;
+    font-size: 11px;
   }
 
   .brand-block,
@@ -573,7 +652,8 @@ input:focus {
   }
 
   .knowledge-layout,
-  .analysis-output {
+  .analysis-output,
+  .workspace-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -602,10 +682,11 @@ input:focus {
   }
 
   .nav-item {
-    width: 38px;
+    width: auto;
     height: 36px;
-    padding: 0;
+    padding: 0 6px;
     justify-content: center;
+    font-size: 10px;
   }
 
   .sidebar-status {
@@ -660,5 +741,249 @@ input:focus {
   .chart-surface {
     min-height: 260px;
     overflow-x: auto;
+  }
+}
+
+.answer-block[data-state="refused"],
+.answer-block[data-state="failed"] {
+  border-top-color: #b83a3a;
+}
+
+.answer-block[data-state="clarification"] {
+  border-top-color: #b27a11;
+}
+
+.defrost-result-card {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.defrost-result-card h3,
+.defrost-result-card p {
+  margin: 0;
+}
+
+.diagnostic-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.diagnostic-meta div,
+.deviation-item {
+  border: 1px solid #dce2df;
+  border-radius: 6px;
+  background: #f8faf9;
+  padding: 10px 12px;
+}
+
+.diagnostic-meta span,
+.deviation-item span {
+  display: block;
+  color: #687670;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.deviation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.deviation-item strong,
+.deviation-item p {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.diagnostic-safety {
+  border-left: 3px solid #b27a11;
+  padding-left: 10px;
+  color: #5f5130;
+}
+
+.engineering-details pre {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.guided-review,
+.technical-details {
+  border: 1px solid #d9dfdc;
+  border-radius: 7px;
+  padding: 12px 14px;
+  background: #f8faf9;
+}
+
+.guided-review summary,
+.technical-details summary,
+.source-item summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #314039;
+}
+
+.guided-review p,
+.technical-details p,
+.field-help {
+  color: #687670;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.guided-grid {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px 12px;
+  margin-top: 12px;
+}
+
+.guided-grid button {
+  grid-column: 2;
+  border: 1px solid #176b49;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #176b49;
+  font-weight: 700;
+}
+
+.upload-preview ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #52605b;
+  font-size: 12px;
+}
+
+.activity-row {
+  display: block;
+}
+
+.activity-row > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.activity-status {
+  font-weight: 700;
+}
+
+.activity-failed .activity-status {
+  color: #a22f2f;
+}
+
+.source-item details p {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.source-error {
+  border-color: #d99b9b;
+  background: #fff7f7;
+}
+
+.danger-button {
+  border: 1px solid #9d2525;
+  border-radius: 6px;
+  background: #a92f2f;
+  color: #ffffff;
+  font-weight: 700;
+  padding: 9px 14px;
+}
+
+dialog {
+  width: min(560px, calc(100vw - 28px));
+  border: 0;
+  border-radius: 9px;
+  padding: 0;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 28%);
+}
+
+dialog::backdrop {
+  background: rgb(14 25 21 / 60%);
+}
+
+.dialog-card {
+  padding: 24px;
+}
+
+.delete-details {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.delete-details div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.delete-details dt {
+  color: #687670;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.delete-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dialog-actions button {
+  padding: 9px 14px;
+}
+
+.dialog-error {
+  border: 1px solid #d99b9b;
+  border-radius: 6px;
+  background: #fff4f4;
+  color: #8b2323;
+  padding: 10px 12px;
+}
+
+.technical-details {
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .nav-item {
+    height: 44px;
+    min-width: 44px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .guided-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-grid button {
+    grid-column: 1;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions button {
+    width: 100%;
+    min-height: 44px;
   }
 }

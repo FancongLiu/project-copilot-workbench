@@ -6,12 +6,17 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-import duckdb
-import pandera.polars as pa
-import polars as pl
-from filelock import FileLock, Timeout as FileLockTimeout
+from project_copilot.platform_compat import ensure_windows_architecture_env
 
-from project_copilot.sql_guard import SQLSelectGuard
+
+ensure_windows_architecture_env()
+
+import duckdb  # noqa: E402
+import pandera.polars as pa  # noqa: E402
+import polars as pl  # noqa: E402
+from filelock import FileLock, Timeout as FileLockTimeout  # noqa: E402
+
+from project_copilot.sql_guard import SQLSelectGuard  # noqa: E402
 
 
 class AnalyticsValidationError(ValueError):

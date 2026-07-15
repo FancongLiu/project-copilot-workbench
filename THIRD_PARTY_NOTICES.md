@@ -11,6 +11,11 @@ The project depends on unmodified open-source packages installed through Python 
 | Pandera | Data contract validation | MIT | https://github.com/unionai-oss/pandera |
 | SQLGlot | SQL parsing and AST policy checks | MIT | https://github.com/tobymao/sqlglot |
 | FastAPI | Web API framework | MIT | https://github.com/fastapi/fastapi |
+| python-multipart | Bounded Web file uploads | Apache-2.0 | https://github.com/Kludex/python-multipart |
+| Docling | Optional Office/PDF parser extra | MIT | https://github.com/docling-project/docling |
+| Docling Haystack integration | Structured Office/PDF chunks and citation metadata | Apache-2.0 | https://github.com/deepset-ai/haystack-core-integrations/tree/main/integrations/docling |
+| Sentence Transformers Haystack integration | Optional local cross-encoder reranking | Apache-2.0 | https://github.com/deepset-ai/haystack-core-integrations/tree/main/integrations/sentence_transformers |
+| transitions | Versioned commercial-HVAC control state replay | MIT | https://github.com/pytransitions/transitions |
 | Lucide | Interface icons | ISC | https://github.com/lucide-icons/lucide |
 
 No upstream project endorses or sponsors this repository.

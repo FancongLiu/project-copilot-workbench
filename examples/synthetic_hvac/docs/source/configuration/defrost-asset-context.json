@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "asset_id": "HP-01",
+  "controller_model": "AuroraCTRL-700",
+  "firmware_version": "SYN-3.4.2",
+  "source_file": "asset-register-heat-pump.md",
+  "source_section": "HP-01 equipment identity"
+}

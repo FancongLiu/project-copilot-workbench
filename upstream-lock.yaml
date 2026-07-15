@@ -35,6 +35,35 @@ components:
     release: v27.29.0
     commit: f67bc16e400101e0beea6b68d250f0147400a218
     license: MIT
+  python-multipart:
+    repository: https://github.com/Kludex/python-multipart
+    release: 0.0.32
+    commit: bdb2b4f0a89864acd70e449ab6050db8a51e653e
+    license: Apache-2.0
+  docling:
+    repository: https://github.com/docling-project/docling
+    release: v2.113.0
+    commit: e548307e8d32bb197c787b1f2998a87bafbc743b
+    license: MIT
+    integration: optional documents extra
+  docling-haystack:
+    repository: https://github.com/deepset-ai/haystack-core-integrations
+    release: integrations/docling-v1.2.0
+    commit: 10019ff044bf15aea856582e45aefc8b9f08d350
+    license: Apache-2.0
+    integration: optional structured documents extra
+  sentence-transformers-haystack:
+    repository: https://github.com/deepset-ai/haystack-core-integrations
+    release: integrations/sentence_transformers-v0.1.1
+    commit: 9fafbb23d3285bb1507436e222984a77b938060e
+    license: Apache-2.0
+    integration: optional local reranking extra
+  transitions:
+    repository: https://github.com/pytransitions/transitions
+    release: 0.9.3
+    commit: f970687f48f807dd5974f59c4d76abed2bd1e7bd
+    license: MIT
+    integration: deterministic defrost state replay
   lucide:
     repository: https://github.com/lucide-icons/lucide
     release: 1.24.0

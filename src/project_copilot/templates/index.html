@@ -1,4 +1,3 @@
-<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -9,167 +8,193 @@
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar" aria-label="Workspace navigation">
+      <aside class="sidebar" aria-label="Project navigation">
         <div class="brand-block">
           <div class="brand-mark" aria-hidden="true">PC</div>
-          <div>
-            <strong>Project Copilot</strong>
-            <span>Workbench</span>
-          </div>
+          <div><strong>Project Copilot</strong><span>HVAC workbench</span></div>
         </div>
-
-        <nav class="nav-list">
-          <button class="nav-item is-active" type="button" data-view="knowledge">
-            <img src="/static/icons/book-open.svg" alt="">
-            <span>Knowledge</span>
-          </button>
-          <button class="nav-item" type="button" data-view="analytics">
-            <img src="/static/icons/chart-no-axes-combined.svg" alt="">
-            <span>Data analysis</span>
-          </button>
-          <button class="nav-item" type="button" data-view="security">
-            <img src="/static/icons/shield-check.svg" alt="">
-            <span>Security</span>
-          </button>
+        <nav class="nav-list" aria-label="Workbench sections">
+          <button class="nav-item is-active" type="button" data-view="copilot" aria-current="page"><span>Ask project</span></button>
+          <button class="nav-item" type="button" data-view="workspace"><span>Project files</span></button>
+          <button class="nav-item" type="button" data-view="analytics"><span>Telemetry</span></button>
+          <button class="nav-item" type="button" data-view="security"><span>Safety</span></button>
         </nav>
-
         <div class="sidebar-status">
-          <span class="status-dot"></span>
-          <div>
-            <strong>Local web app</strong>
-            <span>{{ egress_display }}</span>
-          </div>
+          <span class="status-dot" aria-hidden="true"></span>
+          <div><strong>{{ model_mode }}</strong><span>{{ egress_display }}</span></div>
         </div>
       </aside>
 
       <main class="main-content">
         <header class="topbar">
-          <div>
-            <span class="eyebrow">Active project</span>
-            <h1>{{ package.display_name }}</h1>
-          </div>
-          <div class="topbar-badges" aria-label="Runtime policy">
-            <span class="badge badge-green">{{ knowledge_provider_display }}</span>
-            <span class="badge badge-amber">Read-only data</span>
+          <div><span class="eyebrow">Current project</span><h1 id="active-workspace-name">{{ active_workspace.display_name }}</h1></div>
+          <div class="topbar-badges" aria-label="Runtime safeguards">
+            <span class="badge badge-green">Project evidence only</span>
+            <span class="badge badge-green">Bounded tools</span>
+            <span class="badge badge-amber">Read-only</span>
           </div>
         </header>
 
-        <section class="workspace-view is-visible" data-view-panel="knowledge" data-testid="knowledge-panel">
+        <section class="workspace-view is-visible" data-view-panel="copilot" data-testid="copilot-panel">
           <div class="section-heading">
-            <div>
-              <span class="eyebrow">Document evidence</span>
-              <h2>Knowledge query</h2>
-            </div>
-            <span class="provider-label">{{ knowledge_provider_display }}</span>
+            <div><span class="eyebrow">Documents + approved telemetry</span><h2>Ask about this project</h2></div>
+            <span class="provider-label">Model: {{ model_mode }}</span>
           </div>
-
-          <div class="knowledge-layout">
+          <div class="knowledge-layout" data-testid="knowledge-panel">
             <div class="query-surface">
-              <form id="knowledge-form" class="prompt-form">
-                <label for="knowledge-question">Question</label>
+              <form id="copilot-form" class="prompt-form">
+                <label for="copilot-question">Question</label>
                 <div class="prompt-row">
-                  <textarea id="knowledge-question" name="question" rows="3" required>供水温度设定值是多少？</textarea>
-                  <button type="submit" class="primary-button">
-                    <img src="/static/icons/send.svg" alt="">
-                    <span>Query</span>
-                  </button>
+                  <textarea id="copilot-question" name="question" rows="3" required placeholder="Example: Which approved configuration is current, and what source superseded the earlier value?"></textarea>
+                  <button type="submit" class="primary-button"><span>Ask project</span></button>
                 </div>
               </form>
-              <div id="knowledge-answer" class="answer-block" aria-live="polite">
-                <span class="answer-label">Answer</span>
-                <p>Select Query to retrieve cited project evidence.</p>
+
+              <details class="guided-review">
+                <summary>Check a defrost sequence</summary>
+                <p>Use a complete event window. Times are interpreted in the rule pack's project timezone.</p>
+                <form id="defrost-guide-form" class="guided-grid">
+                  <label for="defrost-asset">Unit ID</label>
+                  <input id="defrost-asset" name="asset_id" placeholder="HP-01" required>
+                  <label for="defrost-start">Start</label>
+                  <input id="defrost-start" name="start" type="datetime-local" step="10" required>
+                  <label for="defrost-end">End</label>
+                  <input id="defrost-end" name="end" type="datetime-local" step="10" required>
+                  <button type="submit">Prepare and run check</button>
+                </form>
+              </details>
+
+              <div id="copilot-answer" class="answer-block" aria-live="polite">
+                <span id="answer-status" class="answer-label">Ready</span>
+                <p>Ask a question after confirming the current project and its imported evidence.</p>
+                <div id="diagnostic-result" hidden></div>
+              </div>
+              <div class="trace-panel">
+                <span class="answer-label">Checks performed</span>
+                <div id="tool-activity"><p class="empty-state">No project checks have run yet.</p></div>
               </div>
             </div>
-
-            <aside class="sources-panel" aria-label="Evidence sources">
-              <div class="panel-title">
-                <h3>Sources</h3>
-                <span id="source-count">0</span>
-              </div>
-              <div id="source-list" class="source-list">
-                <p class="empty-state">No evidence selected.</p>
-              </div>
+            <aside class="sources-panel" aria-label="Answer evidence">
+              <div class="panel-title"><h3>Evidence</h3><span id="source-count">0</span></div>
+              <div id="source-list" class="source-list"><p class="empty-state">No cited evidence yet.</p></div>
             </aside>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view-panel="workspace" data-testid="workspace-panel">
+          <div class="section-heading">
+            <div><span class="eyebrow">Project evidence lifecycle</span><h2>Projects and source files</h2></div>
+            <span class="provider-label">Runtime data stays outside Git</span>
+          </div>
+          <div class="workspace-grid">
+            <div class="query-surface compact-surface">
+              <form id="workspace-create-form" class="stack-form">
+                <h3>Create a project</h3>
+                <label for="new-project-id">Project ID</label>
+                <input id="new-project-id" name="project_id" placeholder="approved-hvac" required>
+                <label for="new-display-name">Project name</label>
+                <input id="new-display-name" name="display_name" placeholder="Approved HVAC project" required>
+                <button class="primary-button" type="submit">Create project</button>
+              </form>
+              <label for="workspace-select">Open another project</label>
+              <select id="workspace-select">
+                {% for workspace in workspaces %}
+                <option value="{{ workspace.project_id }}" {% if workspace.active %}selected{% endif %}>{{ workspace.display_name }}</option>
+                {% endfor %}
+              </select>
+              <form id="source-upload-form" class="stack-form" enctype="multipart/form-data">
+                <h3>Import approved evidence</h3>
+                <label for="source-category">Evidence type</label>
+                <select id="source-category" name="category" required>
+                  <option value="" selected disabled>Choose the type for these files</option>
+                  <option value="background">Project / equipment background</option>
+                  <option value="configuration">Configuration / control sequence</option>
+                  <option value="meeting">Meeting / field notes</option>
+                  <option value="decision">Approved decision / change</option>
+                  <option value="SOP">Procedure / SOP</option>
+                  <option value="dataset">Telemetry dataset</option>
+                </select>
+                <label for="source-files">Files or safe source ZIP</label>
+                <input id="source-files" name="files" type="file" multiple required>
+                <p class="field-help">A Web ZIP is imported as a safe source archive. It is not treated as a validated startup Project Package.</p>
+                <div id="upload-preview" class="upload-preview" aria-live="polite"></div>
+                <button class="primary-button" type="submit">Import and build evidence index</button>
+              </form>
+              <p id="workspace-status" class="empty-state" role="status" aria-live="polite"></p>
+            </div>
+            <div class="sources-panel inventory-panel">
+              <div class="panel-title">
+                <div><h3>Source inventory</h3><p id="inventory-summary" class="field-help"></p></div>
+                <button id="reindex-button" type="button">Rebuild evidence index</button>
+              </div>
+              <div id="inventory-list" class="source-list">
+                {% for source in sources %}
+                <article class="source-item" data-source-id="{{ source.source_id }}" data-filename="{{ source.filename }}" data-category="{{ source.category }}">
+                  <strong>{{ source.filename }}</strong>
+                  <p>{{ source.category }} · {{ source.status }} · {{ source.parser }}</p>
+                  <details><summary>Audit details</summary><p>ID: {{ source.source_id }}<br>SHA-256: {{ source.sha256 }}<br>Size: {{ source.size_bytes }} bytes{% if source.error %}<br>Error: {{ source.error }}{% endif %}</p></details>
+                  <button type="button" data-delete-source="{{ source.source_id }}" aria-label="Delete {{ source.filename }}">Delete source</button>
+                </article>
+                {% endfor %}
+              </div>
+            </div>
           </div>
         </section>
 
         <section class="workspace-view" data-view-panel="analytics">
           <div class="section-heading">
-            <div>
-              <span class="eyebrow">Validated telemetry</span>
-              <h2>Data analysis</h2>
-            </div>
-            <span class="provider-label">DuckDB + Polars</span>
+            <div><span class="eyebrow">Current project's validated dataset</span><h2>Read-only telemetry summary</h2></div>
+            <span class="provider-label">Typed, allowlisted analysis</span>
           </div>
-
-          <div class="metric-strip">
-            <div class="metric-item">
-              <span>Rows</span>
-              <strong>{{ metrics.row_count }}</strong>
-            </div>
-            <div class="metric-item">
-              <span>Average power</span>
-              <strong>{{ "%.1f"|format(metrics.average_power_kw) }} kW</strong>
-            </div>
-            <div class="metric-item">
-              <span>Average delta T</span>
-              <strong>{{ "%.2f"|format(metrics.average_delta_t_c) }} C</strong>
-            </div>
-            <div class="metric-item">
-              <span>Average COP</span>
-              <strong>{{ "%.2f"|format(metrics.average_cop) }}</strong>
-            </div>
+          <p id="analytics-status" class="field-help" role="status" aria-live="polite">
+            {% if metrics.available %}Dataset: {{ metrics.dataset_filename }}{% else %}Current project has no approved telemetry.csv dataset.{% endif %}
+          </p>
+          <div class="metric-strip" id="metric-strip" {% if not metrics.available %}hidden{% endif %}>
+            <div class="metric-item"><span>Validated rows</span><strong id="metric-rows">{{ metrics.row_count }}</strong></div>
+            <div class="metric-item"><span>Average electrical power</span><strong id="metric-power">{% if metrics.available %}{{ "%.1f"|format(metrics.average_power_kw) }} kW{% endif %}</strong></div>
+            <div class="metric-item"><span>Average return–supply difference</span><strong id="metric-delta">{% if metrics.available %}{{ "%.2f"|format(metrics.average_delta_t_c) }} °C{% endif %}</strong></div>
+            <div class="metric-item"><span>Average cooling COP</span><strong id="metric-cop">{% if metrics.available %}{{ "%.2f"|format(metrics.average_cop) }}{% endif %}</strong></div>
           </div>
-
-          <form id="analysis-form" class="analysis-form">
-            <label for="analysis-question">Approved analysis request</label>
-            <div class="prompt-row">
-              <input id="analysis-question" name="question" value="哪个时刻的负荷最高？" required>
-              <button type="submit" class="primary-button">
-                <img src="/static/icons/chart-no-axes-combined.svg" alt="">
-                <span>Analyze</span>
-              </button>
-            </div>
-            <div class="quick-queries" aria-label="Approved analysis intents">
-              <button type="button" data-question="哪个时刻的负荷最高？">Peak load</button>
-              <button type="button" data-question="请查看 COP 效率趋势">COP trend</button>
-              <button type="button" data-question="显示功率趋势">Power trend</button>
-              <button type="button" data-question="显示供回水温差趋势">Delta T</button>
-            </div>
-          </form>
-
-          <div class="analysis-output">
-            <div class="analysis-summary">
-              <span class="answer-label">Result</span>
-              <h3 id="analysis-title">Waiting for analysis</h3>
-              <p id="analysis-summary">Only approved, read-only analysis intents are available.</p>
-              <code id="analysis-sql"></code>
-            </div>
-            <div id="analysis-chart" class="chart-surface" aria-label="Analysis chart">
-              <p class="empty-state">No series selected.</p>
-            </div>
+          <div class="policy-table">
+            <div role="row"><span role="cell">Data access</span><strong role="cell">Current project only</strong></div>
+            <div role="row"><span role="cell">Analysis operations</span><strong role="cell">Reviewed read-only checks</strong></div>
+            <div role="row"><span role="cell">Free-form database commands</span><strong role="cell">Not available</strong></div>
           </div>
         </section>
 
         <section class="workspace-view" data-view-panel="security">
           <div class="section-heading">
-            <div>
-              <span class="eyebrow">Fail-closed defaults</span>
-              <h2>Security policy</h2>
-            </div>
-            <span class="provider-label">Project Package v0.1</span>
+            <div><span class="eyebrow">Fail-closed defaults</span><h2>Safety and data boundaries</h2></div>
+            <span class="provider-label">Project Package v0.2</span>
           </div>
-
-          <div class="policy-table" role="table" aria-label="Security capabilities">
-            <div role="row"><span role="cell">Knowledge egress</span><strong role="cell">{{ egress_display }}</strong></div>
-            <div role="row"><span role="cell">Downstream approval</span><strong role="cell">{{ "Acknowledged" if downstream_approval_acknowledged else "Not used" }}</strong></div>
-            <div role="row"><span role="cell">Free-form NL2SQL</span><strong role="cell">Blocked</strong></div>
-            <div role="row"><span role="cell">Shell and Python execution</span><strong role="cell">Unavailable</strong></div>
-            <div role="row"><span role="cell">DuckDB access</span><strong role="cell">Read-only SELECT</strong></div>
-            <div role="row"><span role="cell">Knowledge telemetry</span><strong role="cell">Disabled</strong></div>
+          <div class="policy-table" role="table" aria-label="Safety capabilities">
+            <div role="row"><span role="cell">Knowledge destination</span><strong role="cell">{{ egress_display }}</strong></div>
+            <div role="row"><span role="cell">Project isolation</span><strong role="cell">Explicit project ID on every query</strong></div>
+            <div role="row"><span role="cell">Shell, scripts, Web, MCP</span><strong role="cell">Unavailable</strong></div>
+            <div role="row"><span role="cell">Physical equipment control</span><strong role="cell">Unavailable</strong></div>
+            <div role="row"><span role="cell">Imported telemetry</span><strong role="cell">Read-only</strong></div>
           </div>
+          <details class="technical-details"><summary>Administrator technical details</summary><p>Retrieval: {{ knowledge_provider_display }}. Agent steps and tool calls are bounded. Hidden chain-of-thought is neither requested nor displayed. Knowledge telemetry is disabled.</p></details>
         </section>
       </main>
     </div>
+
+    <dialog id="delete-dialog" aria-labelledby="delete-dialog-title">
+      <form method="dialog" class="dialog-card">
+        <h2 id="delete-dialog-title">Delete project source</h2>
+        <p>This permanently removes the selected source from this project and rebuilds the evidence index. The app has no recycle bin.</p>
+        <dl class="delete-details">
+          <div><dt>Project</dt><dd id="delete-project"></dd></div>
+          <div><dt>File</dt><dd id="delete-filename"></dd></div>
+          <div><dt>Type</dt><dd id="delete-category"></dd></div>
+          <div><dt>Source ID</dt><dd id="delete-source-id"></dd></div>
+        </dl>
+        <p id="delete-error" class="dialog-error" role="alert" tabindex="-1" hidden></p>
+        <div class="dialog-actions">
+          <button id="delete-cancel" type="button" value="cancel">Cancel</button>
+          <button id="delete-confirm" class="danger-button" type="button">Delete this source</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>

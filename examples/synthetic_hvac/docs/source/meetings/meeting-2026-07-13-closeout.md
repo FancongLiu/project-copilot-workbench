@@ -1,0 +1,3 @@
+# Closeout meeting — 2026-07-13
+
+At the 2026-07-13 meeting, the team confirmed that the 2026-07-12 read-only controller export showed the D-014 target of 6.5 degrees Celsius active and agreed to defer the proposed pump reset. Decision D-017 deferred the proposed reduction of the primary-loop differential-pressure target from 55 kPa to 45 kPa, so the current value remained 55 kPa pending a separate pump-stability test. Action A-014 remained open with Lin Qiao because the full 72-hour post-change observation window was not yet complete. Action A-017 was assigned to Maya Singh to draft a future pump-stability test; it has no authority to change live equipment.

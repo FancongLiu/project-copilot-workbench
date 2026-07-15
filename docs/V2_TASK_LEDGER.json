@@ -1,0 +1,274 @@
+{
+  "schema_version": "1",
+  "ledger_id": "project-copilot-workbench-v2-delivery-20260715",
+  "status_authority": "this_file",
+  "objective_authority": "company/runtime/project_copilot_v2_handoff_20260715.md",
+  "checkpoint_projection": "docs/V2_CHECKPOINT.md",
+  "event_log": "docs/V2_TASK_EVENTS.jsonl",
+  "status": "active",
+  "revision": 10,
+  "event_sequence": 28,
+  "concurrency_limit": 3,
+  "write_owner": "root",
+  "safety_boundaries": [
+    "Do not modify OnionQuant runtime, Cron, context_state, Inbox, or Outbox.",
+    "Public repository contains only generic code and fully synthetic data.",
+    "Do not publish real company documents, endpoints, model names, certificates, credentials, indexes, logs, screenshots, or evaluation questions.",
+    "No force-push, destructive Git reset, AI Cron, polling worker, arbitrary Shell/Python/Web/MCP tool, model-generated SQL, or physical equipment control."
+  ],
+  "chairman_corrections": [
+    {
+      "id": "C-001",
+      "summary": "Search current Web and GitHub evidence before architecture, implementation, or bug-fix design; prefer mature deployable components over hand-written substitutes.",
+      "applied_to": [
+        "docs/research/2026-07-15-v2-framework-selection.md",
+        "docs/research/2026-07-15-recent-rag-shortlist.md",
+        "docs/adr/002-v2-governed-workspace-agent.md"
+      ]
+    },
+    {
+      "id": "C-002",
+      "summary": "Use bounded parallel Agents for independent research and review while keeping one implementation write owner and preserving the project hard concurrency cap.",
+      "applied_to": [
+        "docs/V2_CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "C-003",
+      "summary": "Treat commercial HVAC as the first deep domain: unit configuration, controls, field changes, meeting records, decisions, SOPs, alarms, telemetry, and background knowledge must drive repeated evaluation and optimization.",
+      "applied_to": [
+        "examples/synthetic_hvac",
+        "evaluation/gold_cases.json",
+        "docs/evaluation.md"
+      ]
+    },
+    {
+      "id": "C-004",
+      "summary": "Before release, perform a complete human HVAC-engineer UX journey and review every button, label, placement, feedback state, error message, citation view, destructive action, and mobile flow.",
+      "applied_to": [
+        "tests/test_browser_acceptance.py",
+        "docs/acceptance-checklist.md"
+      ]
+    },
+    {
+      "id": "C-005",
+      "summary": "Push the finished release to GitHub and provide a detailed zero-context company-PC handoff that a less capable Agent can execute safely end to end.",
+      "applied_to": [
+        "docs/company-deployment-v2.md",
+        "docs/company-agent-handoff.md",
+        "docs/admin-user-guide.md",
+        "docs/acceptance-checklist.md",
+        "config/company-v2.example.ps1"
+      ]
+    },
+    {
+      "id": "C-006",
+      "summary": "Persist requirements, decisions, task state, failures, evidence, and next actions in a durable ledger/checkpoint structure rather than relying on conversational history.",
+      "applied_to": [
+        "docs/V2_TASK_LEDGER.json",
+        "docs/V2_TASK_EVENTS.jsonl",
+        "docs/V2_CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "C-007",
+      "summary": "Support natural-language review of commercial-HVAC defrost logic over user-selected ten-second telemetry windows by combining exact control documents, deterministic temporal replay, bounded AI orchestration, and explicit uncertainty.",
+      "applied_to": [
+        "src/project_copilot/defrost_diagnostics.py",
+        "src/project_copilot/agent.py",
+        "examples/synthetic_hvac",
+        "evaluation/gold_cases.json",
+        "docs/adr/003-defrost-temporal-diagnostics.md"
+      ]
+    }
+  ],
+  "slices": [
+    {
+      "id": "V2-01",
+      "title": "Authority, Goal, cognitive model, and current framework research",
+      "status": "completed",
+      "dependencies": [],
+      "acceptance": ["research-first", "current GitHub evidence", "license and deployment comparison"],
+      "evidence": [
+        "docs/research/2026-07-15-v2-framework-selection.md",
+        "docs/research/2026-07-15-recent-rag-shortlist.md",
+        "docs/adr/002-v2-governed-workspace-agent.md"
+      ]
+    },
+    {
+      "id": "V2-02",
+      "title": "Durable workspace, safe import, persistent retrieval, and source inventory",
+      "status": "completed",
+      "dependencies": ["V2-01"],
+      "acceptance": ["A1", "A2"],
+      "evidence": [
+        "src/project_copilot/workspaces.py",
+        "src/project_copilot/ingestion.py",
+        "tests/test_workspaces_v2.py",
+        "tests/test_web_v2.py"
+      ]
+    },
+    {
+      "id": "V2-03",
+      "title": "Bounded Haystack Agent, company model/embedding path, and governed analytics",
+      "status": "completed",
+      "dependencies": ["V2-02"],
+      "acceptance": ["A3", "A4", "A5", "A6"],
+      "evidence": [
+        "src/project_copilot/agent.py",
+        "src/project_copilot/semantic_analytics.py",
+        "src/project_copilot/embeddings.py",
+        "tests/test_project_agent_v2.py",
+        "tests/test_governed_analytics_v2.py"
+      ]
+    },
+    {
+      "id": "V2-04",
+      "title": "Commercial HVAC synthetic corpus and frozen offline evaluation",
+      "status": "completed",
+      "dependencies": ["V2-03"],
+      "acceptance": ["A4", "A5", "A6"],
+      "evidence": [
+        "examples/synthetic_hvac",
+        "evaluation/gold_cases.json",
+        "evaluation/results/deterministic-baseline.json",
+        "docs/evaluation.md"
+      ]
+    },
+    {
+      "id": "V2-05",
+      "title": "Company Windows/offline deployment, operations, and zero-context handoff",
+      "status": "completed",
+      "dependencies": ["V2-01", "V2-03"],
+      "acceptance": ["A8", "A10"],
+      "evidence": [
+        "docs/company-deployment-v2.md",
+        "docs/company-agent-handoff.md",
+        "docs/admin-user-guide.md",
+        "docs/acceptance-checklist.md",
+        "docs/light-rag-direct-deploy.md",
+        "config/company-v2.example.ps1"
+      ]
+    },
+    {
+      "id": "V2-03R",
+      "title": "Research-driven architecture gap remediation",
+      "status": "completed",
+      "dependencies": ["V2-03", "V2-04"],
+      "acceptance": ["A2", "A3", "A4", "A7", "A8"],
+      "required_fixes": [
+        "official optional sentence-transformers Haystack reranker and ranking-sensitive evaluation",
+        "official docling-haystack structured chunks with page/section metadata and offline tokenizer boundary",
+        "true end-to-end Agent wall-clock cancellation budget",
+        "shared explicit SSLContext for company chat and embedding endpoints",
+        "workspace lifecycle locking and atomic index replacement",
+        "scripted multi-turn Agent regression"
+      ],
+      "evidence": [
+        "docs/research/2026-07-15-architecture-gap-review.md",
+        "src/project_copilot/ingestion.py",
+        "src/project_copilot/agent.py",
+        "src/project_copilot/embeddings.py",
+        "src/project_copilot/tls.py",
+        "tests/test_workspaces_v2.py",
+        "tests/test_project_agent_v2.py",
+        "evaluation/results/deterministic-baseline.json"
+      ]
+    },
+    {
+      "id": "V2-04D",
+      "title": "Commercial HVAC defrost temporal-diagnostics feasibility and architecture",
+      "status": "completed",
+      "dependencies": ["V2-01", "V2-03", "V2-04"],
+      "acceptance": ["A4", "A5", "A6"],
+      "required_outputs": [
+        "current Web/GitHub evidence and explicit feasibility conclusion",
+        "10-second point/time-window data contract",
+        "documented defrost sequence/state-machine comparison design",
+        "bounded read-only analysis and root-cause evidence architecture",
+        "fully synthetic replay corpus and gold cases or a clearly recorded next-release boundary"
+      ],
+      "evidence": [
+        "docs/adr/003-defrost-temporal-diagnostics.md",
+        "src/project_copilot/defrost_diagnostics.py",
+        "examples/synthetic_hvac/datasets/raw/defrost_telemetry.csv",
+        "examples/synthetic_hvac/docs/source/configuration/defrost-rules.json",
+        "tests/test_defrost_diagnostics.py",
+        "tests/test_project_agent_v2.py",
+        "tests/test_web_v2.py",
+        "evaluation/gold_cases.json",
+        "evaluation/results/deterministic-baseline.json"
+      ]
+    },
+    {
+      "id": "V2-06",
+      "title": "Fresh local tests, packaging, dependency/security/license/public-data gates",
+      "status": "completed",
+      "dependencies": ["V2-02", "V2-03R", "V2-04D", "V2-05"],
+      "acceptance": ["A7", "A8"],
+      "evidence": [
+        "requirements.runtime.lock",
+        "requirements.lock",
+        "requirements.documents.lock",
+        ".github/workflows/ci.yml",
+        "artifacts/final-dist/project_copilot_workbench-0.2.0-py3-none-any.whl",
+        "artifacts/sbom-final.cdx.json",
+        "artifacts/license-report-final.json"
+      ]
+    },
+    {
+      "id": "V2-07",
+      "title": "Human HVAC-engineer UX walkthrough and independent UX review",
+      "status": "completed",
+      "dependencies": ["V2-06"],
+      "acceptance": ["A1", "A2", "A4", "A6", "A7"],
+      "evidence": [
+        "tests/test_browser_acceptance.py",
+        "docs/acceptance-checklist.md",
+        "docs/assets/workbench-desktop.png",
+        "docs/assets/workbench-mobile.png",
+        "independent UX review: Critical 0, Important 0"
+      ]
+    },
+    {
+      "id": "V2-08",
+      "title": "Independent code review and Critical/Important remediation",
+      "status": "in_progress",
+      "dependencies": ["V2-06", "V2-07"],
+      "acceptance": ["A9"],
+      "evidence": [
+        "independent defrost safety review: Critical 0, Important 0",
+        "independent HVAC UX review: Critical 0, Important 0"
+      ]
+    },
+    {
+      "id": "V2-09",
+      "title": "Final verification, commit, non-force push, GitHub CI, and trial server",
+      "status": "planned",
+      "dependencies": ["V2-08"],
+      "acceptance": ["A7", "A8", "A9", "A10"],
+      "evidence": []
+    }
+  ],
+  "acceptance_status": {
+    "A1": "verified_local_browser",
+    "A2": "verified_local_browser",
+    "A3": "verified_local",
+    "A4": "verified_local",
+    "A5": "verified_local",
+    "A6": "verified_local",
+    "A7": "verified_local_pending_github_ci",
+    "A8": "verified_local_pending_github_ci",
+    "A9": "in_progress",
+    "A10": "planned"
+  },
+  "current_blockers": [],
+  "next_slice_ids": ["V2-08"],
+  "forbidden_inheritance": [
+    "raw task history",
+    "raw Agent transcripts",
+    "stale process IDs",
+    "real company data or secrets"
+  ],
+  "updated_at": "2026-07-15T19:25:00Z"
+}
