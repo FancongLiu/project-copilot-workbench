@@ -26,6 +26,15 @@ CSV = """timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct
 """
 
 
+class BrokenAnalytics:
+    OPERATIONS = GovernedAnalyticsTool.OPERATIONS
+
+    @staticmethod
+    def run(operation: str):  # type: ignore[no-untyped-def]
+        del operation
+        raise RuntimeError("sensitive backend path and credential marker")
+
+
 @component
 class TwoToolGenerator:
     @component.output_types(replies=list[ChatMessage])
@@ -317,6 +326,22 @@ def test_agent_enforces_end_to_end_wall_clock_budget(tmp_path: Path) -> None:
     assert "wall-time budget" in result.answer
     assert result.activities[-1].tool == "agent"
     assert result.activities[-1].status == "failed"
+
+
+def test_agent_fails_closed_without_leaking_unexpected_tool_errors(
+    tmp_path: Path,
+) -> None:
+    agent = build_agent(tmp_path)
+    agent.analytics = BrokenAnalytics()  # type: ignore[assignment]
+
+    result = agent.ask("What was the average power consumption?")
+
+    assert result.refused is True
+    assert result.clarification is False
+    assert "could not complete" in result.answer
+    assert "sensitive" not in result.answer
+    assert any(activity.status == "failed" for activity in result.activities)
+    assert all("sensitive" not in activity.summary for activity in result.activities)
 
 
 def test_agent_can_iterate_from_search_to_source_inspection(tmp_path: Path) -> None:

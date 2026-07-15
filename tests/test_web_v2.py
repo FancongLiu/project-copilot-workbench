@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from haystack.components.generators.chat import OpenAIChatGenerator
 
+from project_copilot.analytics import AnalyticsWorkspace
 from project_copilot.web import (
     _build_chat_generator,
     _build_reranker,
@@ -16,6 +17,33 @@ from project_copilot.web import (
 
 
 HEADERS = {"X-Project-Copilot": "1"}
+
+
+def build_project(root: Path, *, allow_approved_provider: bool = False) -> Path:
+    (root / "docs" / "source").mkdir(parents=True)
+    (root / "datasets" / "raw").mkdir(parents=True)
+    (root / "project.yaml").write_text(
+        f"""schema_version: "0.1"
+project_id: synthetic-hvac-demo
+display_name: Synthetic HVAC Plant
+documents:
+  root: docs/source
+datasets:
+  root: datasets/raw
+security:
+  allow_network: false
+  allow_nl2sql: false
+  allow_approved_provider: {str(allow_approved_provider).lower()}
+""",
+        encoding="utf-8",
+    )
+    (root / "datasets" / "raw" / "telemetry.csv").write_text(
+        """timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct
+2026-07-15T00:00:00,6,12,10,40,50
+""",
+        encoding="utf-8",
+    )
+    return root
 
 
 def test_sop_directory_wins_over_control_keyword_in_filename() -> None:
@@ -318,12 +346,197 @@ def test_analytics_summary_is_workspace_scoped_and_clears_when_dataset_missing(
     assert empty == {
         "project_id": "data-empty",
         "available": False,
+        "state": "missing",
         "dataset_filename": None,
+        "source_id": None,
+        "error": None,
         "row_count": 0,
         "average_power_kw": None,
         "average_delta_t_c": None,
         "average_cop": None,
     }
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"not,the,approved,schema\n1,2,3,4\n",
+        b"timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct\n",
+        (
+            b"timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct\n"
+            b"2026-07-15T00:00:00,6,12,inf,40,50\n"
+        ),
+    ],
+)
+def test_invalid_recognized_telemetry_is_truthfully_rejected_without_500(
+    tmp_path: Path, payload: bytes
+) -> None:
+    client = TestClient(create_app(runtime_root=tmp_path / "runtime-invalid-telemetry"))
+    project_id = "invalid-telemetry"
+    assert (
+        client.post(
+            "/api/workspaces",
+            json={"project_id": project_id, "display_name": "Invalid Telemetry"},
+            headers=HEADERS,
+        ).status_code
+        == 201
+    )
+
+    imported = client.post(
+        f"/api/workspaces/{project_id}/sources",
+        data={"category": "dataset"},
+        files={
+            "files": (
+                "telemetry.csv",
+                payload,
+                "text/csv",
+            )
+        },
+        headers=HEADERS,
+    )
+
+    assert imported.status_code == 201
+    record = imported.json()[0]
+    assert record["status"] == "error"
+    assert "Telemetry schema validation failed" in record["error"]
+    summary = client.get(f"/api/workspaces/{project_id}/analytics/summary")
+    assert summary.status_code == 200
+    assert summary.json()["available"] is False
+    answer = client.post(
+        f"/api/workspaces/{project_id}/copilot/query",
+        json={"question": "What was the average power?"},
+        headers=HEADERS,
+    )
+    assert answer.status_code == 200
+    assert answer.json()["refused"] is True
+    assert answer.json()["clarification"] is True
+    assert "failed validation" in answer.json()["answer"]
+    assert summary.json()["state"] == "invalid"
+    assert summary.json()["source_id"] == record["source_id"]
+    assert len(summary.json()["error"]) <= 500
+
+
+def test_new_telemetry_hash_publishes_new_snapshot_while_old_reader_remains_valid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = TestClient(
+        create_app(runtime_root=tmp_path / "runtime-versioned-analytics")
+    )
+    project_id = "versioned-analytics"
+    client.post(
+        "/api/workspaces",
+        json={"project_id": project_id, "display_name": "Versioned Analytics"},
+        headers=HEADERS,
+    )
+
+    def upload(power: int) -> dict[str, object]:
+        csv = (
+            "timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct\n"
+            f"2026-07-15T00:00:00,6,12,{power},{power * 4},50\n"
+            f"2026-07-15T00:01:00,6,12,{power},{power * 4},50\n"
+        )
+        response = client.post(
+            f"/api/workspaces/{project_id}/sources",
+            data={"category": "dataset"},
+            files={"files": ("telemetry.csv", csv.encode(), "text/csv")},
+            headers=HEADERS,
+        )
+        assert response.status_code == 201
+        return response.json()[0]
+
+    first = upload(10)
+    workspace = next(
+        item
+        for item in client.app.state.workspace_manager.list_workspaces()
+        if item.project_id == project_id
+    )
+    first_database = workspace.root / "analytics" / f"{first['sha256']}.duckdb"
+    first_reader = AnalyticsWorkspace(first_database)._connect_read_only()
+    try:
+        second = upload(80)
+        second_database = workspace.root / "analytics" / f"{second['sha256']}.duckdb"
+        assert second_database != first_database
+        assert second_database.is_file()
+        monkeypatch.setattr(
+            AnalyticsWorkspace,
+            "build",
+            classmethod(
+                lambda cls, **kwargs: (_ for _ in ()).throw(
+                    AssertionError("read path must not rebuild analytics")
+                )
+            ),
+        )
+        summary = client.get(f"/api/workspaces/{project_id}/analytics/summary").json()
+        assert summary["state"] == "ready"
+        assert summary["average_power_kw"] == 80
+        assert first_reader.execute(
+            "select avg(power_kw) from telemetry"
+        ).fetchone() == (10.0,)
+    finally:
+        first_reader.close()
+
+
+def test_company_chat_egress_is_reported_truthfully(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PROJECT_COPILOT_MODEL_MODE", "company")
+    monkeypatch.setenv("PROJECT_COPILOT_OPENAI_BASE_URL", "https://ai.internal/v1")
+    monkeypatch.setenv("PROJECT_COPILOT_OPENAI_API_KEY", "placeholder")
+    monkeypatch.setenv("PROJECT_COPILOT_OPENAI_MODEL", "company-model")
+    monkeypatch.setenv("PROJECT_COPILOT_ALLOWED_HOSTS", "ai.internal")
+
+    client = TestClient(create_app(runtime_root=tmp_path / "runtime-company-egress"))
+    health = client.get("/api/health")
+
+    assert health.status_code == 200
+    assert health.json()["network_allowed"] is True
+    assert health.json()["egress_mode"] == "approved-provider"
+    assert health.json()["egress_channels"] == ["company-chat"]
+    assert "Approved company endpoint" in client.get("/").text
+
+
+@pytest.mark.parametrize(
+    ("base_url", "expected_state", "expected_channels", "network_allowed"),
+    [
+        ("http://127.0.0.1:3001/api", "loopback", [], False),
+        (
+            "https://anythingllm.internal/api",
+            "approved-remote",
+            ["anythingllm-knowledge"],
+            True,
+        ),
+    ],
+)
+def test_anythingllm_egress_distinguishes_loopback_from_remote(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+    expected_state: str,
+    expected_channels: list[str],
+    network_allowed: bool,
+) -> None:
+    project = build_project(
+        tmp_path / "project-anythingllm", allow_approved_provider=True
+    )
+    host = "127.0.0.1" if "127.0.0.1" in base_url else "anythingllm.internal"
+    monkeypatch.setenv("PROJECT_COPILOT_KNOWLEDGE_PROVIDER", "anythingllm")
+    monkeypatch.setenv("ANYTHINGLLM_BASE_URL", base_url)
+    monkeypatch.setenv("ANYTHINGLLM_API_KEY", "placeholder")
+    monkeypatch.setenv("ANYTHINGLLM_WORKSPACE_SLUG", "synthetic-hvac")
+    monkeypatch.setenv("PROJECT_COPILOT_ALLOWED_HOSTS", host)
+    monkeypatch.setenv("PROJECT_COPILOT_ACK_DOWNSTREAM_APPROVED", "true")
+
+    client = TestClient(
+        create_app(
+            project_root=project,
+            runtime_root=tmp_path / f"runtime-anythingllm-{expected_state}",
+        )
+    )
+    health = client.get("/api/health").json()
+
+    assert health["egress_detail"]["knowledge"] == expected_state
+    assert health["egress_channels"] == expected_channels
+    assert health["network_allowed"] is network_allowed
 
 
 def test_company_mode_builds_haystack_openai_compatible_generator(monkeypatch) -> None:

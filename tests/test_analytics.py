@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import duckdb
-import polars as pl
 import pytest
 
 from project_copilot.analytics import AnalyticsValidationError, AnalyticsWorkspace
@@ -67,26 +66,82 @@ def test_analytics_workspace_rejects_return_temperature_below_supply(
         )
 
 
+@pytest.mark.parametrize(
+    "content, message",
+    [
+        (
+            "timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct\n",
+            "at least one row",
+        ),
+        (VALID_CSV.replace("100.0,400.0", "inf,400.0"), "finite"),
+    ],
+)
+def test_analytics_workspace_rejects_empty_or_non_finite_telemetry(
+    tmp_path: Path, content: str, message: str
+) -> None:
+    csv_path = write_csv(tmp_path / "invalid.csv", content)
+
+    with pytest.raises(AnalyticsValidationError, match=message):
+        AnalyticsWorkspace.build(
+            csv_path=csv_path,
+            database_path=tmp_path / "analytics.duckdb",
+        )
+
+
 def test_failed_snapshot_build_preserves_previous_database(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     csv_path = write_csv(tmp_path / "telemetry.csv")
-    database_path = tmp_path / "analytics.duckdb"
-    AnalyticsWorkspace.build(csv_path=csv_path, database_path=database_path)
+    previous_database = tmp_path / "sha-old.duckdb"
+    failed_database = tmp_path / "sha-new.duckdb"
+    AnalyticsWorkspace.build(csv_path=csv_path, database_path=previous_database)
 
-    def fail_write_csv(self, file, **kwargs):  # type: ignore[no-untyped-def]
+    def fail_population(connection, frame, curated_path):  # type: ignore[no-untyped-def]
+        del connection, frame, curated_path
         raise OSError("simulated disk failure")
 
-    monkeypatch.setattr(pl.DataFrame, "write_csv", fail_write_csv)
+    monkeypatch.setattr(AnalyticsWorkspace, "_populate_database", fail_population)
 
     with pytest.raises(AnalyticsValidationError, match="snapshot build failed"):
-        AnalyticsWorkspace.build(csv_path=csv_path, database_path=database_path)
+        AnalyticsWorkspace.build(csv_path=csv_path, database_path=failed_database)
 
-    connection = duckdb.connect(str(database_path), read_only=True)
+    connection = duckdb.connect(str(previous_database), read_only=True)
     try:
         assert connection.execute("select count(*) from telemetry").fetchone() == (3,)
     finally:
         connection.close()
     assert list(tmp_path.glob("*.curated.csv")) == []
     assert list(tmp_path.glob("*.building.duckdb")) == []
+    assert not failed_database.exists()
+
+
+def test_existing_content_addressed_snapshot_is_reused_with_reader_open(
+    tmp_path: Path,
+) -> None:
+    csv_path = write_csv(tmp_path / "telemetry.csv")
+    database_path = tmp_path / "sha256-immutable.duckdb"
+    first = AnalyticsWorkspace.build(csv_path=csv_path, database_path=database_path)
+    reader = first._connect_read_only()
+    try:
+        second = AnalyticsWorkspace.build(
+            csv_path=csv_path,
+            database_path=database_path,
+        )
+        assert second.metric_snapshot().row_count == 3
+        assert reader.execute("select count(*) from telemetry").fetchone() == (3,)
+    finally:
+        reader.close()
+
+
+def test_existing_snapshot_does_not_bypass_source_validation(tmp_path: Path) -> None:
+    csv_path = write_csv(tmp_path / "telemetry.csv")
+    database_path = tmp_path / "sha256-immutable.duckdb"
+    AnalyticsWorkspace.build(csv_path=csv_path, database_path=database_path)
+    csv_path.write_text(
+        "timestamp,supply_temp_c,return_temp_c,power_kw,cooling_kw,load_pct\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(AnalyticsValidationError, match="at least one row"):
+        AnalyticsWorkspace.build(csv_path=csv_path, database_path=database_path)

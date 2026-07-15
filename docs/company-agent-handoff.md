@@ -97,6 +97,9 @@ Stop and escalate without improvising if any condition occurs:
 - the real Project Package is under the Git clone or release directory;
 - an Office/PDF document requires Docling but the separate offline parser/model
   bundle has not passed no-egress acceptance;
+- the parser wheelhouse contains a source archive, the CI parser lock disagrees
+  with any production parser dependency version, or production is asked to
+  install the CI/test lock;
 - the requested workflow requires Shell, arbitrary Python, Web, MCP, free-form
   SQL, physical equipment control or a new unreviewed Agent tool;
 - source deletion, re-index, migration or rollback lacks a current backup;
@@ -141,6 +144,21 @@ py -3.12 -m venv D:\ProjectCopilot\app\0.2.0\venv
 
 Replace `APPROVED` and the wheel filename with the verified received values.
 Do not copy a developer `.venv`.
+
+The command above is the base profile. If Office/PDF parsing was explicitly
+approved and the isolated parser test in the deployment runbook passed, replace
+the runtime-lock dependency command with this complete production-parser
+profile; do not install both profiles and do not install the CI/test lock in the
+production venv:
+
+```powershell
+& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip install `
+  --no-index `
+  --find-links D:\ProjectCopilot\releases\APPROVED\wheelhouse-documents `
+  --require-hashes `
+  -r D:\ProjectCopilot\releases\APPROVED\requirements.documents.lock
+& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip check
+```
 
 Checkpoint `CP-02` is complete when `pip check` succeeds and
 `project-copilot.exe --help` exits zero without network access.

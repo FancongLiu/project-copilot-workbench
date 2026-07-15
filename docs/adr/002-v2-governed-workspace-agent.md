@@ -17,8 +17,9 @@ iterative knowledge and data tools.
 
 Build one bounded vertical product around five deep modules:
 
-1. `WorkspaceManager`: isolated runtime directories, atomic metadata, source
-   inventory, upload/archive/CLI import, re-index and delete.
+1. `WorkspaceManager`: isolated runtime directories and immutable generation
+   snapshots. Upload/archive/CLI import, re-index and delete stage a complete
+   source/inventory/index generation and atomically switch one state pointer.
 2. `ProjectIndexer`: mature parser adapters, Haystack chunking, durable document
    store, BM25 + embedding retrieval and fused citations.
 3. `GovernedAnalyticsTool`: typed semantic operations over the existing
@@ -42,6 +43,8 @@ boundary. Hidden chain-of-thought is never requested, stored, or displayed.
 - Model tools cannot access shell, Python execution, Web, MCP, equipment, or
   unrestricted SQL.
 - DuckDB stays read-only with external access and extension loading disabled.
+- Telemetry DuckDB files are content-addressed and immutable so Windows readers
+  never race an in-place database replacement.
 - Every answer returns auditable citations or a refusal/clarification.
 
 ## Consequences

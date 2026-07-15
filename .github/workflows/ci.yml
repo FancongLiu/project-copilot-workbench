@@ -120,31 +120,14 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install --upgrade pip==26.1.2
-      - run: python -m pip install --require-hashes -r requirements.documents.lock
-      - run: python -m pip install reportlab==5.0.0
+      - run: python -m pip install --require-hashes -r requirements.documents-ci.lock
+      - run: python -m pip check
       - run: python -m pip install --no-deps -e .
       - name: Prefetch the exact offline assets used by the smoke test
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from docling.utils.model_downloader import download_models
-          from transformers import AutoTokenizer
-
-          artifacts = Path("artifacts/docling-models")
-          tokenizer = Path("artifacts/docling-tokenizer")
-          download_models(
-              output_dir=artifacts,
-              with_layout=True,
-              with_tableformer=False,
-              with_code_formula=False,
-              with_picture_classifier=False,
-              with_rapidocr=False,
-              with_easyocr=False,
-          )
-          AutoTokenizer.from_pretrained(
-              "sentence-transformers/all-MiniLM-L6-v2"
-          ).save_pretrained(tokenizer)
-          PY
+        run: >-
+          python scripts/prefetch_docling_assets.py
+          --artifacts-dir artifacts/docling-models
+          --tokenizer-dir artifacts/docling-tokenizer
       - name: Run with network-backed model lookup disabled
         run: python -m pytest tests/test_docling_integration.py -q
         env:

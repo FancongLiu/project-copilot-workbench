@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -16,7 +18,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from project_copilot.agent import DeterministicChatGenerator, ProjectAgent
 from project_copilot.analysis import AnalysisIntentError, ApprovedAnalysisEngine
-from project_copilot.analytics import AnalyticsWorkspace
+from project_copilot.analytics import AnalyticsValidationError, AnalyticsWorkspace
 from project_copilot.company_api import CompanyAPISettings
 from project_copilot.contract import ProjectPackage, load_project_package
 from project_copilot.defrost_diagnostics import (
@@ -53,14 +55,19 @@ class WorkspaceCreateRequest(BaseModel):
 class UnavailableAnalyticsTool:
     OPERATIONS = GovernedAnalyticsTool.OPERATIONS
 
-    @staticmethod
-    def run(operation: str) -> GovernedAnalyticsResult:
+    def __init__(
+        self,
+        summary: str = "No approved telemetry dataset is imported in this workspace.",
+    ) -> None:
+        self.summary = summary
+
+    def run(self, operation: str) -> GovernedAnalyticsResult:
         if operation not in UnavailableAnalyticsTool.OPERATIONS:
             raise ValueError("Analytics operation is not allowlisted")
         return GovernedAnalyticsResult(
             operation=operation,
             title="Dataset required",
-            summary="No approved telemetry dataset is imported in this workspace.",
+            summary=self.summary,
             sql="",
             rows=[],
             chart_type="none",
@@ -202,6 +209,11 @@ def _build_reranker():  # type: ignore[no-untyped-def]
     return SentenceTransformersReranker(model_path)
 
 
+def _is_remote_endpoint(url: str) -> bool:
+    hostname = (urlparse(url).hostname or "").casefold()
+    return hostname not in {"", "localhost", "127.0.0.1", "::1"}
+
+
 def create_app(
     *,
     project_root: str | Path | None = None,
@@ -221,16 +233,6 @@ def create_app(
         "haystack-local": "Haystack BM25",
         "anythingllm-query": "AnythingLLM query",
     }[knowledge_provider_name]
-    downstream_approval_acknowledged = knowledge_provider_name == "anythingllm-query"
-    egress_mode = (
-        "approved-provider" if downstream_approval_acknowledged else "loopback-only"
-    )
-    egress_display = (
-        "Approved provider only"
-        if downstream_approval_acknowledged
-        else "Loopback only"
-    )
-
     manager = WorkspaceManager(selected_runtime)
     embedding_backend = _build_embedding_backend()
     indexer = ProjectIndexer(
@@ -243,6 +245,52 @@ def create_app(
         for workspace in manager.list_workspaces():
             indexer.reindex(workspace.project_id)
     chat_generator, model_mode = _build_chat_generator()
+    egress_detail = {
+        "chat": (
+            "approved-remote"
+            if model_mode == "company-openai-compatible"
+            and _is_remote_endpoint(
+                os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", "")
+            )
+            else "loopback"
+            if model_mode == "company-openai-compatible"
+            else "disabled"
+        ),
+        "embedding": (
+            "approved-remote"
+            if embedding_backend is not None
+            and _is_remote_endpoint(
+                os.environ.get(
+                    "PROJECT_COPILOT_EMBEDDING_BASE_URL",
+                    os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
+                )
+            )
+            else "loopback"
+            if embedding_backend is not None
+            else "disabled"
+        ),
+        "knowledge": (
+            "approved-remote"
+            if knowledge_provider_name == "anythingllm-query"
+            and _is_remote_endpoint(os.environ.get("ANYTHINGLLM_BASE_URL", ""))
+            else "loopback"
+            if knowledge_provider_name == "anythingllm-query"
+            else "local"
+        ),
+    }
+    egress_channel_labels = {
+        "chat": "company-chat",
+        "embedding": "company-embedding",
+        "knowledge": "anythingllm-knowledge",
+    }
+    egress_channels = [
+        egress_channel_labels[name]
+        for name, state in egress_detail.items()
+        if state == "approved-remote"
+    ]
+    downstream_approval_acknowledged = bool(egress_channels)
+    egress_mode = "approved-provider" if egress_channels else "loopback-only"
+    egress_display = "Approved company endpoint" if egress_channels else "Loopback only"
 
     default_csv = next(
         (
@@ -263,9 +311,14 @@ def create_app(
         )
     if default_csv is None:
         raise RuntimeError("The bootstrap Project Package requires a CSV dataset")
+    default_csv_digest = hashlib.sha256(default_csv.read_bytes()).hexdigest()
     default_analytics = AnalyticsWorkspace.build(
         csv_path=default_csv,
-        database_path=selected_runtime / f"{package.project_id}-bootstrap.duckdb",
+        database_path=(
+            selected_runtime
+            / "analytics"
+            / f"{package.project_id}-bootstrap-{default_csv_digest}.duckdb"
+        ),
     )
     legacy_analysis = ApprovedAnalysisEngine(default_analytics)
 
@@ -311,7 +364,7 @@ def create_app(
 
     def analytics_workspace_for(
         project_id: str,
-    ) -> tuple[AnalyticsWorkspace | None, str | None]:
+    ) -> tuple[AnalyticsWorkspace | None, dict[str, object]]:
         workspace_payload(project_id)
         workspace = next(
             item for item in manager.list_workspaces() if item.project_id == project_id
@@ -322,33 +375,67 @@ def create_app(
                 for source in indexer.list_sources(project_id)
                 if source.category == "dataset"
                 and source.filename.casefold() == "telemetry.csv"
-                and source.status == "indexed"
             ),
             None,
         )
         if dataset is None:
-            return None, None
-        return (
-            AnalyticsWorkspace.build(
-                csv_path=workspace.sources_path / dataset.filename,
-                database_path=workspace.root / "analytics.duckdb",
-            ),
-            dataset.filename,
-        )
+            return None, {
+                "state": "missing",
+                "dataset_filename": None,
+                "source_id": None,
+                "error": None,
+            }
+        if dataset.status == "error":
+            return None, {
+                "state": "invalid",
+                "dataset_filename": dataset.filename,
+                "source_id": dataset.source_id,
+                "error": (dataset.error or "Telemetry validation failed")[:500],
+            }
+        database_path = workspace.root / "analytics" / f"{dataset.sha256}.duckdb"
+        if not database_path.is_file():
+            return None, {
+                "state": "unavailable",
+                "dataset_filename": dataset.filename,
+                "source_id": dataset.source_id,
+                "error": "The immutable analytics snapshot is missing; rebuild the project index.",
+            }
+        analytics_workspace = AnalyticsWorkspace(database_path)
+        try:
+            analytics_workspace.metric_snapshot()
+        except AnalyticsValidationError as exc:
+            return None, {
+                "state": "invalid",
+                "dataset_filename": dataset.filename,
+                "source_id": dataset.source_id,
+                "error": str(exc)[:500],
+            }
+        return analytics_workspace, {
+            "state": "ready",
+            "dataset_filename": dataset.filename,
+            "source_id": dataset.source_id,
+            "error": None,
+        }
 
     def analytics_for(project_id: str):  # type: ignore[no-untyped-def]
-        analytics_workspace, _ = analytics_workspace_for(project_id)
+        analytics_workspace, state = analytics_workspace_for(project_id)
         if analytics_workspace is None:
+            if state["state"] == "invalid":
+                return UnavailableAnalyticsTool(
+                    f"The imported telemetry dataset failed validation: {state['error']}"
+                )
+            if state["state"] == "unavailable":
+                return UnavailableAnalyticsTool(str(state["error"]))
             return UnavailableAnalyticsTool()
         return GovernedAnalyticsTool(analytics_workspace)
 
     def analytics_summary_payload(project_id: str) -> dict[str, object]:
-        analytics_workspace, dataset_filename = analytics_workspace_for(project_id)
+        analytics_workspace, state = analytics_workspace_for(project_id)
         if analytics_workspace is None:
             return {
                 "project_id": project_id,
                 "available": False,
-                "dataset_filename": None,
+                **state,
                 "row_count": 0,
                 "average_power_kw": None,
                 "average_delta_t_c": None,
@@ -357,14 +444,11 @@ def create_app(
         return {
             "project_id": project_id,
             "available": True,
-            "dataset_filename": dataset_filename,
+            **state,
             **asdict(analytics_workspace.metric_snapshot()),
         }
 
     def defrost_for(project_id: str):  # type: ignore[no-untyped-def]
-        workspace = next(
-            item for item in manager.list_workspaces() if item.project_id == project_id
-        )
         sources = indexer.list_sources(project_id)
         dataset = next(
             (
@@ -398,15 +482,17 @@ def create_app(
             return None
         try:
             rule_pack = DefrostRulePack.model_validate_json(
-                (workspace.sources_path / rules.filename).read_text(encoding="utf-8")
+                indexer.source_path(project_id, rules.source_id).read_text(
+                    encoding="utf-8"
+                )
             )
             context = DefrostAssetContext.model_validate_json(
-                (workspace.sources_path / asset_context.filename).read_text(
+                indexer.source_path(project_id, asset_context.source_id).read_text(
                     encoding="utf-8"
                 )
             )
             return DefrostDiagnosticsEngine(
-                workspace.sources_path / dataset.filename,
+                indexer.source_path(project_id, dataset.source_id),
                 rule_pack,
                 context,
             )
@@ -470,9 +556,11 @@ def create_app(
             "status": "ok",
             "project_id": active.project_id,
             "knowledge_provider": knowledge_provider_name,
-            "network_allowed": package.security.allow_network,
+            "network_allowed": bool(egress_channels),
             "nl2sql_allowed": package.security.allow_nl2sql,
             "egress_mode": egress_mode,
+            "egress_channels": egress_channels,
+            "egress_detail": egress_detail,
             "downstream_approval_acknowledged": downstream_approval_acknowledged,
         }
 

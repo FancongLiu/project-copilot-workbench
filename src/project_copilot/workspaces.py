@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -22,6 +23,8 @@ class Workspace:
     sources_path: Path
     index_path: Path
     metadata_path: Path
+    snapshots_path: Path
+    state_path: Path
 
 
 class WorkspaceManager:
@@ -33,8 +36,9 @@ class WorkspaceManager:
         self.registry_path = self.runtime_root / "workspace-registry.json"
         self.lock = FileLock(str(self.registry_path) + ".lock", timeout=30)
         self.workspaces_root.mkdir(parents=True, exist_ok=True)
-        if not self.registry_path.exists():
-            self._write_registry({"active": None, "workspaces": []})
+        with self.lock:
+            if not self.registry_path.exists():
+                self._write_registry({"active": None, "workspaces": []})
 
     def create_workspace(self, *, display_name: str, project_id: str) -> Workspace:
         if not self._PROJECT_ID.fullmatch(project_id):
@@ -46,16 +50,37 @@ class WorkspaceManager:
             if any(item["project_id"] == project_id for item in registry["workspaces"]):
                 raise WorkspaceError(f"Workspace already exists: {project_id}")
             root = self.workspaces_root / project_id
+            if root.exists():
+                raise WorkspaceError(
+                    f"Workspace directory already exists on disk: {project_id}"
+                )
             sources_path = root / "sources"
             index_path = root / "index" / "documents.json"
             metadata_path = root / "sources.json"
-            sources_path.mkdir(parents=True)
-            index_path.parent.mkdir(parents=True)
-            metadata_path.write_text("[]\n", encoding="utf-8")
-            registry["workspaces"].append(
-                {"project_id": project_id, "display_name": display_name.strip()}
-            )
-            self._write_registry(registry)
+            snapshots_path = root / "snapshots"
+            state_path = root / "current-state.json"
+            created_root = False
+            try:
+                root.mkdir()
+                created_root = True
+                sources_path.mkdir()
+                index_path.parent.mkdir(parents=True)
+                metadata_path.write_text("[]\n", encoding="utf-8")
+                initial = snapshots_path / "initial"
+                (initial / "sources").mkdir(parents=True)
+                (initial / "sources.json").write_text("[]\n", encoding="utf-8")
+                self._write_json_atomic(
+                    state_path,
+                    {"schema_version": "1", "generation": "initial"},
+                )
+                registry["workspaces"].append(
+                    {"project_id": project_id, "display_name": display_name.strip()}
+                )
+                self._write_registry(registry)
+            except Exception:
+                if created_root:
+                    shutil.rmtree(root, ignore_errors=True)
+                raise
         return self._workspace(project_id, display_name.strip())
 
     def activate(self, project_id: str) -> Workspace:
@@ -103,21 +128,27 @@ class WorkspaceManager:
             sources_path=root / "sources",
             index_path=root / "index" / "documents.json",
             metadata_path=root / "sources.json",
+            snapshots_path=root / "snapshots",
+            state_path=root / "current-state.json",
         )
 
     def _read_registry(self) -> dict[str, object]:
         return json.loads(self.registry_path.read_text(encoding="utf-8"))
 
     def _write_registry(self, registry: dict[str, object]) -> None:
-        self.runtime_root.mkdir(parents=True, exist_ok=True)
+        self._write_json_atomic(self.registry_path, registry)
+
+    @staticmethod
+    def _write_json_atomic(path: Path, payload: dict[str, object]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
         with NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
-            dir=self.runtime_root,
+            dir=path.parent,
             delete=False,
             newline="\n",
         ) as temporary:
-            json.dump(registry, temporary, ensure_ascii=False, indent=2)
+            json.dump(payload, temporary, ensure_ascii=False, indent=2)
             temporary.write("\n")
             temporary_path = Path(temporary.name)
-        os.replace(temporary_path, self.registry_path)
+        os.replace(temporary_path, path)

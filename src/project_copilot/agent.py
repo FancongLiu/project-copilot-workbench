@@ -329,10 +329,10 @@ class ProjectAgent:
                         tool_name, "completed", summary[:180]
                     )
                 return json.dumps(payload, ensure_ascii=False, default=str)
-            except Exception as exc:
+            except Exception:
                 with state_lock:
                     activities[activity_index] = ToolActivity(
-                        tool_name, "failed", str(exc)[:180]
+                        tool_name, "failed", "Governed tool execution failed"
                     )
                 raise
 
@@ -354,7 +354,13 @@ class ProjectAgent:
 
         def analytics_payload(operation: str) -> dict[str, Any]:
             result = self.analytics.run(operation)
-            return {**asdict(result), "summary": result.summary}
+            unavailable = not result.sql
+            return {
+                **asdict(result),
+                "summary": result.summary,
+                "refused": unavailable,
+                "clarification": unavailable,
+            }
 
         def defrost_payload(asset_id: str, start: str, end: str) -> dict[str, Any]:
             if self.defrost_diagnostics is None:
@@ -505,9 +511,16 @@ class ProjectAgent:
             max_agent_steps=self.budget.max_steps,
             raise_on_tool_invocation_failure=True,
         )
+
+        def discard_pipeline_snapshot(snapshot: Any) -> None:
+            del snapshot
+
         try:
             result = await asyncio.wait_for(
-                runner.run_async(messages=[ChatMessage.from_user(question)]),
+                runner.run_async(
+                    messages=[ChatMessage.from_user(question)],
+                    snapshot_callback=discard_pipeline_snapshot,
+                ),
                 timeout=self.budget.timeout_seconds,
             )
         except TimeoutError:
@@ -533,7 +546,20 @@ class ProjectAgent:
                     refused=True,
                     clarification=False,
                 )
-            raise
+            activities.append(
+                ToolActivity("agent", "failed", "Governed Agent execution failed")
+            )
+            return AgentAnswer(
+                answer=(
+                    "The governed Agent could not complete this request safely. "
+                    "No action was taken. Please retry or ask an administrator "
+                    "to inspect the service logs."
+                ),
+                citations=tuple(citations.values()),
+                activities=tuple(activities),
+                refused=True,
+                clarification=False,
+            )
         answer = result["last_message"].text or "The Agent returned no answer."
         if defrost_verdict is not None:
             verdict_label = {

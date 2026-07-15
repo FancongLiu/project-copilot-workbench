@@ -186,7 +186,8 @@ Record the returned `indexed_chunks` count and investigate unexpected changes.
 
 ### 6. Delete a source
 
-Deletion removes the stored source and rebuilds the index. Before selecting
+Deletion removes the source from the active immutable project generation and
+rebuilds the index. Before selecting
 **Delete**:
 
 1. confirm the source ID, filename, category, and owning workspace;
@@ -195,7 +196,10 @@ Deletion removes the stored source and rebuilds the index. Before selecting
 4. delete once and wait for the rebuilt inventory;
 5. query for the deleted fact and confirm it is no longer cited.
 
-There is no recycle bin in the application. Restore from the approved source
+The deleted source is no longer searchable or citable after the atomic
+generation switch. Older inactive generations may remain on disk until the
+approved retention/secure-purge procedure runs with the service stopped. This
+is not an application recycle bin; restore from the approved source
 package/backup if deletion was incorrect.
 
 ### 7. Enable the company model

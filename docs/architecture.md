@@ -44,8 +44,8 @@ sequenceDiagram
   concise activity trace, never hidden reasoning.
 - `semantic_analytics.py`: allowlisted natural-language analytics operations
   mapped to static governed SQL.
-- `analytics.py`: Polars ingestion, Pandera validation, atomic DuckDB snapshots,
-  and read-only connections.
+- `analytics.py`: Polars ingestion, Pandera validation, content-addressed
+  immutable DuckDB snapshots, and read-only connections.
 - `defrost_diagnostics.py`: strict asset/controller/firmware-scoped rule packs,
   Pandera/Polars quality gates, a maintained `transitions` state machine, and
   deterministic first-deviation evidence for bounded time windows.
@@ -62,12 +62,23 @@ SQL, open network connections, run Shell/Python, or control equipment.
 
 ## Persistence and seams
 
-Each workspace owns source files, metadata, a Haystack document-store snapshot,
-and (when a CSV exists) a DuckDB snapshot. Atomic replacement and file locks
-protect registry, inventory, and database transitions. Retrieval and model
-backends are narrow seams: the default is local BM25 plus a deterministic
-test double; production may opt into approved embeddings and an allowlisted
-OpenAI-compatible model.
+Each workspace owns immutable generations containing source files, inventory,
+and the Haystack document-store snapshot. Import, delete, and re-index first
+build and validate a complete unreferenced generation, then atomically switch a
+small state pointer. Failed staging or pointer commits leave the prior
+generation fully active. Readers resolve one generation under the workspace
+lock, so deleted or partially indexed content cannot be mixed into an answer.
+Inactive generations are not served; physical retention/purge is an explicit
+stopped-service administration policy.
+
+Recognized telemetry is validated while a generation is built and published as
+a content-addressed `<sha256>.duckdb` file. Read paths never rebuild or replace
+that database. A Windows reader may therefore keep the old immutable database
+open while a new telemetry hash is published. Invalid telemetry is recorded as
+a source error and produces a bounded clarification instead of an HTTP 500.
+Retrieval and model backends remain narrow seams: the default is local BM25 plus
+a deterministic test double; production may opt into approved embeddings and
+an allowlisted OpenAI-compatible model.
 
 Docling is an optional parser seam. LightRAG is an independent future A/B
 candidate, not a current adapter. AnythingLLM remains a separately installed

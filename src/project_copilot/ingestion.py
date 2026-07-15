@@ -5,10 +5,12 @@ import json
 import logging
 import os
 import re
+import shutil
 from dataclasses import asdict, dataclass, replace
 from io import BytesIO
 from pathlib import Path
 from pathlib import PurePosixPath
+from pathlib import PureWindowsPath
 from tempfile import NamedTemporaryFile
 from typing import Any, Protocol
 from uuid import uuid4
@@ -237,6 +239,15 @@ class SearchResult:
     refused: bool
 
 
+@dataclass(frozen=True)
+class WorkspaceSnapshot:
+    generation: str
+    root: Path
+    sources_path: Path
+    index_path: Path
+    metadata_path: Path
+
+
 def _search_tokens(text: str) -> str:
     return " ".join(token for token in jieba.cut_for_search(text) if token.strip())
 
@@ -292,11 +303,17 @@ class ProjectIndexer:
     ) -> list[SourceRecord]:
         if not files or len(files) > self.MAX_FILES:
             raise IngestionError("Import must contain between 1 and 500 files")
-        records = {
-            item.filename: item for item in self.list_sources(workspace.project_id)
-        }
+        prepared: list[tuple[ImportedFile, str, str, str]] = []
+        batch_names: dict[str, str] = {}
         for item in files:
             filename = self._safe_filename(item.filename)
+            canonical_name = self._canonical_filename(filename)
+            if canonical_name in batch_names:
+                raise IngestionError(
+                    "Windows filename collision in import batch: "
+                    f"{batch_names[canonical_name]} and {filename}"
+                )
+            batch_names[canonical_name] = filename
             if item.category not in self.CATEGORIES:
                 raise IngestionError(f"Unsupported source category: {item.category}")
             if len(item.content) > self.MAX_FILE_BYTES:
@@ -317,9 +334,24 @@ class ProjectIndexer:
                     f"Unsupported source format: {extension or 'none'}"
                 )
             digest = hashlib.sha256(item.content).hexdigest()
-            destination = workspace.sources_path / filename
-            self._atomic_write_bytes(destination, item.content)
-            records[filename] = SourceRecord(
+            prepared.append((item, filename, parser, digest))
+
+        current = self._current_snapshot_unlocked(workspace)
+        records = {
+            self._canonical_filename(item.filename): item
+            for item in self._read_snapshot_sources(current)
+        }
+        overrides: dict[str, bytes] = {}
+        for item, filename, parser, digest in prepared:
+            canonical_name = self._canonical_filename(filename)
+            existing = records.get(canonical_name)
+            if existing is not None and existing.filename != filename:
+                raise IngestionError(
+                    "Windows filename collision with an existing source: "
+                    f"{existing.filename} and {filename}"
+                )
+            overrides[filename] = item.content
+            records[canonical_name] = SourceRecord(
                 source_id=hashlib.sha256(f"{filename}:{digest}".encode()).hexdigest()[
                     :16
                 ],
@@ -330,18 +362,21 @@ class ProjectIndexer:
                 parser=parser,
                 size_bytes=len(item.content),
             )
-        imported = sorted(records.values(), key=lambda value: value.filename)
-        self._write_sources(workspace, imported)
-        self._reindex_unlocked(workspace)
-        refreshed = {
-            item.filename: item for item in self.list_sources(workspace.project_id)
-        }
-        return [refreshed[self._safe_filename(item.filename)] for item in files]
+        updated, _ = self._publish_candidate_snapshot(
+            workspace,
+            current,
+            sorted(records.values(), key=lambda value: value.filename),
+            overrides=overrides,
+        )
+        refreshed = {item.filename: item for item in updated}
+        return [refreshed[filename] for _, filename, _, _ in prepared]
 
     def list_sources(self, project_id: str) -> list[SourceRecord]:
         workspace = self._get_workspace(project_id)
-        payload = json.loads(workspace.metadata_path.read_text(encoding="utf-8"))
-        return [SourceRecord(**item) for item in payload]
+        with self._workspace_lock(workspace):
+            return self._read_snapshot_sources(
+                self._current_snapshot_unlocked(workspace)
+            )
 
     def import_archive(
         self, project_id: str, archive_name: str, content: bytes
@@ -394,37 +429,40 @@ class ProjectIndexer:
     def delete_source(self, project_id: str, source_id: str) -> None:
         workspace = self._get_workspace(project_id)
         with self._workspace_lock(workspace):
-            records = self.list_sources(project_id)
+            current = self._current_snapshot_unlocked(workspace)
+            records = self._read_snapshot_sources(current)
             selected = next(
                 (item for item in records if item.source_id == source_id), None
             )
             if selected is None:
                 raise IngestionError(f"Unknown source: {source_id}")
-            (workspace.sources_path / selected.filename).unlink(missing_ok=True)
-            self._write_sources(
-                workspace, [item for item in records if item.source_id != source_id]
+            self._publish_candidate_snapshot(
+                workspace,
+                current,
+                [item for item in records if item.source_id != source_id],
             )
-            self._reindex_unlocked(workspace)
 
     def inspect_source(self, project_id: str, source_id: str) -> dict[str, object]:
         workspace = self._get_workspace(project_id)
-        source = next(
-            (
-                item
-                for item in self.list_sources(project_id)
-                if item.source_id == source_id
-            ),
-            None,
-        )
-        if source is None:
-            raise IngestionError(f"Unknown source: {source_id}")
-        path = workspace.sources_path / source.filename
-        preview = (
-            path.read_text(encoding="utf-8")[:4_000]
-            if source.parser == "plain-text"
-            else "Dataset source; content preview is not exposed through the Agent."
-        )
-        return {"source": asdict(source), "preview": preview}
+        with self._workspace_lock(workspace):
+            snapshot = self._current_snapshot_unlocked(workspace)
+            source = next(
+                (
+                    item
+                    for item in self._read_snapshot_sources(snapshot)
+                    if item.source_id == source_id
+                ),
+                None,
+            )
+            if source is None:
+                raise IngestionError(f"Unknown source: {source_id}")
+            path = snapshot.sources_path / source.filename
+            preview = (
+                path.read_text(encoding="utf-8")[:4_000]
+                if source.parser == "plain-text"
+                else "Dataset source; content preview is not exposed through the Agent."
+            )
+            return {"source": asdict(source), "preview": preview}
 
     def reindex(self, project_id: str) -> int:
         workspace = self._get_workspace(project_id)
@@ -432,16 +470,41 @@ class ProjectIndexer:
             return self._reindex_unlocked(workspace)
 
     def _reindex_unlocked(self, workspace: Workspace) -> int:
+        current = self._current_snapshot_unlocked(workspace)
+        _, count = self._publish_candidate_snapshot(
+            workspace,
+            current,
+            self._read_snapshot_sources(current),
+        )
+        return count
+
+    def _build_snapshot_index(
+        self,
+        workspace: Workspace,
+        snapshot: WorkspaceSnapshot,
+        source_records: list[SourceRecord],
+    ) -> tuple[list[SourceRecord], int]:
         project_id = workspace.project_id
         documents: list[Document] = []
         splitter = DocumentSplitter(split_by="passage", split_length=1, split_overlap=0)
-        source_records = self.list_sources(project_id)
         updated_records: list[SourceRecord] = []
         for source in source_records:
             if source.parser == "dataset":
-                updated_records.append(replace(source, status="indexed", error=None))
+                error = self._dataset_validation_error(
+                    snapshot.sources_path / source.filename,
+                    source.filename,
+                    workspace=workspace,
+                    source=source,
+                )
+                updated_records.append(
+                    replace(
+                        source,
+                        status="error" if error else "indexed",
+                        error=error,
+                    )
+                )
                 continue
-            path = workspace.sources_path / source.filename
+            path = snapshot.sources_path / source.filename
             try:
                 parsed_chunks = self._source_chunks(path, source.parser)
             except (OSError, UnicodeDecodeError, IngestionError, RuntimeError) as exc:
@@ -499,23 +562,22 @@ class ProjectIndexer:
         )
         if documents:
             store.write_documents(documents)
-        workspace.index_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot.index_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_index: Path | None = None
         try:
             with NamedTemporaryFile(
-                dir=workspace.index_path.parent,
+                dir=snapshot.index_path.parent,
                 suffix=".index.json",
                 delete=False,
             ) as temporary:
                 temporary_index = Path(temporary.name)
             store.save_to_disk(str(temporary_index))
-            os.replace(temporary_index, workspace.index_path)
+            os.replace(temporary_index, snapshot.index_path)
         finally:
             if temporary_index is not None:
                 temporary_index.unlink(missing_ok=True)
-        if updated_records != source_records:
-            self._write_sources(workspace, updated_records)
-        return len(documents)
+        self._write_records(snapshot.metadata_path, updated_records)
+        return updated_records, len(documents)
 
     def search(
         self,
@@ -529,9 +591,11 @@ class ProjectIndexer:
         if not question.strip():
             return SearchResult("Please ask a specific project question.", (), True)
         with self._workspace_lock(workspace):
-            if not workspace.index_path.exists():
+            snapshot = self._current_snapshot_unlocked(workspace)
+            if not snapshot.index_path.exists():
                 self._reindex_unlocked(workspace)
-            store = InMemoryDocumentStore.load_from_disk(str(workspace.index_path))
+                snapshot = self._current_snapshot_unlocked(workspace)
+            store = InMemoryDocumentStore.load_from_disk(str(snapshot.index_path))
         filters = None
         if categories:
             filters = {
@@ -589,6 +653,194 @@ class ProjectIndexer:
         )
         return SearchResult(citations[0].excerpt, citations, False)
 
+    def source_path(self, project_id: str, source_id: str) -> Path:
+        workspace = self._get_workspace(project_id)
+        with self._workspace_lock(workspace):
+            snapshot = self._current_snapshot_unlocked(workspace)
+            source = next(
+                (
+                    item
+                    for item in self._read_snapshot_sources(snapshot)
+                    if item.source_id == source_id
+                ),
+                None,
+            )
+            if source is None:
+                raise IngestionError(f"Unknown source: {source_id}")
+            return snapshot.sources_path / source.filename
+
+    def _current_snapshot_unlocked(self, workspace: Workspace) -> WorkspaceSnapshot:
+        if not workspace.state_path.exists():
+            self._migrate_legacy_snapshot(workspace)
+        try:
+            state = json.loads(workspace.state_path.read_text(encoding="utf-8"))
+            generation = str(state["generation"])
+        except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise IngestionError("Workspace snapshot pointer is invalid") from exc
+        snapshot = self._snapshot_paths(workspace, generation)
+        if not snapshot.metadata_path.is_file() or not snapshot.sources_path.is_dir():
+            raise IngestionError("Workspace snapshot is incomplete")
+        return snapshot
+
+    @staticmethod
+    def _snapshot_paths(workspace: Workspace, generation: str) -> WorkspaceSnapshot:
+        root = workspace.snapshots_path / generation
+        return WorkspaceSnapshot(
+            generation=generation,
+            root=root,
+            sources_path=root / "sources",
+            index_path=root / "documents.json",
+            metadata_path=root / "sources.json",
+        )
+
+    def _migrate_legacy_snapshot(self, workspace: Workspace) -> None:
+        generation = f"migrated-{uuid4().hex}"
+        snapshot = self._snapshot_paths(workspace, generation)
+        snapshot.sources_path.mkdir(parents=True, exist_ok=False)
+        try:
+            if workspace.sources_path.is_dir():
+                for source in workspace.sources_path.iterdir():
+                    if source.is_file():
+                        self._link_or_copy(source, snapshot.sources_path / source.name)
+            if workspace.metadata_path.is_file():
+                self._link_or_copy(workspace.metadata_path, snapshot.metadata_path)
+            else:
+                self._write_records(snapshot.metadata_path, [])
+            if workspace.index_path.is_file():
+                self._link_or_copy(workspace.index_path, snapshot.index_path)
+            self._write_json_atomic(
+                workspace.state_path,
+                {"schema_version": "1", "generation": generation},
+            )
+        except Exception:
+            shutil.rmtree(snapshot.root, ignore_errors=True)
+            raise
+
+    @classmethod
+    def _read_snapshot_sources(cls, snapshot: WorkspaceSnapshot) -> list[SourceRecord]:
+        payload = json.loads(snapshot.metadata_path.read_text(encoding="utf-8"))
+        records = [SourceRecord(**item) for item in payload]
+        names: dict[str, str] = {}
+        for record in records:
+            cls._safe_filename(record.filename)
+            canonical_name = cls._canonical_filename(record.filename)
+            if canonical_name in names:
+                raise IngestionError(
+                    "Workspace inventory contains a Windows filename collision: "
+                    f"{names[canonical_name]} and {record.filename}"
+                )
+            names[canonical_name] = record.filename
+        return records
+
+    def _publish_candidate_snapshot(
+        self,
+        workspace: Workspace,
+        current: WorkspaceSnapshot,
+        records: list[SourceRecord],
+        *,
+        overrides: dict[str, bytes] | None = None,
+    ) -> tuple[list[SourceRecord], int]:
+        generation = uuid4().hex
+        candidate = self._snapshot_paths(workspace, generation)
+        candidate.sources_path.mkdir(parents=True, exist_ok=False)
+        overrides = overrides or {}
+        try:
+            for source in records:
+                destination = candidate.sources_path / source.filename
+                if source.filename in overrides:
+                    self._atomic_write_bytes(destination, overrides[source.filename])
+                else:
+                    self._link_or_copy(
+                        current.sources_path / source.filename,
+                        destination,
+                    )
+            updated_records, count = self._build_snapshot_index(
+                workspace,
+                candidate,
+                records,
+            )
+            self._write_json_atomic(
+                workspace.state_path,
+                {"schema_version": "1", "generation": generation},
+            )
+            return updated_records, count
+        except Exception as exc:
+            shutil.rmtree(candidate.root, ignore_errors=True)
+            if isinstance(exc, IngestionError):
+                raise
+            raise IngestionError(
+                "Source snapshot build failed; previous snapshot restored"
+            ) from exc
+
+    @staticmethod
+    def _link_or_copy(source: Path, destination: Path) -> None:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.link(source, destination)
+        except OSError:
+            shutil.copy2(source, destination)
+
+    @staticmethod
+    def _write_json_atomic(path: Path, payload: dict[str, object]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            delete=False,
+            newline="\n",
+        ) as temporary:
+            json.dump(payload, temporary, ensure_ascii=False, indent=2)
+            temporary.write("\n")
+            temporary_path = Path(temporary.name)
+        os.replace(temporary_path, path)
+
+    def _dataset_validation_error(
+        self,
+        path: Path,
+        filename: str,
+        *,
+        workspace: Workspace,
+        source: SourceRecord,
+    ) -> str | None:
+        try:
+            if filename.casefold() == "telemetry.csv":
+                from project_copilot.analytics import AnalyticsWorkspace
+
+                AnalyticsWorkspace.build(
+                    csv_path=path,
+                    database_path=(
+                        workspace.root / "analytics" / f"{source.sha256}.duckdb"
+                    ),
+                )
+            elif filename.casefold() == "defrost_telemetry.csv":
+                from project_copilot.defrost_diagnostics import (
+                    DEFROST_TELEMETRY_SCHEMA,
+                )
+                from project_copilot.platform_compat import (
+                    ensure_windows_architecture_env,
+                )
+
+                ensure_windows_architecture_env()
+                import pandera.polars as pa
+                import polars as pl
+
+                try:
+                    DEFROST_TELEMETRY_SCHEMA.validate(
+                        pl.read_csv(path, try_parse_dates=True)
+                    )
+                except (
+                    OSError,
+                    pl.exceptions.PolarsError,
+                    pa.errors.SchemaError,
+                ) as exc:
+                    raise IngestionError(
+                        f"Defrost telemetry schema validation failed: {exc}"
+                    ) from exc
+        except (IngestionError, ValueError) as exc:
+            return str(exc).replace(str(path), path.name)[:500]
+        return None
+
     def _get_workspace(self, project_id: str) -> Workspace:
         workspace = next(
             (
@@ -606,12 +858,37 @@ class ProjectIndexer:
     def _workspace_lock(workspace: Workspace) -> FileLock:
         return FileLock(str(workspace.root / ".workspace.lock"), timeout=30)
 
-    @staticmethod
-    def _safe_filename(filename: str) -> str:
-        candidate = Path(filename)
-        if candidate.name != filename or filename in {"", ".", ".."}:
-            raise IngestionError("Imported filenames must not contain paths")
+    @classmethod
+    def _safe_filename(cls, filename: str) -> str:
+        candidate = PureWindowsPath(filename)
+        reserved_stems = {
+            "con",
+            "prn",
+            "aux",
+            "nul",
+            *(f"com{index}" for index in range(1, 10)),
+            *(f"lpt{index}" for index in range(1, 10)),
+        }
+        stem = filename.split(".", 1)[0].casefold()
+        has_invalid_character = any(
+            ord(character) < 32 or character in '<>:"/\\|?*' for character in filename
+        )
+        if (
+            candidate.name != filename
+            or len(candidate.parts) != 1
+            or filename in {"", ".", ".."}
+            or filename != filename.rstrip(" .")
+            or has_invalid_character
+            or stem in reserved_stems
+        ):
+            raise IngestionError(
+                "Imported filenames must be Windows-safe single filenames"
+            )
         return filename
+
+    @staticmethod
+    def _canonical_filename(filename: str) -> str:
+        return filename.casefold()
 
     @staticmethod
     def _first_heading(content: str) -> str | None:
@@ -652,22 +929,21 @@ class ProjectIndexer:
         os.replace(temporary_path, destination)
 
     @staticmethod
-    def _write_sources(workspace: Workspace, records: list[SourceRecord]) -> None:
-        lock = FileLock(str(workspace.metadata_path) + ".lock", timeout=30)
-        with lock:
-            with NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                dir=workspace.root,
-                delete=False,
-                newline="\n",
-            ) as temporary:
-                json.dump(
-                    [asdict(item) for item in records],
-                    temporary,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-                temporary.write("\n")
-                temporary_path = Path(temporary.name)
-            os.replace(temporary_path, workspace.metadata_path)
+    def _write_records(path: Path, records: list[SourceRecord]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            delete=False,
+            newline="\n",
+        ) as temporary:
+            json.dump(
+                [asdict(item) for item in records],
+                temporary,
+                ensure_ascii=False,
+                indent=2,
+            )
+            temporary.write("\n")
+            temporary_path = Path(temporary.name)
+        os.replace(temporary_path, path)

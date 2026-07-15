@@ -84,6 +84,12 @@ def test_web_app_exposes_bounded_knowledge_and_analysis_apis(tmp_path: Path) -> 
         "network_allowed": False,
         "nl2sql_allowed": False,
         "egress_mode": "loopback-only",
+        "egress_channels": [],
+        "egress_detail": {
+            "chat": "disabled",
+            "embedding": "disabled",
+            "knowledge": "local",
+        },
         "downstream_approval_acknowledged": False,
     }
     assert knowledge.status_code == 200
@@ -91,6 +97,35 @@ def test_web_app_exposes_bounded_knowledge_and_analysis_apis(tmp_path: Path) -> 
     assert analysis.status_code == 200
     assert analysis.json()["intent"] == "peak-load"
     assert analysis.json()["rows"][0]["peak_load_pct"] == 70.0
+
+
+def test_bootstrap_analytics_uses_the_current_dataset_hash(tmp_path: Path) -> None:
+    project = build_project(tmp_path / "project-changing-bootstrap")
+    runtime = tmp_path / "runtime-changing-bootstrap"
+    first = TestClient(create_app(project_root=project, runtime_root=runtime))
+    first_peak = first.post(
+        "/api/analytics/analyze",
+        json={"question": "peak load"},
+        headers={"X-Project-Copilot": "1"},
+    )
+    assert first_peak.json()["rows"][0]["peak_load_pct"] == 70.0
+
+    telemetry = project / "datasets" / "raw" / "telemetry.csv"
+    telemetry.write_text(
+        telemetry.read_text(encoding="utf-8").replace(
+            "2026-07-01T10:00:00,7.5,13.5,120.0,540.0,70.0",
+            "2026-07-01T10:00:00,7.5,13.5,120.0,540.0,99.0",
+        ),
+        encoding="utf-8",
+    )
+    restarted = TestClient(create_app(project_root=project, runtime_root=runtime))
+    second_peak = restarted.post(
+        "/api/analytics/analyze",
+        json={"question": "peak load"},
+        headers={"X-Project-Copilot": "1"},
+    )
+
+    assert second_peak.json()["rows"][0]["peak_load_pct"] == 99.0
 
 
 def test_repository_synthetic_example_starts_without_external_services(

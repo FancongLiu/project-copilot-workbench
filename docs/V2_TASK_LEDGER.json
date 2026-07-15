@@ -6,8 +6,8 @@
   "checkpoint_projection": "docs/V2_CHECKPOINT.md",
   "event_log": "docs/V2_TASK_EVENTS.jsonl",
   "status": "active",
-  "revision": 10,
-  "event_sequence": 28,
+  "revision": 16,
+  "event_sequence": 35,
   "concurrency_limit": 3,
   "write_owner": "root",
   "safety_boundaries": [
@@ -210,9 +210,11 @@
         "requirements.runtime.lock",
         "requirements.lock",
         "requirements.documents.lock",
+        "requirements.documents-ci.lock",
         ".github/workflows/ci.yml",
-        "artifacts/final-dist/project_copilot_workbench-0.2.0-py3-none-any.whl",
-        "artifacts/sbom-final.cdx.json",
+        "fresh scripts/verify.cmd: 149 passed, 4 documented optional skips",
+        "artifacts/final-dist-final/project_copilot_workbench-0.2.0-py3-none-any.whl",
+        "artifacts/sbom-final-final.cdx.json",
         "artifacts/license-report-final.json"
       ]
     },
@@ -227,24 +229,32 @@
         "docs/acceptance-checklist.md",
         "docs/assets/workbench-desktop.png",
         "docs/assets/workbench-mobile.png",
+        "docs/assets/workbench-project-files.png",
+        "docs/assets/workbench-mobile-defrost.png",
         "independent UX review: Critical 0, Important 0"
       ]
     },
     {
       "id": "V2-08",
       "title": "Independent code review and Critical/Important remediation",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["V2-06", "V2-07"],
       "acceptance": ["A9"],
       "evidence": [
         "independent defrost safety review: Critical 0, Important 0",
-        "independent HVAC UX review: Critical 0, Important 0"
+        "independent HVAC UX review: Critical 0, Important 0",
+        "whole-diff review of 6559256 found atomic workspace, egress truth, immutable analytics, telemetry validation, Docling CI and offline deployment blockers",
+        "working-tree remediation adds immutable workspace generations, content-addressed DuckDB, fail-closed telemetry, truthful per-channel egress, production-matched Docling CI lock and executable offline runbook",
+        "final rereview follow-up pinned the Docling layout model commit and corrected parser acceptance variables/final manifest ordering",
+        "final rereview follow-up rejects Windows filename aliases/collisions and content-addresses the legacy bootstrap analytics database",
+        "unexpected Haystack pipeline failures now return a sanitized refusal, retain generic failed activity and suppress default error snapshot files",
+        "final independent release rereview: Critical 0, Important 0"
       ]
     },
     {
       "id": "V2-09",
       "title": "Final verification, commit, non-force push, GitHub CI, and trial server",
-      "status": "planned",
+      "status": "in_progress",
       "dependencies": ["V2-08"],
       "acceptance": ["A7", "A8", "A9", "A10"],
       "evidence": []
@@ -259,16 +269,18 @@
     "A6": "verified_local",
     "A7": "verified_local_pending_github_ci",
     "A8": "verified_local_pending_github_ci",
-    "A9": "in_progress",
+    "A9": "verified_independent_review",
     "A10": "planned"
   },
-  "current_blockers": [],
-  "next_slice_ids": ["V2-08"],
+  "current_blockers": [
+    "Create the remediation commit, push without force and obtain green GitHub CI."
+  ],
+  "next_slice_ids": ["V2-09"],
   "forbidden_inheritance": [
     "raw task history",
     "raw Agent transcripts",
     "stale process IDs",
     "real company data or secrets"
   ],
-  "updated_at": "2026-07-15T19:25:00Z"
+  "updated_at": "2026-07-15T22:15:00Z"
 }

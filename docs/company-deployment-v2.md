@@ -66,11 +66,13 @@ scripts\verify.cmd
 New-Item -ItemType Directory -Force `
   "$Release\wheel", "$Release\wheelhouse", "$Release\evidence" | Out-Null
 Copy-Item dist\*.whl "$Release\wheel\"
-Copy-Item requirements.runtime.lock, requirements.documents.lock, pyproject.toml, LICENSE, NOTICE, `
+Copy-Item requirements.runtime.lock, requirements.documents.lock, requirements.documents-ci.lock, `
+  pyproject.toml, LICENSE, NOTICE, `
   THIRD_PARTY_NOTICES.md "$Release\"
 Copy-Item config\company-v2.example.ps1 "$Release\"
 
 & ".venv\Scripts\python.exe" -m pip download `
+  --only-binary=:all: `
   --require-hashes -r requirements.runtime.lock `
   --dest "$Release\wheelhouse"
 & ".venv\Scripts\python.exe" -m pip download `
@@ -106,7 +108,10 @@ it produces a source archive (`.tar.gz` or `.zip`) for a runtime dependency,
 stop: the offline install would need a compiler/toolchain and is not the
 approved wheel-only profile.
 
-Create a reproducible file manifest after all artifacts are present:
+Create a reproducible file manifest after all artifacts are present. Run the
+manifest block only after every selected optional bundle in the following
+subsections has been built and verified. If any artifact changes later,
+regenerate `SHA256SUMS.json`; never transfer an older manifest:
 
 ```powershell
 $Base = (Resolve-Path $Release).Path
@@ -133,7 +138,10 @@ channel than the artifact transfer.
 The base wheel supports Markdown, UTF-8 text, JSON, and CSV without Docling.
 PDF/DOCX/PPTX/XLSX parsing requires the separately reviewed `documents` extra.
 The repository pins `docling==2.113.0` and `docling-haystack==1.2.0` and ships
-their complete transitive dependency set in `requirements.documents.lock`.
+their complete production dependency set in `requirements.documents.lock`.
+`requirements.documents-ci.lock` is constrained to that exact production graph
+and adds only the parser-smoke dependencies. It is used to build one superset
+wheelhouse; the production venv still installs the smaller production lock.
 Parser artifacts and the tokenizer remain separate immutable model bundles.
 
 Prepare and hash a separate bundle only if company acceptance explicitly needs
@@ -142,35 +150,39 @@ restricted company PC:
 
 ```powershell
 New-Item -ItemType Directory -Force "$Release\wheelhouse-documents" | Out-Null
-& ".venv\Scripts\python.exe" -m pip download `
-  --require-hashes -r requirements.documents.lock `
+$DocumentBuilder = Join-Path $Repo "artifacts\document-builder-$Commit"
+py -3.12 -m venv $DocumentBuilder
+& "$DocumentBuilder\Scripts\python.exe" -m pip install --upgrade pip==26.1.2
+& "$DocumentBuilder\Scripts\python.exe" -m pip install `
+  --require-hashes -r requirements.documents-ci.lock
+& "$DocumentBuilder\Scripts\python.exe" -m pip check
+& "$DocumentBuilder\Scripts\python.exe" -m pip download `
+  --only-binary=:all: `
+  --require-hashes -r requirements.documents-ci.lock `
   --dest "$Release\wheelhouse-documents"
+$UnexpectedParserArtifacts = Get-ChildItem "$Release\wheelhouse-documents" -File |
+  Where-Object Extension -ne ".whl"
+if ($UnexpectedParserArtifacts) {
+  $UnexpectedParserArtifacts.FullName
+  throw "Parser wheelhouse contains a non-wheel artifact"
+}
 
 New-Item -ItemType Directory -Force `
   "$Release\models\docling", "$Release\models\docling-tokenizer" | Out-Null
-& ".venv\Scripts\python.exe" -c @'
-from pathlib import Path
-from docling.utils.model_downloader import download_models
-from transformers import AutoTokenizer
-
-download_models(
-    output_dir=Path(r"REPLACE_DOCLING_MODEL_DIRECTORY"),
-    with_layout=True,
-    with_tableformer=False,
-    with_code_formula=False,
-    with_picture_classifier=False,
-    with_rapidocr=False,
-    with_easyocr=False,
-)
-AutoTokenizer.from_pretrained(
-    "sentence-transformers/all-MiniLM-L6-v2"
-).save_pretrained(Path(r"REPLACE_TOKENIZER_DIRECTORY"))
-'@
+& "$DocumentBuilder\Scripts\python.exe" scripts\prefetch_docling_assets.py `
+  --artifacts-dir "$Release\models\docling" `
+  --tokenizer-dir "$Release\models\docling-tokenizer" `
+  --tokenizer-revision 1110a243fdf4706b3f48f1d95db1a4f5529b4d41 `
+  --layout-model-revision b5b4bd59ad2b69aab715e9b1f1dfd74394c45fd4
 ```
 
-Replace both placeholders with the absolute release paths before running the
-snippet. The release manifest must include every model/tokenizer file and its
-license/provenance record.
+The wheel download is deliberately wheel-only; any missing wheel is a release
+blocker rather than permission to build an sdist on the restricted PC. The
+release manifest must include every parser wheel, model/tokenizer file and its
+license/provenance record. Both revisions above are immutable Hugging Face
+commits, not floating default branches; record each repository ID, revision and
+downloaded file hash in release evidence. After building this optional bundle,
+regenerate `SHA256SUMS.json` with the final manifest block above.
 
 Before approval, prove in an isolated no-egress VM that all parser dependencies
 and model assets are present. The structured converter uses Docling
@@ -184,6 +196,42 @@ synthetic PDF/DOCX smoke with Hugging Face lookups forced offline. Repeat that
 test on the exact Windows company build: require chunks with section/page
 metadata, application-restart persistence, and successful search. A successful
 `pip install` alone does not prove offline parsing.
+
+On the isolated Windows acceptance VM, expand the transferred source archive,
+create a disposable parser-test venv, and run the exact integration test with
+network model lookup disabled:
+
+```powershell
+$Release = "D:\ProjectCopilot\releases\REPLACE_WITH_COMMIT"
+$ParserTest = "D:\ProjectCopilot\parser-acceptance\venv"
+$ParserSource = "D:\ProjectCopilot\parser-acceptance\source"
+New-Item -ItemType Directory -Force $ParserSource | Out-Null
+Expand-Archive `
+  -LiteralPath "$Release\project-copilot-source-REPLACE_WITH_COMMIT.zip" `
+  -DestinationPath $ParserSource -Force
+py -3.12 -m venv $ParserTest
+& "$ParserTest\Scripts\python.exe" -m pip install `
+  --no-index --find-links "$Release\wheelhouse" pip==26.1.2
+& "$ParserTest\Scripts\python.exe" -m pip install `
+  --no-index --find-links "$Release\wheelhouse-documents" `
+  --require-hashes -r "$Release\requirements.documents-ci.lock"
+& "$ParserTest\Scripts\python.exe" -m pip install `
+  --no-index --no-deps (Get-ChildItem "$Release\wheel\*.whl").FullName
+& "$ParserTest\Scripts\python.exe" -m pip check
+$env:DOCLING_ARTIFACTS_PATH = "$Release\models\docling"
+$env:PROJECT_COPILOT_DOCLING_ARTIFACTS_PATH = "$Release\models\docling"
+$env:PROJECT_COPILOT_DOCLING_TOKENIZER_PATH = "$Release\models\docling-tokenizer"
+$env:PROJECT_COPILOT_RUN_DOCLING_INTEGRATION = "1"
+$env:HF_HUB_OFFLINE = "1"
+$env:TRANSFORMERS_OFFLINE = "1"
+Push-Location $ParserSource
+& "$ParserTest\Scripts\python.exe" -m pytest tests\test_docling_integration.py -q
+Pop-Location
+```
+
+Run this while outbound traffic is blocked and capture the process/network
+evidence. The test creates synthetic PDF/DOCX inputs, parses them, imports them,
+restarts the indexer, searches the result, and checks PDF page metadata.
 
 ### Optional local reranker bundle
 
@@ -269,6 +317,18 @@ py -3.12 -m venv "$App\venv"
 
 & "$App\venv\Scripts\python.exe" -m pip check
 & "$App\venv\Scripts\project-copilot.exe" --help
+```
+
+If and only if the separately reviewed Office/PDF bundle passed the isolated
+parser acceptance above, replace the runtime dependency install command with
+the following production parser install. Do not install the CI lock in the
+production venv:
+
+```powershell
+& "$App\venv\Scripts\python.exe" -m pip install `
+  --no-index --find-links "$Release\wheelhouse-documents" `
+  --require-hashes -r "$Release\requirements.documents.lock"
+& "$App\venv\Scripts\python.exe" -m pip check
 ```
 
 Smoke-test with synthetic data and a disposable runtime before real data:
@@ -454,7 +514,10 @@ $Runtime = "D:\ProjectCopilot\runtime"
 - An individual file is limited to 5 MB.
 - Inventory shows source ID, SHA-256, parser, status, size, and error.
 - **Re-index** rebuilds the workspace index from stored sources.
-- **Delete** removes one source and rebuilds the index.
+- **Delete** removes one source from the active immutable generation and
+  rebuilds the index. Older generations are never served; physical purge is
+  governed by the approved backup/retention procedure and must happen while the
+  service is stopped.
 
 The Web ZIP importer is a safe source-import operation. It skips `project.yaml`;
 it does not replace startup validation of an unpacked Project Package.
@@ -505,9 +568,12 @@ the host firewall, VLAN, secure web gateway, or internal API gateway.
 3. Correlate the app PID, DNS results, firewall/proxy logs, and packet capture.
    Record every observed destination and the owner-approved reason.
 
-Synthetic deterministic mode should show no application egress. Company mode
-may show only the approved model endpoint plus explicitly documented name
-resolution. A quality test is not a no-egress test.
+Synthetic deterministic mode should show no application egress and reports
+`egress_mode=loopback-only`. Company chat, embedding, or an approved external
+knowledge provider reports `egress_mode=approved-provider` plus only the active
+channel labels; it never returns URLs, model IDs, or secrets. Packet evidence in
+company mode may show only those approved endpoints plus explicitly documented
+name resolution. A quality test is not a no-egress test.
 
 ## 10. Logs and audit
 
