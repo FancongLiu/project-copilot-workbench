@@ -6,8 +6,8 @@
   "checkpoint_projection": "docs/V2_CHECKPOINT.md",
   "event_log": "docs/V2_TASK_EVENTS.jsonl",
   "status": "active",
-  "revision": 17,
-  "event_sequence": 36,
+  "revision": 18,
+  "event_sequence": 37,
   "concurrency_limit": 3,
   "write_owner": "root",
   "safety_boundaries": [
@@ -260,7 +260,8 @@
       "evidence": [
         "6559256 feat: deliver governed project copilot workbench v2",
         "19003d56c5801f5c937d9ceb890ccee6ae690bdd fix: harden atomic snapshots and offline deployment",
-        "final loopback health: http://127.0.0.1:8788/api/health"
+        "final loopback health: http://127.0.0.1:8788/api/health",
+        "GitHub Actions run 29451105406: Ubuntu/Windows/browser/package passed; documents target mismatch and one public-model-SHA Gitleaks false positive diagnosed and fixed"
       ]
     }
   ],
@@ -277,7 +278,7 @@
     "A10": "planned"
   },
   "current_blockers": [
-    "Create the remediation commit, push without force and obtain green GitHub CI."
+    "Commit and push the CI-target/secret-scan false-positive remediation, then obtain a fully green GitHub Actions run."
   ],
   "next_slice_ids": ["V2-09"],
   "forbidden_inheritance": [
@@ -286,5 +287,5 @@
     "stale process IDs",
     "real company data or secrets"
   ],
-  "updated_at": "2026-07-15T22:25:00Z"
+  "updated_at": "2026-07-15T22:40:00Z"
 }

@@ -65,6 +65,8 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
         0
     ]
 
+    assert "runs-on: windows-latest" in documents_job
+    assert "runs-on: ubuntu-latest" not in documents_job
     assert "requirements.documents-ci.lock" in documents_job
     assert "pip install reportlab" not in documents_job
     assert "python -m pip check" in documents_job
@@ -91,6 +93,11 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
     handoff = (ROOT / "docs" / "company-agent-handoff.md").read_text(encoding="utf-8")
     assert "requirements.documents.lock" in handoff
     assert "do not install the CI/test lock" in handoff
+
+    gitleaks = (ROOT / ".gitleaks.toml").read_text(encoding="utf-8")
+    assert "useDefault = true" in gitleaks
+    assert "1110a243fdf4706b3f48f1d95db1a4f5529b4d41" in gitleaks
+    assert "commits =" not in gitleaks
 
 
 def test_documents_ci_lock_pins_smoke_and_parser_dependencies() -> None:

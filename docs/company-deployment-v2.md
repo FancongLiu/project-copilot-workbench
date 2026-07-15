@@ -192,7 +192,8 @@ through `PROJECT_COPILOT_DOCLING_TOKENIZER_PATH`; PDFs additionally require
 artifact directory into `PdfPipelineOptions`, disables OCR/table extraction for
 this baseline, disables remote services, uses `local_files_only=true` for the
 tokenizer, and fails instead of downloading at runtime. GitHub CI runs a real
-synthetic PDF/DOCX smoke with Hugging Face lookups forced offline. Repeat that
+synthetic PDF/DOCX smoke on the Windows target with Hugging Face lookups forced
+offline. Repeat that
 test on the exact Windows company build: require chunks with section/page
 metadata, application-restart persistence, and successful search. A successful
 `pip install` alone does not prove offline parsing.

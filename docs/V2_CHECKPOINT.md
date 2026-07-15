@@ -29,8 +29,9 @@ append-only transition summary.
 
 - Branch: `main`, base commit `41d1b448bdfc0c6288f51b146a96ccb4610fda73`
   before V2 edits. Delivery commit `6559256` and verified remediation commit
-  `19003d56c5801f5c937d9ceb890ccee6ae690bdd` exist locally and have not yet been
-  pushed.
+  `19003d56c5801f5c937d9ceb890ccee6ae690bdd` are on remote `main`. Evidence
+  commit `4ed30478b22f96415c48cc01a3f6d70cffbbe81e` triggered the first GitHub
+  Actions run.
 - Runtime/Cron/inbox/outbox state has not been modified.
 - V2 workspace, import, retrieval, bounded Agent, governed analytics, company
   model/embedding configuration, Web UI, CLI, synthetic corpus, evaluation and
@@ -89,6 +90,14 @@ append-only transition summary.
   sanitized refusal with generic failed activity and suppresses default error
   snapshot files, preventing HTTP 500 and exception leakage. The final
   independent release rereview reports Critical 0 and Important 0.
+- First remote run `29451105406` passed Ubuntu tests/evaluation/release guard,
+  Windows tests/evaluation/release guard, browser and package/SBOM jobs. The
+  documents job correctly exposed that a Windows-generated parser lock cannot
+  install on an Ubuntu job because it contains `pywin32`; the job now runs on
+  the Windows company target. Gitleaks' sole finding was the public immutable
+  Hugging Face tokenizer commit misclassified through the constant name. A
+  narrow exact-value allowlist extends all default rules; local Gitleaks v8.24.3
+  now scans the same commit range with no leaks.
 
 ## Durable delivery loop from Chairman guidance
 
@@ -117,8 +126,8 @@ follow-up research instead of silently expanding the current implementation.
 
 ## Next actions
 
-1. Push `main` without force.
-2. Monitor GitHub Actions to green, record commit/CI
+1. Commit and push the CI target/Gitleaks false-positive remediation.
+2. Monitor the replacement GitHub Actions run to green, record commit/CI
    evidence, and leave the final loopback trial server available.
 
 ## Acceptance evidence ledger
