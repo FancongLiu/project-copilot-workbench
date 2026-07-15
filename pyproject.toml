@@ -12,7 +12,7 @@ license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 dependencies = [
   "duckdb==1.5.4",
   "fastapi==0.139.0",
-  "filelock==3.29.0",
+  "filelock==3.29.7",
   "haystack-ai==2.31.0",
   "httpx==0.28.1",
   "jieba==0.42.1",
