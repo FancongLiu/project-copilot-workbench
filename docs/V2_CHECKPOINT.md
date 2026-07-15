@@ -120,6 +120,16 @@ append-only transition summary.
   exists; `dist` must be empty before building and contain exactly one
   application wheel afterward. The follow-up review reports Critical 0 and
   Important 0, and every PowerShell code block parses successfully.
+- Commit `e35ee2acdea4622ecbc2f0fde9943e43d5ba81e4` pushed the hash-locked
+  builder/double-lock remediation. GitHub run `29453989896` passed Windows and
+  Ubuntu tests/evaluation/release guard, package/SBOM/license, browser, secrets,
+  and the new build-tool download gate. The real Docling smoke then exposed a
+  separate asset-version mismatch: Docling 2.113.0 defaults to
+  `docling-layout-heron`, while the prefetch script still downloaded
+  `docling-layout-old`. Official Docling source and Hugging Face evidence bind
+  the correct folder to immutable Heron commit
+  `8f39ad3c0b4c58e9c2d2c84a38465abf757272d8`; the TDD correction is now in the
+  working tree.
 
 ## Durable delivery loop from Chairman guidance
 
@@ -148,8 +158,7 @@ follow-up research instead of silently expanding the current implementation.
 
 ## Next actions
 
-1. Commit and push the independently approved setuptools/double-lock
-   offline-deployment remediation.
+1. Commit and push the Docling 2.113.0 Heron artifact correction.
 2. Monitor the replacement GitHub Actions run to green, record commit/CI
    evidence, and leave the final loopback trial server available.
 

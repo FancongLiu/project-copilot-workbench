@@ -51,9 +51,9 @@ def test_docling_prefetch_script_uses_bounded_offline_asset_set(tmp_path: Path) 
     assert calls["revision"] == "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
     assert calls["tokenizer_path"] == tokenizer.resolve()
     assert calls["layout_download"] == {
-        "repo_id": "docling-project/docling-layout-old",
-        "revision": "b5b4bd59ad2b69aab715e9b1f1dfd74394c45fd4",
-        "local_dir": artifacts.resolve() / "docling-project--docling-layout-old",
+        "repo_id": "docling-project/docling-layout-heron",
+        "revision": "8f39ad3c0b4c58e9c2d2c84a38465abf757272d8",
+        "local_dir": artifacts.resolve() / "docling-project--docling-layout-heron",
         "force": False,
         "progress": False,
     }
@@ -102,7 +102,7 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
         '$Release = "D:\\ProjectCopilot\\releases\\REPLACE_WITH_COMMIT"' in deployment
     )
     assert (
-        "--layout-model-revision b5b4bd59ad2b69aab715e9b1f1dfd74394c45fd4" in deployment
+        "--layout-model-revision 8f39ad3c0b4c58e9c2d2c84a38465abf757272d8" in deployment
     )
     assert re.search(
         r"Run the\s+manifest block only after every selected optional bundle",

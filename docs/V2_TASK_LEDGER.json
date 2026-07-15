@@ -6,8 +6,8 @@
   "checkpoint_projection": "docs/V2_CHECKPOINT.md",
   "event_log": "docs/V2_TASK_EVENTS.jsonl",
   "status": "active",
-  "revision": 20,
-  "event_sequence": 39,
+  "revision": 21,
+  "event_sequence": 40,
   "concurrency_limit": 3,
   "write_owner": "root",
   "safety_boundaries": [
@@ -267,6 +267,8 @@
         "final loopback health: http://127.0.0.1:8788/api/health",
         "GitHub Actions run 29451105406: Ubuntu/Windows/browser/package passed; documents target mismatch and one public-model-SHA Gitleaks false positive diagnosed and fixed",
         "GitHub Actions run 29451735488: all jobs except documents passed; documents exposed pip-tools unsafe-package exclusion of torch's setuptools dependency",
+        "e35ee2acdea4622ecbc2f0fde9943e43d5ba81e4 ci: lock document build tooling",
+        "GitHub Actions run 29453989896: Windows/Ubuntu/package/browser/secrets and build-tool validation passed; real Docling smoke exposed an outdated layout-old prefetch against the v2.113.0 Heron default",
         "working tree locks setuptools==83.0.0 with hashes and documents a researched source-lock/final-wheel-offline-lock deployment boundary",
         "clean build/release/smoke paths fail if reused and dist must contain exactly one application wheel",
         "independent offline release rereview: Critical 0, Important 0",
@@ -287,7 +289,7 @@
     "A10": "planned"
   },
   "current_blockers": [
-    "Commit and push the setuptools/document offline-lock remediation, then obtain a fully green GitHub Actions run."
+    "Commit and push the Docling v2.113.0 Heron artifact correction, then obtain a fully green GitHub Actions run."
   ],
   "next_slice_ids": ["V2-09"],
   "forbidden_inheritance": [
@@ -296,5 +298,5 @@
     "stale process IDs",
     "real company data or secrets"
   ],
-  "updated_at": "2026-07-16T05:58:00+08:00"
+  "updated_at": "2026-07-16T06:14:00+08:00"
 }

@@ -317,7 +317,7 @@ New-Item -ItemType Directory `
   --artifacts-dir "$Release\models\docling" `
   --tokenizer-dir "$Release\models\docling-tokenizer" `
   --tokenizer-revision 1110a243fdf4706b3f48f1d95db1a4f5529b4d41 `
-  --layout-model-revision b5b4bd59ad2b69aab715e9b1f1dfd74394c45fd4
+  --layout-model-revision 8f39ad3c0b4c58e9c2d2c84a38465abf757272d8
 ```
 
 Source-only parser dependencies are hash-verified and built only on the clean

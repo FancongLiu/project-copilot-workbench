@@ -7,9 +7,9 @@ from typing import Any
 
 DEFAULT_TOKENIZER = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_TEXT_MODEL_COMMIT = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
-DEFAULT_LAYOUT_REPO = "docling-project/docling-layout-old"
-DEFAULT_LAYOUT_REVISION = "b5b4bd59ad2b69aab715e9b1f1dfd74394c45fd4"
-DEFAULT_LAYOUT_FOLDER = "docling-project--docling-layout-old"
+DEFAULT_LAYOUT_REPO = "docling-project/docling-layout-heron"
+DEFAULT_LAYOUT_MODEL_COMMIT = "8f39ad3c0b4c58e9c2d2c84a38465abf757272d8"
+DEFAULT_LAYOUT_FOLDER = "docling-project--docling-layout-heron"
 
 
 def prefetch_assets(
@@ -19,7 +19,7 @@ def prefetch_assets(
     tokenizer_model: str = DEFAULT_TOKENIZER,
     tokenizer_revision: str = DEFAULT_TEXT_MODEL_COMMIT,
     layout_model_repo: str = DEFAULT_LAYOUT_REPO,
-    layout_model_revision: str = DEFAULT_LAYOUT_REVISION,
+    layout_model_revision: str = DEFAULT_LAYOUT_MODEL_COMMIT,
     layout_downloader: Any | None = None,
     tokenizer_factory: Any | None = None,
 ) -> None:
@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tokenizer-model", default=DEFAULT_TOKENIZER)
     parser.add_argument("--tokenizer-revision", default=DEFAULT_TEXT_MODEL_COMMIT)
     parser.add_argument("--layout-model-repo", default=DEFAULT_LAYOUT_REPO)
-    parser.add_argument("--layout-model-revision", default=DEFAULT_LAYOUT_REVISION)
+    parser.add_argument("--layout-model-revision", default=DEFAULT_LAYOUT_MODEL_COMMIT)
     return parser
 
 
