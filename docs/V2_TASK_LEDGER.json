@@ -6,8 +6,8 @@
   "checkpoint_projection": "docs/V2_CHECKPOINT.md",
   "event_log": "docs/V2_TASK_EVENTS.jsonl",
   "status": "active",
-  "revision": 18,
-  "event_sequence": 37,
+  "revision": 20,
+  "event_sequence": 39,
   "concurrency_limit": 3,
   "write_owner": "root",
   "safety_boundaries": [
@@ -209,10 +209,11 @@
       "evidence": [
         "requirements.runtime.lock",
         "requirements.lock",
+        "requirements.build.lock",
         "requirements.documents.lock",
         "requirements.documents-ci.lock",
         ".github/workflows/ci.yml",
-        "fresh scripts/verify.cmd: 149 passed, 4 documented optional skips",
+        "fresh scripts/verify.cmd: 150 passed, 4 documented optional skips",
         "artifacts/final-dist-final/project_copilot_workbench-0.2.0-py3-none-any.whl",
         "artifacts/sbom-final-final.cdx.json",
         "artifacts/license-report-final.json"
@@ -248,7 +249,8 @@
         "final rereview follow-up pinned the Docling layout model commit and corrected parser acceptance variables/final manifest ordering",
         "final rereview follow-up rejects Windows filename aliases/collisions and content-addresses the legacy bootstrap analytics database",
         "unexpected Haystack pipeline failures now return a sanitized refusal, retain generic failed activity and suppress default error snapshot files",
-        "final independent release rereview: Critical 0, Important 0"
+        "final independent release rereview: Critical 0, Important 0",
+        "offline release-builder rereview found and closed stale artifact reuse; final rereview Critical 0, Important 0"
       ]
     },
     {
@@ -260,8 +262,15 @@
       "evidence": [
         "6559256 feat: deliver governed project copilot workbench v2",
         "19003d56c5801f5c937d9ceb890ccee6ae690bdd fix: harden atomic snapshots and offline deployment",
+        "4ed30478b22f96415c48cc01a3f6d70cffbbe81e docs: record verified remediation commit",
+        "d59cf85acf5cafd7419af9666e60dc410981d0ca ci: align document smoke with Windows target",
         "final loopback health: http://127.0.0.1:8788/api/health",
-        "GitHub Actions run 29451105406: Ubuntu/Windows/browser/package passed; documents target mismatch and one public-model-SHA Gitleaks false positive diagnosed and fixed"
+        "GitHub Actions run 29451105406: Ubuntu/Windows/browser/package passed; documents target mismatch and one public-model-SHA Gitleaks false positive diagnosed and fixed",
+        "GitHub Actions run 29451735488: all jobs except documents passed; documents exposed pip-tools unsafe-package exclusion of torch's setuptools dependency",
+        "working tree locks setuptools==83.0.0 with hashes and documents a researched source-lock/final-wheel-offline-lock deployment boundary",
+        "clean build/release/smoke paths fail if reused and dist must contain exactly one application wheel",
+        "independent offline release rereview: Critical 0, Important 0",
+        "fresh scripts/verify.cmd: 150 passed, 4 documented optional skips; release guard and Gitleaks clean"
       ]
     }
   ],
@@ -278,7 +287,7 @@
     "A10": "planned"
   },
   "current_blockers": [
-    "Commit and push the CI-target/secret-scan false-positive remediation, then obtain a fully green GitHub Actions run."
+    "Commit and push the setuptools/document offline-lock remediation, then obtain a fully green GitHub Actions run."
   ],
   "next_slice_ids": ["V2-09"],
   "forbidden_inheritance": [
@@ -287,5 +296,5 @@
     "stale process IDs",
     "real company data or secrets"
   ],
-  "updated_at": "2026-07-15T22:40:00Z"
+  "updated_at": "2026-07-16T05:58:00+08:00"
 }

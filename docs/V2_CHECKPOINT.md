@@ -31,7 +31,8 @@ append-only transition summary.
   before V2 edits. Delivery commit `6559256` and verified remediation commit
   `19003d56c5801f5c937d9ceb890ccee6ae690bdd` are on remote `main`. Evidence
   commit `4ed30478b22f96415c48cc01a3f6d70cffbbe81e` triggered the first GitHub
-  Actions run.
+  Actions run. CI alignment commit
+  `d59cf85acf5cafd7419af9666e60dc410981d0ca` is on remote `main`.
 - Runtime/Cron/inbox/outbox state has not been modified.
 - V2 workspace, import, retrieval, bounded Agent, governed analytics, company
   model/embedding configuration, Web UI, CLI, synthetic corpus, evaluation and
@@ -63,7 +64,7 @@ append-only transition summary.
 - PDF parsing now requires approved local Docling artifacts as well as a local
   tokenizer. A real offline PDF/DOCX integration smoke is present in GitHub CI;
   the heavy models are intentionally not installed on this nearly-full drive.
-- After all review remediation, fresh `scripts/verify.cmd` passed with 149 tests and
+- After all review remediation, fresh `scripts/verify.cmd` passed with 150 tests and
   4 documented optional skips. The 23-case frozen evaluation again passed 23/23
   with zero execution failures; evidence cases remained Recall 1.0, MRR
   0.859375 and NDCG 0.9003721028. Strict dependency audit found no known
@@ -98,6 +99,27 @@ append-only transition summary.
   Hugging Face tokenizer commit misclassified through the constant name. A
   narrow exact-value allowlist extends all default rules; local Gitleaks v8.24.3
   now scans the same commit range with no leaks.
+- Second remote run `29451735488` passed Ubuntu/Windows tests, evaluation,
+  release guard, browser, package/SBOM, and secrets. Its only failure was the
+  Windows documents install: Torch requires setuptools, while pip-tools had
+  excluded setuptools from hash mode as an unsafe package. Both parser locks
+  now use `--allow-unsafe` and hash-pin `setuptools==83.0.0`.
+- Current official pip/pip-tools documentation and GitHub issues also showed
+  that an sdist hash cannot authenticate a newly built wheel copied into a
+  release wheelhouse, and build-isolation dependencies are outside outer
+  `--require-hashes`. The runbook therefore uses a clean, hash-locked connected
+  builder with `--no-build-isolation`, creates target-specific offline locks
+  from the final wheelhouse, mechanically checks normalized name/version
+  parity, and makes the restricted company PC install only wheels with
+  `--isolated --no-index --no-cache-dir --only-binary=:all: --require-hashes`.
+  Fresh local gates after this remediation pass 150 tests with 4 documented
+  skips; release guard, Ruff, formatting, diff check, and Gitleaks are clean.
+- A final independent offline-release review found one Important risk: a failed
+  rerun of the same commit could reuse stale release, venv, wheelhouse, model,
+  offline-lock, or `dist` artifacts. Every such output now fails if it already
+  exists; `dist` must be empty before building and contain exactly one
+  application wheel afterward. The follow-up review reports Critical 0 and
+  Important 0, and every PowerShell code block parses successfully.
 
 ## Durable delivery loop from Chairman guidance
 
@@ -126,7 +148,8 @@ follow-up research instead of silently expanding the current implementation.
 
 ## Next actions
 
-1. Commit and push the CI target/Gitleaks false-positive remediation.
+1. Commit and push the independently approved setuptools/double-lock
+   offline-deployment remediation.
 2. Monitor the replacement GitHub Actions run to green, record commit/CI
    evidence, and leave the final loopback trial server available.
 
@@ -140,7 +163,7 @@ follow-up research instead of silently expanding the current implementation.
 | A4 multi-step cited answers | verified local | 23-case frozen evaluation set including defrost replay boundaries |
 | A5 governed analytics tools | implemented | typed operations + SQL policy tests |
 | A6 refusal/clarification | implemented | hostile and missing-evidence cases |
-| A7 tests/CI/browser/wheel | local passed, CI pending | 149 passed, 4 optional skips; final browser and rebuilt wheel smoke passed |
+| A7 tests/CI/browser/wheel | local passed, CI pending | 150 passed, 4 optional skips; final browser and rebuilt wheel smoke passed |
 | A8 scanners/audit/SBOM/license/public data | local passed, CI pending | audit, license, SBOM and release guard passed |
 | A9 independent review | verified | final release rereview Critical 0, Important 0 |
-| A10 commit/push/trial server | commit/server ready, push pending | `19003d56...`; healthy `127.0.0.1:8788` |
+| A10 commit/push/trial server | latest remediation pending push; server healthy | remote `d59cf85...`; healthy `127.0.0.1:8788` |

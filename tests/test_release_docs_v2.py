@@ -67,6 +67,8 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
 
     assert "runs-on: windows-latest" in documents_job
     assert "runs-on: ubuntu-latest" not in documents_job
+    assert "requirements.build.lock" in documents_job
+    assert "--only-binary=:all:" in documents_job
     assert "requirements.documents-ci.lock" in documents_job
     assert "pip install reportlab" not in documents_job
     assert "python -m pip check" in documents_job
@@ -78,6 +80,23 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
     assert "--only-binary=:all:" in deployment
     assert "requirements.documents-ci.lock" in deployment
     assert "requirements.documents.lock" in deployment
+    assert "requirements.build.lock" in deployment
+    assert " -m pip --isolated wheel `" in deployment
+    assert "--no-build-isolation" in deployment
+    for offline_lock in (
+        "requirements.runtime.offline.lock",
+        "requirements.documents.offline.lock",
+        "requirements.documents-ci.offline.lock",
+    ):
+        assert offline_lock in deployment
+    assert deployment.count("--no-emit-find-links") == 3
+    assert deployment.count("--no-emit-index-url") == 3
+    assert "Get-NormalizedPins" in deployment
+    assert "Release directory already exists" in deployment
+    assert "Build directory already exists" in deployment
+    assert "dist directory is not empty" in deployment
+    assert "Expected exactly one application wheel" in deployment
+    assert deployment.count("Assert-PathAbsent") >= 7
     assert "Parser wheelhouse contains a non-wheel artifact" in deployment
     assert (
         '$Release = "D:\\ProjectCopilot\\releases\\REPLACE_WITH_COMMIT"' in deployment
@@ -91,8 +110,9 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
     )
     assert "regenerate `SHA256SUMS.json`" in deployment
     handoff = (ROOT / "docs" / "company-agent-handoff.md").read_text(encoding="utf-8")
-    assert "requirements.documents.lock" in handoff
-    assert "do not install the CI/test lock" in handoff
+    assert "requirements.documents.offline.lock" in handoff
+    assert "requirements.documents-ci.offline.lock" in handoff
+    assert re.search(r"do not install the\s+CI/test offline lock", handoff)
 
     gitleaks = (ROOT / ".gitleaks.toml").read_text(encoding="utf-8")
     assert "useDefault = true" in gitleaks
@@ -108,9 +128,34 @@ def test_documents_ci_lock_pins_smoke_and_parser_dependencies() -> None:
         "docling-haystack==1.2.0",
         "pytest==9.0.3",
         "reportlab==5.0.0",
+        "setuptools==83.0.0",
     ):
         assert requirement in lock
     assert lock.count("--hash=sha256:") > 100
+
+
+def test_connected_builder_tools_are_hash_locked_and_wheel_only() -> None:
+    lock = (ROOT / "requirements.build.lock").read_text(encoding="utf-8")
+
+    for requirement in (
+        "pip==26.1.2",
+        "pip-tools==7.5.3",
+        "setuptools==83.0.0",
+        "wheel==0.47.0",
+    ):
+        assert requirement in lock
+    assert lock.count("--hash=sha256:") >= 10
+
+    deployment = (ROOT / "docs" / "company-deployment-v2.md").read_text(
+        encoding="utf-8"
+    )
+    build_tools = deployment.split("### Connected builder toolchain", 1)[1].split(
+        "### Optional Office/PDF parser bundle", 1
+    )[0]
+    assert "pip --isolated download" in build_tools
+    assert "--only-binary=:all:" in build_tools
+    assert "--require-hashes -r requirements.build.lock" in build_tools
+    assert "--no-index" in build_tools
 
 
 def _locked_versions(path: str) -> dict[str, str]:
@@ -125,6 +170,8 @@ def test_documents_ci_lock_keeps_every_production_parser_version() -> None:
     ci_versions = _locked_versions("requirements.documents-ci.lock")
 
     assert production_versions
+    assert set(runtime_versions) <= set(production_versions)
+    assert set(production_versions) <= set(ci_versions)
     assert {
         name: (version, production_versions.get(name))
         for name, version in runtime_versions.items()

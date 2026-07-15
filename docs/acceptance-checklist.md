@@ -111,12 +111,18 @@ Evidence: `REPLACE`
 - [ ] Artifact SHA-256 manifest verifies on the company PC.
 - [ ] Any Office/PDF Docling bundle is separately hashed and proves parsing in
   a blocked-network VM; otherwise those formats are explicitly disabled.
-- [ ] The parser dependency wheelhouse is a wheel-only (`--only-binary=:all:`)
-  superset built from `requirements.documents-ci.lock`; that lock preserves
-  every version in `requirements.documents.lock` and adds only the smoke-test
-  dependencies for the target Windows Python/architecture.
-- [ ] The production parser venv installs `requirements.documents.lock`, not
-  the CI lock, from that offline wheelhouse and passes `pip check`.
+- [ ] A clean connected Windows builder installs only the hash-locked
+  `requirements.build.lock` toolchain, then uses `pip wheel
+  --no-build-isolation --check-build-dependencies` to build the parser
+  wheelhouse from `requirements.documents-ci.lock`.
+- [ ] The final parser wheelhouse contains only `.whl` files. Target-specific
+  `requirements.documents.offline.lock` and
+  `requirements.documents-ci.offline.lock` hash those exact wheels and have
+  the same normalized name/version sets as their source locks.
+- [ ] The production parser venv installs
+  `requirements.documents.offline.lock`, not the CI/test offline lock, using
+  `--isolated`, `--no-index`, `--no-cache-dir`, `--only-binary=:all:`, and
+  `--require-hashes`, then passes `pip check`.
 - [ ] PDF parsing is supplied both an immutable local tokenizer and Docling
   artifacts directory, runs with remote services/model lookup disabled, and
   preserves page/section metadata after application restart.

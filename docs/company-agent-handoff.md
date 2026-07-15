@@ -97,9 +97,9 @@ Stop and escalate without improvising if any condition occurs:
 - the real Project Package is under the Git clone or release directory;
 - an Office/PDF document requires Docling but the separate offline parser/model
   bundle has not passed no-egress acceptance;
-- the parser wheelhouse contains a source archive, the CI parser lock disagrees
-  with any production parser dependency version, or production is asked to
-  install the CI/test lock;
+- any runtime/parser wheelhouse contains a source archive, an offline lock is
+  missing, an offline/source lock name-version set differs, or production is
+  asked to install the CI/test offline lock;
 - the requested workflow requires Shell, arbitrary Python, Web, MCP, free-form
   SQL, physical equipment control or a new unreviewed Agent tool;
 - source deletion, re-index, migration or rollback lacks a current backup;
@@ -116,7 +116,10 @@ SHA256SUMS.json: all files present, all hashes match
 Git bundle: valid
 Git commit: exact approved SHA
 Wheel: project_copilot_workbench-0.2.0-*.whl
-Runtime lock: requirements.runtime.lock present
+Source locks: requirements.build.lock and requirements.*.lock present
+Deployment lock: requirements.runtime.offline.lock present
+Optional parser production lock: requirements.documents.offline.lock present
+Optional parser test lock: requirements.documents-ci.offline.lock present
 SBOM: sbom.cdx.json present
 License evidence: license-report.json present
 ```
@@ -133,12 +136,20 @@ Follow section 5 of `docs/company-deployment-v2.md`. Never upgrade an in-use
 environment in place. The required shape is:
 
 ```powershell
+$Release = "D:\ProjectCopilot\releases\APPROVED"
+if (Test-Path -LiteralPath "D:\ProjectCopilot\app\0.2.0\venv") {
+  throw "Application venv already exists; create a fresh release path"
+}
 py -3.12 -m venv D:\ProjectCopilot\app\0.2.0\venv
+& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-build" pip==26.1.2
+& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse" --require-hashes `
+  -r "$Release\requirements.runtime.offline.lock"
 & D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip install `
-  --no-index --find-links D:\ProjectCopilot\releases\APPROVED\wheelhouse `
-  --require-hashes -r D:\ProjectCopilot\releases\APPROVED\requirements.runtime.lock
-& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip install `
-  --no-index --no-deps D:\ProjectCopilot\releases\APPROVED\wheel\project_copilot_workbench-0.2.0-py3-none-any.whl
+  --no-index --no-deps "$Release\wheel\project_copilot_workbench-0.2.0-py3-none-any.whl"
 & D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip check
 ```
 
@@ -147,16 +158,15 @@ Do not copy a developer `.venv`.
 
 The command above is the base profile. If Office/PDF parsing was explicitly
 approved and the isolated parser test in the deployment runbook passed, replace
-the runtime-lock dependency command with this complete production-parser
-profile; do not install both profiles and do not install the CI/test lock in the
-production venv:
+the runtime offline-lock dependency command with this complete
+production-parser profile; do not install both profiles and do not install the
+CI/test offline lock in the production venv:
 
 ```powershell
-& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip install `
-  --no-index `
-  --find-links D:\ProjectCopilot\releases\APPROVED\wheelhouse-documents `
-  --require-hashes `
-  -r D:\ProjectCopilot\releases\APPROVED\requirements.documents.lock
+& D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-documents" --require-hashes `
+  -r "$Release\requirements.documents.offline.lock"
 & D:\ProjectCopilot\app\0.2.0\venv\Scripts\python.exe -m pip check
 ```
 

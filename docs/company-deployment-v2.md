@@ -45,11 +45,37 @@ CPU architecture, CI run URLs, approvers, and artifact manifest together.
 Use Windows, Python 3.12, and the same CPU architecture as the company PC.
 Start in a clean checkout of the reviewed commit.
 
+### Connected builder toolchain
+
+Treat the connected release-builder as a supply-chain boundary: use a clean
+Windows account/VM with no company data, long-lived credentials, SSH agent, or
+production secrets. `requirements.build.lock` hash-locks pip, pip-tools,
+setuptools, wheel, Hatchling, audit, build, and SBOM tooling. Build isolation is
+disabled after that toolchain is installed because pip hash-checking does not
+cover dynamically installed PEP 517 build dependencies. If a source package
+needs another build dependency, stop, research it, and add it to the reviewed
+build lock instead of allowing an implicit download.
+
 ```powershell
 $ErrorActionPreference = "Stop"
 $Repo = (Resolve-Path .).Path
 $Commit = (git rev-parse HEAD).Trim()
 $Release = Join-Path $Repo "artifacts\release-$Commit"
+$Builder = Join-Path $Repo "artifacts\release-builder-$Commit"
+
+function Assert-PathAbsent([string]$Path, [string]$Label) {
+  if (Test-Path -LiteralPath $Path) { throw "$Label already exists: $Path" }
+}
+if (Test-Path -LiteralPath $Release) {
+  throw "Release directory already exists: $Release"
+}
+if (Test-Path -LiteralPath $Builder) {
+  throw "Build directory already exists: $Builder"
+}
+$StaleDistArtifacts = @(Get-ChildItem dist -Force -ErrorAction SilentlyContinue)
+if ($StaleDistArtifacts.Count -gt 0) {
+  throw "dist directory is not empty; start from a fresh release checkout"
+}
 
 git status --short
 if (git status --porcelain) { throw "Release checkout is not clean" }
@@ -57,26 +83,86 @@ if (git status --porcelain) { throw "Release checkout is not clean" }
 scripts\bootstrap.cmd
 scripts\verify.cmd
 
-& ".venv\Scripts\python.exe" -m pip install `
-  build==1.5.0 pip-audit==2.10.1 cyclonedx-bom==7.3.0
-& ".venv\Scripts\python.exe" -m pip_audit `
-  -r requirements.runtime.lock --strict
-& ".venv\Scripts\python.exe" -m build --wheel
-
 New-Item -ItemType Directory -Force `
-  "$Release\wheel", "$Release\wheelhouse", "$Release\evidence" | Out-Null
-Copy-Item dist\*.whl "$Release\wheel\"
-Copy-Item requirements.runtime.lock, requirements.documents.lock, requirements.documents-ci.lock, `
-  pyproject.toml, LICENSE, NOTICE, `
-  THIRD_PARTY_NOTICES.md "$Release\"
+  "$Release\wheel", "$Release\wheelhouse", `
+  "$Release\wheelhouse-build", "$Release\evidence" | Out-Null
+Copy-Item requirements.build.lock, requirements.runtime.lock, `
+  requirements.documents.lock, requirements.documents-ci.lock, `
+  pyproject.toml, LICENSE, NOTICE, THIRD_PARTY_NOTICES.md "$Release\"
 Copy-Item config\company-v2.example.ps1 "$Release\"
 
-& ".venv\Scripts\python.exe" -m pip download `
-  --only-binary=:all: `
+& ".venv\Scripts\python.exe" -m pip --isolated download `
+  --only-binary=:all: --require-hashes -r requirements.build.lock `
+  --dest "$Release\wheelhouse-build"
+$UnexpectedBuildArtifacts = Get-ChildItem "$Release\wheelhouse-build" -File |
+  Where-Object Extension -ne ".whl"
+if ($UnexpectedBuildArtifacts) {
+  $UnexpectedBuildArtifacts.FullName
+  throw "Build-tool wheelhouse contains a non-wheel artifact"
+}
+
+py -3.12 -m venv $Builder
+& "$Builder\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-build" `
+  --require-hashes -r requirements.build.lock
+& "$Builder\Scripts\python.exe" -m pip check
+& "$Builder\Scripts\python.exe" -m pip_audit `
+  -r requirements.runtime.lock --strict
+& "$Builder\Scripts\python.exe" -m build --wheel --no-isolation
+
+$ApplicationWheels = @(Get-ChildItem dist -File `
+  -Filter "project_copilot_workbench-*.whl")
+$AllDistWheels = @(Get-ChildItem dist -File -Filter "*.whl")
+if ($ApplicationWheels.Count -ne 1 -or $AllDistWheels.Count -ne 1) {
+  throw "Expected exactly one application wheel in clean dist"
+}
+Copy-Item $ApplicationWheels[0].FullName "$Release\wheel\"
+& "$Builder\Scripts\python.exe" -m pip --isolated wheel `
+  --no-build-isolation --check-build-dependencies `
   --require-hashes -r requirements.runtime.lock `
-  --dest "$Release\wheelhouse"
-& ".venv\Scripts\python.exe" -m pip download `
-  pip==26.1.2 --dest "$Release\wheelhouse"
+  --wheel-dir "$Release\wheelhouse"
+$UnexpectedRuntimeArtifacts = Get-ChildItem "$Release\wheelhouse" -File |
+  Where-Object Extension -ne ".whl"
+if ($UnexpectedRuntimeArtifacts) {
+  $UnexpectedRuntimeArtifacts.FullName
+  throw "Runtime wheelhouse contains a non-wheel artifact"
+}
+
+function Write-OfflinePins([string]$SourceLock, [string]$Destination) {
+  Get-Content $SourceLock | ForEach-Object {
+    if ($_ -match '^[A-Za-z0-9][A-Za-z0-9._-]*==[^ \\]+') { $Matches[0] }
+  } | Set-Content $Destination -Encoding ascii
+}
+function Get-NormalizedPins([string]$LockPath) {
+  Get-Content $LockPath | ForEach-Object {
+    if ($_ -match '^([A-Za-z0-9][A-Za-z0-9._-]*)==([^ \\]+)') {
+      $Name = ($Matches[1] -replace '[-_.]+', '-').ToLowerInvariant()
+      "$Name==$($Matches[2].ToLowerInvariant())"
+    }
+  }
+}
+function Assert-LockParity([string]$SourceLock, [string]$OfflineLock) {
+  $SourcePins = @(Get-NormalizedPins $SourceLock)
+  $OfflinePins = @(Get-NormalizedPins $OfflineLock)
+  $Difference = Compare-Object ($SourcePins | Sort-Object) `
+    ($OfflinePins | Sort-Object)
+  if ($Difference) {
+    $Difference | Format-Table | Out-String | Write-Host
+    throw "Offline lock name/version set differs from source lock"
+  }
+}
+
+Write-OfflinePins requirements.runtime.lock `
+  "$Release\requirements.runtime.offline.in"
+& "$Builder\Scripts\pip-compile.exe" `
+  --no-index --find-links "$Release\wheelhouse" `
+  --no-emit-find-links --no-emit-index-url `
+  --generate-hashes --allow-unsafe --strip-extras `
+  --output-file "$Release\requirements.runtime.offline.lock" `
+  "$Release\requirements.runtime.offline.in"
+Assert-LockParity requirements.runtime.lock `
+  "$Release\requirements.runtime.offline.lock"
 
 git archive --format=zip `
   --output "$Release\project-copilot-source-$Commit.zip" HEAD
@@ -88,25 +174,43 @@ git status --short | Set-Content `
   "$Release\evidence\git-status.txt" -Encoding utf8
 
 $Smoke = Join-Path $Repo "artifacts\wheel-smoke-$Commit"
+Assert-PathAbsent $Smoke "Smoke environment"
 py -3.12 -m venv $Smoke
-& "$Smoke\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse" pip==26.1.2
-& "$Smoke\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse" `
-  --require-hashes -r requirements.runtime.lock
+& "$Smoke\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-build" pip==26.1.2
+& "$Smoke\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse" --require-hashes `
+  -r "$Release\requirements.runtime.offline.lock"
 & "$Smoke\Scripts\python.exe" -m pip install `
   --no-index --no-deps (Get-ChildItem "$Release\wheel\*.whl").FullName
 & "$Smoke\Scripts\python.exe" -m pip check
-& ".venv\Scripts\cyclonedx-py.exe" environment `
+& "$Builder\Scripts\cyclonedx-py.exe" environment `
   "$Smoke\Scripts\python.exe" --pyproject pyproject.toml `
   --mc-type application --output-reproducible --output-format JSON `
   --output-file "$Release\evidence\sbom.cdx.json"
 ```
 
-`pip download` must complete on the same Windows/Python/architecture target. If
-it produces a source archive (`.tar.gz` or `.zip`) for a runtime dependency,
-stop: the offline install would need a compiler/toolchain and is not the
-approved wheel-only profile.
+The source locks verify upstream distributions, including the few packages
+whose upstream release is source-only. `pip wheel` may build those packages only
+on this clean connected builder, with build isolation disabled and the reviewed
+build toolchain already installed. The generated `*.offline.lock` files then
+hash the actual final wheels. Restricted machines never use source locks for
+installation and never compile code. The manifest must cover the build-tool
+wheelhouse, final runtime wheelhouse, source locks, offline inputs, and offline
+locks.
+
+Research basis: pip recommends hash-checking together with binary-only installs
+for secure deployment, documents wheelhouses as target-specific installation
+bundles, and assigns build dependency management to the operator when build
+isolation is disabled. pip's open issues also confirm that outer
+`--require-hashes` does not currently cover build-system dependencies. See
+[secure installs](https://pip.pypa.io/en/stable/topics/secure-installs/),
+[wheelhouse installs](https://pip.pypa.io/en/stable/topics/repeatable-installs/#using-a-wheelhouse-aka-installation-bundles),
+[build isolation](https://pip.pypa.io/en/stable/reference/build-system/#disabling-build-isolation),
+[pip issue 11974](https://github.com/pypa/pip/issues/11974), and
+[pip issue 13984](https://github.com/pypa/pip/issues/13984).
 
 Create a reproducible file manifest after all artifacts are present. Run the
 manifest block only after every selected optional bundle in the following
@@ -141,7 +245,8 @@ The repository pins `docling==2.113.0` and `docling-haystack==1.2.0` and ships
 their complete production dependency set in `requirements.documents.lock`.
 `requirements.documents-ci.lock` is constrained to that exact production graph
 and adds only the parser-smoke dependencies. It is used to build one superset
-wheelhouse; the production venv still installs the smaller production lock.
+wheelhouse. Target-specific offline locks hash the final wheels; the production
+venv still installs the smaller production offline lock.
 Parser artifacts and the tokenizer remain separate immutable model bundles.
 
 Prepare and hash a separate bundle only if company acceptance explicitly needs
@@ -149,17 +254,25 @@ these formats. Prefetch models on the connected release-builder, never on the
 restricted company PC:
 
 ```powershell
-New-Item -ItemType Directory -Force "$Release\wheelhouse-documents" | Out-Null
 $DocumentBuilder = Join-Path $Repo "artifacts\document-builder-$Commit"
-py -3.12 -m venv $DocumentBuilder
-& "$DocumentBuilder\Scripts\python.exe" -m pip install --upgrade pip==26.1.2
-& "$DocumentBuilder\Scripts\python.exe" -m pip install `
-  --require-hashes -r requirements.documents-ci.lock
-& "$DocumentBuilder\Scripts\python.exe" -m pip check
-& "$DocumentBuilder\Scripts\python.exe" -m pip download `
-  --only-binary=:all: `
+Assert-PathAbsent $DocumentBuilder "Document builder environment"
+Assert-PathAbsent "$Release\wheelhouse-documents" "Parser wheelhouse"
+Assert-PathAbsent "$Release\models\docling" "Docling model directory"
+Assert-PathAbsent "$Release\models\docling-tokenizer" "Tokenizer directory"
+Assert-PathAbsent "$Release\requirements.documents.offline.in" `
+  "Parser production offline input"
+Assert-PathAbsent "$Release\requirements.documents.offline.lock" `
+  "Parser production offline lock"
+Assert-PathAbsent "$Release\requirements.documents-ci.offline.in" `
+  "Parser test offline input"
+Assert-PathAbsent "$Release\requirements.documents-ci.offline.lock" `
+  "Parser test offline lock"
+
+New-Item -ItemType Directory "$Release\wheelhouse-documents" | Out-Null
+& "$Builder\Scripts\python.exe" -m pip --isolated wheel `
+  --no-build-isolation --check-build-dependencies `
   --require-hashes -r requirements.documents-ci.lock `
-  --dest "$Release\wheelhouse-documents"
+  --wheel-dir "$Release\wheelhouse-documents"
 $UnexpectedParserArtifacts = Get-ChildItem "$Release\wheelhouse-documents" -File |
   Where-Object Extension -ne ".whl"
 if ($UnexpectedParserArtifacts) {
@@ -167,7 +280,38 @@ if ($UnexpectedParserArtifacts) {
   throw "Parser wheelhouse contains a non-wheel artifact"
 }
 
-New-Item -ItemType Directory -Force `
+Write-OfflinePins requirements.documents.lock `
+  "$Release\requirements.documents.offline.in"
+Write-OfflinePins requirements.documents-ci.lock `
+  "$Release\requirements.documents-ci.offline.in"
+& "$Builder\Scripts\pip-compile.exe" `
+  --no-index --find-links "$Release\wheelhouse-documents" `
+  --no-emit-find-links --no-emit-index-url `
+  --generate-hashes --allow-unsafe --strip-extras `
+  --output-file "$Release\requirements.documents.offline.lock" `
+  "$Release\requirements.documents.offline.in"
+& "$Builder\Scripts\pip-compile.exe" `
+  --no-index --find-links "$Release\wheelhouse-documents" `
+  --no-emit-find-links --no-emit-index-url `
+  --generate-hashes --allow-unsafe --strip-extras `
+  --output-file "$Release\requirements.documents-ci.offline.lock" `
+  "$Release\requirements.documents-ci.offline.in"
+Assert-LockParity requirements.documents.lock `
+  "$Release\requirements.documents.offline.lock"
+Assert-LockParity requirements.documents-ci.lock `
+  "$Release\requirements.documents-ci.offline.lock"
+
+py -3.12 -m venv $DocumentBuilder
+& "$DocumentBuilder\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-build" pip==26.1.2
+& "$DocumentBuilder\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-documents" --require-hashes `
+  -r "$Release\requirements.documents-ci.offline.lock"
+& "$DocumentBuilder\Scripts\python.exe" -m pip check
+
+New-Item -ItemType Directory `
   "$Release\models\docling", "$Release\models\docling-tokenizer" | Out-Null
 & "$DocumentBuilder\Scripts\python.exe" scripts\prefetch_docling_assets.py `
   --artifacts-dir "$Release\models\docling" `
@@ -176,13 +320,15 @@ New-Item -ItemType Directory -Force `
   --layout-model-revision b5b4bd59ad2b69aab715e9b1f1dfd74394c45fd4
 ```
 
-The wheel download is deliberately wheel-only; any missing wheel is a release
-blocker rather than permission to build an sdist on the restricted PC. The
-release manifest must include every parser wheel, model/tokenizer file and its
-license/provenance record. Both revisions above are immutable Hugging Face
-commits, not floating default branches; record each repository ID, revision and
-downloaded file hash in release evidence. After building this optional bundle,
-regenerate `SHA256SUMS.json` with the final manifest block above.
+Source-only parser dependencies are hash-verified and built only on the clean
+connected builder. The final parser directory must contain wheels only, and the
+two target-specific offline locks must match the source-lock name/version sets.
+The release manifest must include every parser wheel, source/offline lock,
+model/tokenizer file, and license/provenance record. Both revisions above are
+immutable Hugging Face commits, not floating default branches; record each
+repository ID, revision, and downloaded file hash in release evidence. After
+building this optional bundle, regenerate `SHA256SUMS.json` with the final
+manifest block above.
 
 Before approval, prove in an isolated no-egress VM that all parser dependencies
 and model assets are present. The structured converter uses Docling
@@ -206,16 +352,24 @@ network model lookup disabled:
 $Release = "D:\ProjectCopilot\releases\REPLACE_WITH_COMMIT"
 $ParserTest = "D:\ProjectCopilot\parser-acceptance\venv"
 $ParserSource = "D:\ProjectCopilot\parser-acceptance\source"
-New-Item -ItemType Directory -Force $ParserSource | Out-Null
+if (Test-Path -LiteralPath $ParserTest) {
+  throw "Parser acceptance venv already exists: $ParserTest"
+}
+if (Test-Path -LiteralPath $ParserSource) {
+  throw "Parser acceptance source already exists: $ParserSource"
+}
+New-Item -ItemType Directory $ParserSource | Out-Null
 Expand-Archive `
   -LiteralPath "$Release\project-copilot-source-REPLACE_WITH_COMMIT.zip" `
   -DestinationPath $ParserSource -Force
 py -3.12 -m venv $ParserTest
-& "$ParserTest\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse" pip==26.1.2
-& "$ParserTest\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse-documents" `
-  --require-hashes -r "$Release\requirements.documents-ci.lock"
+& "$ParserTest\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-build" pip==26.1.2
+& "$ParserTest\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-documents" --require-hashes `
+  -r "$Release\requirements.documents-ci.offline.lock"
 & "$ParserTest\Scripts\python.exe" -m pip install `
   --no-index --no-deps (Get-ChildItem "$Release\wheel\*.whl").FullName
 & "$ParserTest\Scripts\python.exe" -m pip check
@@ -307,12 +461,17 @@ $ErrorActionPreference = "Stop"
 $Release = "D:\ProjectCopilot\releases\REPLACE_WITH_COMMIT"
 $App = "D:\ProjectCopilot\app\0.2.0"
 
+if (Test-Path -LiteralPath "$App\venv") {
+  throw "Application venv already exists: $App\venv"
+}
 py -3.12 -m venv "$App\venv"
-& "$App\venv\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse" pip==26.1.2
-& "$App\venv\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse" `
-  --require-hashes -r "$Release\requirements.runtime.lock"
+& "$App\venv\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-build" pip==26.1.2
+& "$App\venv\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse" --require-hashes `
+  -r "$Release\requirements.runtime.offline.lock"
 & "$App\venv\Scripts\python.exe" -m pip install `
   --no-index --no-deps (Get-ChildItem "$Release\wheel\*.whl").FullName
 
@@ -322,13 +481,14 @@ py -3.12 -m venv "$App\venv"
 
 If and only if the separately reviewed Office/PDF bundle passed the isolated
 parser acceptance above, replace the runtime dependency install command with
-the following production parser install. Do not install the CI lock in the
-production venv:
+the following production parser install. Do not install a source lock or the
+CI/test offline lock in the production venv:
 
 ```powershell
-& "$App\venv\Scripts\python.exe" -m pip install `
-  --no-index --find-links "$Release\wheelhouse-documents" `
-  --require-hashes -r "$Release\requirements.documents.lock"
+& "$App\venv\Scripts\python.exe" -m pip --isolated install `
+  --no-index --no-cache-dir --only-binary=:all: `
+  --find-links "$Release\wheelhouse-documents" --require-hashes `
+  -r "$Release\requirements.documents.offline.lock"
 & "$App\venv\Scripts\python.exe" -m pip check
 ```
 
