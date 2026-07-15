@@ -29,7 +29,7 @@ jobs:
           python -m evaluation.run_offline
           --output artifacts/deterministic-${{ matrix.os }}.json
       - run: python -m project_copilot.release_guard .
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: deterministic-evaluation-${{ matrix.os }}
           path: artifacts/deterministic-${{ matrix.os }}.json
@@ -68,7 +68,7 @@ jobs:
           cyclonedx-py environment wheel-smoke/bin/python --pyproject pyproject.toml
           --mc-type application --output-reproducible --output-format JSON
           --output-file sbom.cdx.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-and-sbom
           path: |
@@ -105,7 +105,7 @@ jobs:
         env:
           PROJECT_COPILOT_BROWSER_URL: http://127.0.0.1:8788
           PROJECT_COPILOT_SCREENSHOT_DIR: artifacts
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-acceptance
           path: artifacts/*
