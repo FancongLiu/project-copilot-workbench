@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "dataset": "project-aurora-project-delivery-engineer-role",
+  "license": "CC0-1.0",
+  "fully_synthetic": true,
+  "cases": [
+    {
+      "id": "delivery-open-handover-action",
+      "category": "meeting_decision",
+      "question": "What did meeting MTG-ROLE-HO-03 leave open for handover?",
+      "expected": {
+        "sources": ["project-delivery-role-handover.md"],
+        "answer_contains_all": ["A-ROLE-31", "commissioning lead", "read-only trend hash", "2026-07-18"],
+        "grounding_terms": ["MTG-ROLE-HO-03", "A-ROLE-31", "read-only trend hash"],
+        "tools": ["meeting_decision_lookup"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "delivery-meeting-sequence",
+      "category": "meeting_decision",
+      "question": "What did the 2026-06-19 meeting decide before the 2026-07-10 meeting changed the supply target?",
+      "expected": {
+        "sources": ["meeting-2026-06-19-controls-review.md", "meeting-2026-07-10-commissioning.md"],
+        "answer_contains_all": ["D-008", "30 seconds", "D-014", "6.5 degrees Celsius"],
+        "grounding_terms": ["D-008", "30 seconds", "D-014", "6.5 degrees Celsius"],
+        "tools": ["meeting_decision_lookup"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "delivery-clarify-ambiguous-status",
+      "category": "clarification",
+      "question": "How is it?",
+      "expected": {
+        "sources": [],
+        "answer_contains_all": ["Please specify", "project aspect", "time range"],
+        "grounding_terms": [],
+        "tools": ["clarification"],
+        "refused": false,
+        "clarification": true
+      }
+    },
+    {
+      "id": "delivery-reject-design-overlay",
+      "category": "role_isolation",
+      "question": "DBAUTH5N3",
+      "expected": {
+        "sources": [],
+        "answer_contains_all": ["do not contain enough evidence"],
+        "grounding_terms": [],
+        "tools": ["project_search"],
+        "refused": true,
+        "clarification": false
+      }
+    }
+  ]
+}

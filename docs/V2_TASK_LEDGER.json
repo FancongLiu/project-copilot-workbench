@@ -5,9 +5,9 @@
   "objective_authority": "company/runtime/project_copilot_v2_handoff_20260715.md",
   "checkpoint_projection": "docs/V2_CHECKPOINT.md",
   "event_log": "docs/V2_TASK_EVENTS.jsonl",
-  "status": "complete",
-  "revision": 22,
-  "event_sequence": 41,
+  "status": "in_progress",
+  "revision": 24,
+  "event_sequence": 43,
   "concurrency_limit": 3,
   "write_owner": "root",
   "safety_boundaries": [
@@ -79,6 +79,16 @@
         "examples/synthetic_hvac",
         "evaluation/gold_cases.json",
         "docs/adr/003-defrost-temporal-diagnostics.md"
+      ]
+    },
+    {
+      "id": "C-008",
+      "summary": "Treat defrost as one difficult example inside the broader commercial-HVAC project knowledge and governed data-analysis product; evaluate distinct engineer roles against current industry and mature-project evidence.",
+      "applied_to": [
+        "examples/synthetic_hvac/agent_data",
+        "evaluation/hvac_role_benchmark.json",
+        "evaluation/run_hvac_role_benchmark.py",
+        "docs/research/2026-07-16-hvac-engineer-benchmark.md"
       ]
     }
   ],
@@ -276,6 +286,29 @@
         "independent offline release rereview: Critical 0, Important 0",
         "fresh scripts/verify.cmd: 150 passed, 4 documented optional skips; release guard and Gitleaks clean"
       ]
+    },
+    {
+      "id": "V2-10",
+      "title": "Commercial-HVAC engineer role benchmark and research-driven gap review",
+      "status": "in_progress",
+      "dependencies": ["V2-09"],
+      "acceptance": [
+        "current official Web and GitHub comparison",
+        "isolated synthetic role data areas",
+        "broad knowledge and governed data-analysis workflows",
+        "measured per-role evidence and optimization priorities",
+        "independent review, fresh verification, commit and push"
+      ],
+      "evidence": [
+        "evaluation/hvac_role_benchmark.json",
+        "evaluation/run_hvac_role_benchmark.py",
+        "evaluation/results/hvac-role-benchmark.json",
+        "examples/synthetic_hvac/agent_data",
+        "evaluation/test_hvac_role_benchmark.py",
+        "docs/research/2026-07-16-hvac-engineer-benchmark.md",
+        "fresh scripts/verify.cmd: 158 passed, 4 documented optional skips",
+        "independent final rereview: Critical 0, Important 0"
+      ]
     }
   ],
   "acceptance_status": {
@@ -291,12 +324,12 @@
     "A10": "verified_commit_push_and_trial_server"
   },
   "current_blockers": [],
-  "next_slice_ids": [],
+  "next_slice_ids": ["V2-10"],
   "forbidden_inheritance": [
     "raw task history",
     "raw Agent transcripts",
     "stale process IDs",
     "real company data or secrets"
   ],
-  "updated_at": "2026-07-16T06:27:00+08:00"
+  "updated_at": "2026-07-16T09:10:32+08:00"
 }

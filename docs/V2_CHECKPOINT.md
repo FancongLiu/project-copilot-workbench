@@ -1,6 +1,6 @@
 # Project Copilot Workbench V2 compact checkpoint
 
-Last updated: 2026-07-16 (Asia/Shanghai)
+Last updated: 2026-07-16 09:10 (Asia/Shanghai)
 
 ## Objective and authority
 
@@ -26,6 +26,29 @@ append-only transition summary.
   are in ignored `artifacts/research-upstream/` at recorded commits.
 
 ## Current state
+
+- Slice V2-10 is complete after the Chairman clarified that defrost is one
+  difficult example, while the product boundary is general commercial-HVAC
+  project knowledge and governed structured/time-series analysis.
+- Two bounded read-only research Agents completed current official industry
+  workflow and mature GitHub project comparisons. The WebSearch connector
+  returned HTTP 404, so the evidence was independently refreshed through
+  official public pages, vendor libraries, GitHub REST/API, repository source,
+  and PyPI metadata; this limitation must remain visible in the research note.
+- Four fully synthetic isolated role data areas now cover design, controls
+  commissioning, field service, and project delivery. After independent review
+  added cross-role leakage negatives, the 16-case offline run completed 16/16
+  without execution errors. Seven evidence-bearing cases
+  measured Recall 1.0, MRR 0.9285714286, and NDCG 0.9501315614; all measured
+  answer/tool/refusal/clarification checks passed; four opaque cross-role source
+  markers were unavailable outside their assigned workspaces. These figures apply only to
+  the deterministic synthetic run, not a company model or real equipment.
+- Independent V2-10 review reproduced role-directory overlap, gold-answer
+  fallback, missing artifact binding, provenance/link boundary, stale Vanna,
+  and cross-role-negative gaps. All were remediated and rereviewed at Critical
+  0 and Important 0. Fresh `scripts/verify.cmd` passed 158 tests with 4
+  documented optional skips. Commit, non-force push, and final remote/server
+  confirmation are the only handoff actions after this checkpoint write.
 
 - Branch: `main`, base commit `41d1b448bdfc0c6288f51b146a96ccb4610fda73`
   before V2 edits. Delivery commit `6559256` and verified remediation commit

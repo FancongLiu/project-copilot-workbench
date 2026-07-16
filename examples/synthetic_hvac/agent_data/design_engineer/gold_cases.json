@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "dataset": "project-aurora-design-engineer-role",
+  "license": "CC0-1.0",
+  "fully_synthetic": true,
+  "cases": [
+    {
+      "id": "design-role-evidence-contract",
+      "category": "project_knowledge",
+      "question": "What evidence must DB-ROLE-01 reconcile before a performance conclusion?",
+      "expected": {
+        "sources": ["design-basis-role.md"],
+        "answer_contains_all": ["DB-ROLE-01", "equipment schedule", "BAS point schedule", "implemented configuration"],
+        "grounding_terms": ["DB-ROLE-01", "BAS point schedule", "implemented configuration"],
+        "tools": ["project_search"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "design-current-supply-target",
+      "category": "configuration_lookup",
+      "question": "What is the current configuration supply target for CH-01?",
+      "expected": {
+        "sources": ["controller-export-2026-07-12.md"],
+        "answer_contains_all": ["6.5 degrees Celsius", "D-014"],
+        "grounding_terms": ["6.5 degrees Celsius", "D-014"],
+        "tools": ["configuration_lookup"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "design-temperature-delta",
+      "category": "governed_analytics",
+      "question": "Summarize the average supply-return temperature delta T in validated telemetry.",
+      "expected": {
+        "sources": [],
+        "answer_contains_all": ["Average delta T", "validated telemetry"],
+        "grounding_terms": [],
+        "tools": ["governed_analytics"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "design-reject-commissioning-overlay",
+      "category": "role_isolation",
+      "question": "CXAUTH9Q2",
+      "expected": {
+        "sources": [],
+        "answer_contains_all": ["do not contain enough evidence"],
+        "grounding_terms": [],
+        "tools": ["project_search"],
+        "refused": true,
+        "clarification": false
+      }
+    }
+  ]
+}

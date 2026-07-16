@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "dataset": "project-aurora-commissioning-engineer-role",
+  "license": "CC0-1.0",
+  "fully_synthetic": true,
+  "cases": [
+    {
+      "id": "commissioning-witness-prerequisites",
+      "category": "project_knowledge",
+      "question": "What evidence does CX-ROLE-02 require before replay?",
+      "expected": {
+        "sources": ["commissioning-role-plan.md"],
+        "answer_contains_all": ["CX-ROLE-02", "timezone", "command-versus-feedback", "read-only trend export"],
+        "grounding_terms": ["CX-ROLE-02", "rule-version binding", "read-only trend export"],
+        "tools": ["project_search"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "commissioning-peak-load",
+      "category": "governed_analytics",
+      "question": "What was the peak load in the validated telemetry?",
+      "expected": {
+        "sources": [],
+        "answer_contains_all": ["93.0%", "2026-07-01 15:00:00"],
+        "grounding_terms": [],
+        "tools": ["governed_analytics"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "commissioning-defrost-deviation",
+      "category": "temporal_diagnostics",
+      "question": "Did HP-01 follow the defrost control logic from 2026-07-15T15:59:00 to 2026-07-15T16:08:00?",
+      "expected": {
+        "sources": ["defrost-control-sequence.md"],
+        "answer_contains_all": ["non-compliant", "first deviation", "expected-versus-observed"],
+        "grounding_terms": ["outdoor fan command must be off", "300-second maximum"],
+        "tools": ["configuration_lookup", "defrost_diagnostics"],
+        "refused": false,
+        "clarification": false
+      }
+    },
+    {
+      "id": "commissioning-reject-field-overlay",
+      "category": "role_isolation",
+      "question": "WOAUTH8K7",
+      "expected": {
+        "sources": [],
+        "answer_contains_all": ["do not contain enough evidence"],
+        "grounding_terms": [],
+        "tools": ["project_search"],
+        "refused": true,
+        "clarification": false
+      }
+    }
+  ]
+}

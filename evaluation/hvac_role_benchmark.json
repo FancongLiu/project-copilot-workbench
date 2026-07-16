@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "benchmark_id": "project-aurora-commercial-hvac-roles-v1",
+  "license": "CC0-1.0",
+  "fully_synthetic": true,
+  "roles": [
+    {
+      "role_id": "design_engineer",
+      "display_name": "Commercial HVAC design engineer",
+      "workflows": [
+        "project_knowledge",
+        "configuration_lookup",
+        "governed_analytics",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/design_engineer",
+      "gold_path": "examples/synthetic_hvac/agent_data/design_engineer/gold_cases.json"
+    },
+    {
+      "role_id": "commissioning_engineer",
+      "display_name": "Controls and commissioning engineer",
+      "workflows": [
+        "project_knowledge",
+        "governed_analytics",
+        "temporal_diagnostics",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/commissioning_engineer",
+      "gold_path": "examples/synthetic_hvac/agent_data/commissioning_engineer/gold_cases.json"
+    },
+    {
+      "role_id": "field_service_engineer",
+      "display_name": "Field service engineer",
+      "workflows": [
+        "project_knowledge",
+        "governed_analytics",
+        "refusal",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/field_service_engineer",
+      "gold_path": "examples/synthetic_hvac/agent_data/field_service_engineer/gold_cases.json"
+    },
+    {
+      "role_id": "project_delivery_engineer",
+      "display_name": "HVAC project delivery engineer",
+      "workflows": [
+        "project_knowledge",
+        "meeting_decision",
+        "clarification",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/project_delivery_engineer",
+      "gold_path": "examples/synthetic_hvac/agent_data/project_delivery_engineer/gold_cases.json"
+    }
+  ]
+}

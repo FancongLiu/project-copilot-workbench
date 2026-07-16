@@ -35,6 +35,9 @@ The read-only [Kelsus sovereign AI reference architecture](https://github.com/Ke
   firmware version;
 - an intentional 7.0 versus 6.5 degree historical/current configuration conflict;
 - an intentional 55 versus proposed 45 kPa implemented/deferred distinction.
+- four isolated role data areas for design, controls commissioning, field
+  service, and project delivery. Each area adds its own fully synthetic work
+  artifact and frozen role questions to the shared Project Aurora package.
 
 Public [ASHRAE commissioning](https://www.ashrae.org/technical-resources/bookstore/commissioning) and [central chilled-water plant](https://www.ashrae.org/professional-development/self-directed-learning-group-learning-texts/fundamentals-of-design-and-control-of-central-chilled-water-plants) pages were consulted only for ordinary vocabulary and document workflow shape. No ASHRAE text, paid standard, manufacturer table, facility record, or real control value is redistributed. Corpus origin and restrictions are recorded in `examples/synthetic_hvac/SYNTHETIC_DATA_PROVENANCE.md`; the package is CC0-1.0.
 
@@ -76,6 +79,33 @@ The runner uses a temporary runtime by default. To retain generated indexes and 
 ```
 
 Generated runtime state must not be committed. The measured JSON may be retained when it identifies the adapter and corpus digest and contains no real project data.
+
+## Run the HVAC engineer role benchmark
+
+The broader role benchmark treats defrost as one difficult example inside
+commercial-HVAC project knowledge and governed data analysis. It creates a
+separate runtime root for every role and never mixes role-specific source
+inventories:
+
+```powershell
+& ".venv\Scripts\python.exe" -m pytest `
+  evaluation/test_hvac_role_benchmark.py -q
+& ".venv\Scripts\python.exe" -m evaluation.run_hvac_role_benchmark `
+  --output evaluation/results/hvac-role-benchmark.json
+```
+
+The committed role benchmark contains 4 roles and 16 cases across project
+knowledge, configuration lookup, meeting decisions, typed analytics, temporal
+diagnostics, clarification, refusal, and cross-role source isolation. The latest
+deterministic run completed 16/16 cases without execution errors. Seven evidence-bearing cases measured
+Recall `1.0`, MRR `0.9285714285714286`, and NDCG
+`0.950131561401019`. See
+`docs/research/2026-07-16-hvac-engineer-benchmark.md` for the industry workflow,
+mature-project comparison, product rubric, limitations, and next priorities.
+
+These role results are still synthetic deterministic regression evidence. A
+company model must run a separate private campaign, and real role data areas
+must remain outside the public repository.
 
 ## Metrics and evidence
 

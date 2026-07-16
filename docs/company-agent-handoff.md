@@ -295,6 +295,41 @@ cover at least:
 - insufficient/unobservable behavior for gaps, missing points, or timing finer
   than the sample interval.
 
+Before authoring private cases, run the public role-isolation regression from
+the verified source tree:
+
+```powershell
+& .venv\Scripts\python.exe -m pytest `
+  evaluation/test_hvac_role_benchmark.py -q
+& .venv\Scripts\python.exe -m evaluation.run_hvac_role_benchmark `
+  --runtime D:\ProjectCopilot\evaluation\synthetic-role-runtime `
+  --output D:\ProjectCopilot\evaluation\synthetic-role-result.json
+```
+
+The public benchmark is a deterministic smoke test only. Its four role areas
+show the required private layout: design engineer, controls/commissioning
+engineer, field-service engineer, and project-delivery engineer. Build the
+company set outside Git with one access-controlled data area and gold set per
+role. Import the approved shared Project Package plus only that role's overlay
+into a fresh runtime root. Never reuse one role's workspace or index for
+another role's score.
+
+Company-private coverage must not be defrost-only. Include equipment schedules,
+point lists, effective configuration, meeting/change history, SOPs, alarm and
+work-order evidence, energy/temperature/pressure/flow trends, data quality,
+time-window analysis, and safety refusal. Defrost or another complex control
+sequence is one temporal case. Bind every model-specific case to asset,
+controller, firmware, document revision, units, time zone, point mapping,
+sample interval, and immutable source hashes. A vendor table or threshold must
+remain private and version-bound; do not generalize it across product families.
+
+For a company-model campaign, preserve the frozen deterministic expectations
+and add an optional reviewed DeepEval adapter for faithfulness, context
+precision/recall, task completion, tool correctness, argument correctness, and
+step efficiency. The judge must use the approved company endpoint, be calibrated
+against independent HVAC-engineer ratings, and retain disagreements. Do not
+convert an uncalibrated judge score into an acceptance percentage.
+
 Record per-case expected sources, required answer facts, expected tool names,
 refusal/clarification outcome and measured latency. Classify failures as
 corpus, parser, retrieval, ranking, tool selection, grounding, analytics, UI,

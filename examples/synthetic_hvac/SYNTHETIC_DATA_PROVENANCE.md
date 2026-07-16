@@ -22,6 +22,12 @@ The fictional organization is `Northstar Test Lab`; the fictional project is `Pr
   they were not copied from an OEM manual.
 - The corpus deliberately contains dated historical and current configuration values so temporal and conflict-resolution behavior can be measured.
 - The evaluation gold set was written before measured runs and is stored in `evaluation/gold_cases.json`; measured results are emitted separately and never overwrite the gold expectations.
+- Four role-specific data areas under `agent_data` were independently authored
+  for design, controls commissioning, field service, and project-delivery
+  evaluation. Each role uses a separate runtime workspace and its own frozen
+  gold cases. Defrost is only one complex commissioning case; the remaining
+  cases cover project knowledge, configuration, meetings, field work, typed
+  telemetry analytics, clarification, and refusal.
 - No language model output or downloaded HVAC manual was copied into the corpus.
 
 Public ASHRAE commissioning and chilled-water-plant topic pages were consulted only to confirm ordinary domain vocabulary and document workflow shapes. All fixture wording and numerical values remain independently invented. Those references are listed in `docs/evaluation.md` and are not redistributed here.

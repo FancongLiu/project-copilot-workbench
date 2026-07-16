@@ -120,6 +120,8 @@ Run the frozen offline evaluation and write per-case evidence:
 ```powershell
 .venv\Scripts\python.exe -m evaluation.run_offline `
   --output evaluation\results\deterministic-baseline.json
+.venv\Scripts\python.exe -m evaluation.run_hvac_role_benchmark `
+  --output evaluation\results\hvac-role-benchmark.json
 ```
 
 The gate covers unit/integration/security mutation cases, deterministic
@@ -130,7 +132,10 @@ executes Gitleaks.
 
 The current deterministic baseline contains 23 frozen cases. It includes five
 defrost time-window replays over an 8,640-row, ten-second synthetic day plus a
-Chinese equipment-control refusal. See
+Chinese equipment-control refusal. A second 16-case benchmark creates isolated
+data/runtime areas for commercial-HVAC design, commissioning, field service,
+and project delivery; defrost is only one of its knowledge and data-analysis
+workflows. See
 [evaluation](docs/evaluation.md) for measured counts, ranking values, and
 limitations.
 

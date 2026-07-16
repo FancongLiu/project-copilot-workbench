@@ -1,0 +1,2340 @@
+{
+  "schema_version": "1.0",
+  "benchmark_id": "project-aurora-commercial-hvac-roles-v1",
+  "started_at": "2026-07-16T01:04:04.512431+00:00",
+  "completed_at": "2026-07-16T01:04:11.769504+00:00",
+  "offline": true,
+  "adapter": "project_copilot.agent.DeterministicChatGenerator",
+  "environment": {
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.22631-SP0"
+  },
+  "corpus": {
+    "dataset": "project-aurora-synthetic-hvac",
+    "sha256": "a7857bc38f534104f871044e4a7d880f61c1255f6ffc137658f96034b9bdebdc",
+    "license": "CC0-1.0",
+    "fully_synthetic": true,
+    "telemetry_rows": 72,
+    "defrost_telemetry_rows": 8640
+  },
+  "license": "CC0-1.0",
+  "fully_synthetic": true,
+  "isolation": "Each role imports the shared synthetic project package plus its own role data into a separate WorkspaceManager runtime root.",
+  "roles": [
+    {
+      "role_id": "design_engineer",
+      "display_name": "Commercial HVAC design engineer",
+      "workflows": [
+        "project_knowledge",
+        "configuration_lookup",
+        "governed_analytics",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/design_engineer",
+      "data_area_sha256": "09f8f16c43205955530c62d48a2588b61519f46f877627e770f6edde65894ec8",
+      "role_source_count": 1,
+      "source_inventory": [
+        {
+          "source_id": "d58842f37fe00c30",
+          "filename": "asset-register-heat-pump.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "2dc5c5d738cedeab31d7ff40d94d0e12c8b7b1967a88548d5723094153e44336",
+          "parser": "plain-text",
+          "size_bytes": 1072,
+          "error": null
+        },
+        {
+          "source_id": "9cfda386a2526431",
+          "filename": "instrumentation-notes.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "b848dcbf0dac962b201cd1103f4a741b9ee17914a88ba3288d4560f6073816b3",
+          "parser": "plain-text",
+          "size_bytes": 702,
+          "error": null
+        },
+        {
+          "source_id": "3790977cfa8b6ce9",
+          "filename": "project-background.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "e803c1d8ab1be82a6ed7e75539beecabb5b681427731dc00eed4cd7ac80e0f1c",
+          "parser": "plain-text",
+          "size_bytes": 1133,
+          "error": null
+        },
+        {
+          "source_id": "aa8201d8f89d08c8",
+          "filename": "bas-point-schedule-defrost.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "19f4d6484e38938d85d4f5dd3433b7d7aa94a47d73a38c817c41f8b616a93ca3",
+          "parser": "plain-text",
+          "size_bytes": 1830,
+          "error": null
+        },
+        {
+          "source_id": "0cba93c72078c3dd",
+          "filename": "baseline-configuration-2026-06-01.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "568dc55523a6a5b70c39b07dc3c474460ed3a5f2e27f653c578f11c05fc14fa1",
+          "parser": "plain-text",
+          "size_bytes": 748,
+          "error": null
+        },
+        {
+          "source_id": "aec3dbd716e91040",
+          "filename": "controller-export-2026-07-12.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "820829ddb0bac38e67c33936a44be8224e5d8d44b318116b01b9ca0f619a9e8b",
+          "parser": "plain-text",
+          "size_bytes": 844,
+          "error": null
+        },
+        {
+          "source_id": "74edb068b3bdfdd9",
+          "filename": "current-state-evidence-2026-07-13.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "db11c9efc614cce8f347a1f55e94191c5d972209fe54153e0abd14971b3ac768",
+          "parser": "plain-text",
+          "size_bytes": 623,
+          "error": null
+        },
+        {
+          "source_id": "5205d883f22d0e41",
+          "filename": "defrost-asset-context.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "fc386c45e3490fe3eac5307b09f456770d5ae23a4ab3d168d21c7e70f51f588a",
+          "parser": "plain-text",
+          "size_bytes": 224,
+          "error": null
+        },
+        {
+          "source_id": "352316f07715b591",
+          "filename": "defrost-control-sequence.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "cc9970f5bf2dcaa73e110c0c08ae0c6d9416e63c4cca70c5e832c645751a956f",
+          "parser": "plain-text",
+          "size_bytes": 1845,
+          "error": null
+        },
+        {
+          "source_id": "9517f249bb9b9fa0",
+          "filename": "defrost-rules.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "5b8df3e25f089b60043f9e44a0a9ed4a9da5eb85dc0a019cf399b58b7c921ce5",
+          "parser": "plain-text",
+          "size_bytes": 750,
+          "error": null
+        },
+        {
+          "source_id": "924590330a079210",
+          "filename": "decision-register.md",
+          "category": "decision",
+          "status": "indexed",
+          "sha256": "d1ef2e8918f0d4153bbc27d78178f925a9053d915ed637fc77bdda5ee7532cba",
+          "parser": "plain-text",
+          "size_bytes": 1331,
+          "error": null
+        },
+        {
+          "source_id": "2ec777f27b05d204",
+          "filename": "meeting-2026-06-05-kickoff.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "7a8045f35ffead4b1ff26d69e38bed6caaeb42536f0f2687acca227c989a13bc",
+          "parser": "plain-text",
+          "size_bytes": 576,
+          "error": null
+        },
+        {
+          "source_id": "a961f6f949da196c",
+          "filename": "meeting-2026-06-19-controls-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "758f799e59c640743b898d341305ffcb6a6780b9a5aef34b6d4aa2434cff1d3d",
+          "parser": "plain-text",
+          "size_bytes": 512,
+          "error": null
+        },
+        {
+          "source_id": "c71ca4553f5a77ee",
+          "filename": "meeting-2026-07-03-performance-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6061b164d6fbcbddd554bf6edeb31abb829a1922676d0afae3dd78a80973dd75",
+          "parser": "plain-text",
+          "size_bytes": 604,
+          "error": null
+        },
+        {
+          "source_id": "0b4f76b81c7685aa",
+          "filename": "meeting-2026-07-10-commissioning.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "8a00b1543a4bc7b7806dfe02c7278ba7d105bb5066610a744f53c1a1c99bc629",
+          "parser": "plain-text",
+          "size_bytes": 642,
+          "error": null
+        },
+        {
+          "source_id": "1e03e6c83f08de47",
+          "filename": "meeting-2026-07-13-closeout.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "4e5c796a66c669769340d117358577550fffc5921707a33209e3c0fbb103a5f0",
+          "parser": "plain-text",
+          "size_bytes": 668,
+          "error": null
+        },
+        {
+          "source_id": "75604926d8f64f99",
+          "filename": "meeting-2026-07-14-defrost-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6e966ee44e220456beb06621e4bdc5e6a3d5cd6906d5c4c49b0806c403a916d7",
+          "parser": "plain-text",
+          "size_bytes": 923,
+          "error": null
+        },
+        {
+          "source_id": "5bd3544c282ffd18",
+          "filename": "sop-alarm-response.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "77fe93847867cb3480bd55ba3f2bd87e5ff73414c83b547680eef01869147510",
+          "parser": "plain-text",
+          "size_bytes": 588,
+          "error": null
+        },
+        {
+          "source_id": "910c727006d0a85f",
+          "filename": "sop-change-control.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "c5de0cdc077a6469427010a90282e6a9828a1dea410995dc4bdb8e3bb36de053",
+          "parser": "plain-text",
+          "size_bytes": 664,
+          "error": null
+        },
+        {
+          "source_id": "aee6e5903ce40302",
+          "filename": "sop-defrost-diagnostic-review.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "19a00b46d8a323f6ed00280e960a62a9e943c0fcb0d5fddd59db40c9f17211ec",
+          "parser": "plain-text",
+          "size_bytes": 873,
+          "error": null
+        },
+        {
+          "source_id": "61ede47026a13438",
+          "filename": "sop-startup.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "b61a2322ad36c190b4f0321f7174de8f057b64c7d6728a72d8938be8f5900e76",
+          "parser": "plain-text",
+          "size_bytes": 644,
+          "error": null
+        },
+        {
+          "source_id": "10e1a739606c5678",
+          "filename": "design-basis-role.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "ee80a295793bd8fc0efa50e1b16c97d2d8832a49797b0533a5f48de01d8041f2",
+          "parser": "plain-text",
+          "size_bytes": 760,
+          "error": null
+        }
+      ],
+      "cases": [
+        {
+          "case_id": "design-role-evidence-contract",
+          "category": "project_knowledge",
+          "question": "What evidence must DB-ROLE-01 reconcile before a performance conclusion?",
+          "status": "passed",
+          "latency_ms": 146.554,
+          "error": null,
+          "expected": {
+            "sources": [
+              "design-basis-role.md"
+            ],
+            "answer_contains_all": [
+              "DB-ROLE-01",
+              "equipment schedule",
+              "BAS point schedule",
+              "implemented configuration"
+            ],
+            "grounding_terms": [
+              "DB-ROLE-01",
+              "BAS point schedule",
+              "implemented configuration"
+            ],
+            "tools": [
+              "project_search"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Review item `DB-ROLE-01` requires the design engineer to reconcile the current\nequipment schedule, approved control sequence, BAS point schedule, and latest\nimplemented configuration before accepting a performance conclusion.\nThe synthetic isolation marker for this role document is `DBAUTH5N3`. The role review must distinguish design intent from measured operation. Its\ndeliverable is a cited discrepancy list, not a control command. Missing pump,\nvalve, sensor-quality, or effective-date evidence must be reported as an open\ninformation request rather than filled from memory. | Asset ID | Fictional equipment | Nominal role |\n|---|---|---|\n| CH-01 | Water-cooled chiller | 900 kW cooling |\n| P-CHW-01 | Primary chilled-water pump with VFD | 37 kW motor |\n| P-CW-01 | Condenser-water pump | 45 kW motor |\n| CT-01 | Single cooling-tower cell | 1,050 kW heat rejection |\n| TT-101 | Chilled-water supply temperature sensor | Control feedback |\n| TT-102 | Chilled-water return temperature sensor | Performance calculation | During active defrost, the outdoor fan command must be off and the\nreversing-valve command must be on. Defrost may end when outdoor coil\ntemperature reaches 5 C or when the 300-second maximum duration is reached.\nAfter the command clears, the outdoor fan remains off for a 20-second recovery\ndwell before normal heating resumes. # Performance review — 2026-07-03",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "Review item `DB-ROLE-01` requires the design engineer to reconcile the current\nequipment schedule, approved control sequence, BAS point schedule, and latest\nimplemented configurati"
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "10e1a739606c5678",
+                "source": "design-basis-role.md",
+                "category": "background",
+                "excerpt": "Review item `DB-ROLE-01` requires the design engineer to reconcile the current\nequipment schedule, approved control sequence, BAS point schedule, and latest\nimplemented configuration before accepting a performance conclusion.\nThe synthetic isolation marker for this role document is `DBAUTH5N3`.",
+                "section": "Synthetic design-engineer review brief",
+                "page": null,
+                "score": 31.304305641994358
+              },
+              {
+                "source_id": "10e1a739606c5678",
+                "source": "design-basis-role.md",
+                "category": "background",
+                "excerpt": "The role review must distinguish design intent from measured operation. Its\ndeliverable is a cited discrepancy list, not a control command. Missing pump,\nvalve, sensor-quality, or effective-date evidence must be reported as an open\ninformation request rather than filled from memory.",
+                "section": "Synthetic design-engineer review brief",
+                "page": null,
+                "score": 22.66946913052793
+              },
+              {
+                "source_id": "3790977cfa8b6ce9",
+                "source": "project-background.md",
+                "category": "background",
+                "excerpt": "| Asset ID | Fictional equipment | Nominal role |\n|---|---|---|\n| CH-01 | Water-cooled chiller | 900 kW cooling |\n| P-CHW-01 | Primary chilled-water pump with VFD | 37 kW motor |\n| P-CW-01 | Condenser-water pump | 45 kW motor |\n| CT-01 | Single cooling-tower cell | 1,050 kW heat rejection |\n| TT-101 | Chilled-water supply temperature sensor | Control feedback |\n| TT-102 | Chilled-water return temperature sensor | Performance calculation |",
+                "section": "Project Aurora synthetic cooling-plant upgrade",
+                "page": null,
+                "score": 20.9461879282506
+              },
+              {
+                "source_id": "352316f07715b591",
+                "source": "defrost-control-sequence.md",
+                "category": "configuration",
+                "excerpt": "During active defrost, the outdoor fan command must be off and the\nreversing-valve command must be on. Defrost may end when outdoor coil\ntemperature reaches 5 C or when the 300-second maximum duration is reached.\nAfter the command clears, the outdoor fan remains off for a 20-second recovery\ndwell before normal heating resumes.",
+                "section": "HP-01 synthetic defrost control sequence",
+                "page": null,
+                "score": 20.66166118501072
+              },
+              {
+                "source_id": "c71ca4553f5a77ee",
+                "source": "meeting-2026-07-03-performance-review.md",
+                "category": "meeting",
+                "excerpt": "# Performance review — 2026-07-03",
+                "section": "Performance review — 2026-07-03",
+                "page": null,
+                "score": 20.41409453293572
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "design-current-supply-target",
+          "category": "configuration_lookup",
+          "question": "What is the current configuration supply target for CH-01?",
+          "status": "passed",
+          "latency_ms": 84.64,
+          "error": null,
+          "expected": {
+            "sources": [
+              "controller-export-2026-07-12.md"
+            ],
+            "answer_contains_all": [
+              "6.5 degrees Celsius",
+              "D-014"
+            ],
+            "grounding_terms": [
+              "6.5 degrees Celsius",
+              "D-014"
+            ],
+            "tools": [
+              "configuration_lookup"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "| Parameter | Observed value | Current-state interpretation |\n|---|---:|---|\n| CH-01 occupied supply target | 6.5 degrees Celsius | Active; implements Decision D-014 |\n| Primary-loop differential-pressure target | 55 kPa | Active; unchanged from baseline |\n| Proposed differential-pressure reset | 45 kPa | Not active; Decision D-017 was deferred |\n| Flow-proof delay | 30 seconds | Active |\n| High supply-temperature alarm | 7.5 degrees Celsius for 10 minutes | Active | - D-014 is implemented: CH-01 occupied supply target is 6.5 degrees Celsius.\n- D-017 is deferred: the primary-loop differential-pressure target remains 55 kPa, not 45 kPa.\n- The 30-second flow-proof delay remains active.\n- Action A-014 remains open until Lin Qiao records 72 hours of stable post-change observations. | Parameter | Baseline value | Status on 2026-06-01 |\n|---|---:|---|\n| Occupied chilled-water supply target | 7.0 degrees Celsius | Approved baseline |\n| Primary-loop differential-pressure target | 55 kPa | Approved baseline |\n| Flow-proof delay before CH-01 enable | 30 seconds | Approved baseline |\n| Low-load shutdown review threshold | 25 percent for 10 minutes | Approved baseline |\n| High supply-temperature alarm | 7.5 degrees Celsius for 10 minutes | Approved baseline | Current-state rule: an implemented decision plus dated field evidence supersedes an older baseline. A deferred proposal is not current configuration. The 7.0 degree target is historical after Decision D-014 took effect. It remains in this file so the workbench must distinguish a dated baseline from current state.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "configuration_lookup"
+            ],
+            "tool_trace": [
+              {
+                "tool": "configuration_lookup",
+                "status": "completed",
+                "summary": "| Parameter | Observed value | Current-state interpretation |\n|---|---:|---|\n| CH-01 occupied supply target | 6.5 degrees Celsius | Active; implements Decision D-014 |\n| Primary-lo"
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "aec3dbd716e91040",
+                "source": "controller-export-2026-07-12.md",
+                "category": "configuration",
+                "excerpt": "| Parameter | Observed value | Current-state interpretation |\n|---|---:|---|\n| CH-01 occupied supply target | 6.5 degrees Celsius | Active; implements Decision D-014 |\n| Primary-loop differential-pressure target | 55 kPa | Active; unchanged from baseline |\n| Proposed differential-pressure reset | 45 kPa | Not active; Decision D-017 was deferred |\n| Flow-proof delay | 30 seconds | Active |\n| High supply-temperature alarm | 7.5 degrees Celsius for 10 minutes | Active |",
+                "section": "Read-only controller export observed 2026-07-12",
+                "page": null,
+                "score": 15.891837921465948
+              },
+              {
+                "source_id": "74edb068b3bdfdd9",
+                "source": "current-state-evidence-2026-07-13.md",
+                "category": "configuration",
+                "excerpt": "- D-014 is implemented: CH-01 occupied supply target is 6.5 degrees Celsius.\n- D-017 is deferred: the primary-loop differential-pressure target remains 55 kPa, not 45 kPa.\n- The 30-second flow-proof delay remains active.\n- Action A-014 remains open until Lin Qiao records 72 hours of stable post-change observations.",
+                "section": "Current-state evidence reviewed 2026-07-13",
+                "page": null,
+                "score": 15.746876391440798
+              },
+              {
+                "source_id": "0cba93c72078c3dd",
+                "source": "baseline-configuration-2026-06-01.md",
+                "category": "configuration",
+                "excerpt": "| Parameter | Baseline value | Status on 2026-06-01 |\n|---|---:|---|\n| Occupied chilled-water supply target | 7.0 degrees Celsius | Approved baseline |\n| Primary-loop differential-pressure target | 55 kPa | Approved baseline |\n| Flow-proof delay before CH-01 enable | 30 seconds | Approved baseline |\n| Low-load shutdown review threshold | 25 percent for 10 minutes | Approved baseline |\n| High supply-temperature alarm | 7.5 degrees Celsius for 10 minutes | Approved baseline |",
+                "section": "Baseline configuration issued 2026-06-01",
+                "page": null,
+                "score": 15.586253607858389
+              },
+              {
+                "source_id": "924590330a079210",
+                "source": "decision-register.md",
+                "category": "decision",
+                "excerpt": "Current-state rule: an implemented decision plus dated field evidence supersedes an older baseline. A deferred proposal is not current configuration.",
+                "section": "Synthetic decision and action register",
+                "page": null,
+                "score": 15.11607105953158
+              },
+              {
+                "source_id": "0cba93c72078c3dd",
+                "source": "baseline-configuration-2026-06-01.md",
+                "category": "configuration",
+                "excerpt": "The 7.0 degree target is historical after Decision D-014 took effect. It remains in this file so the workbench must distinguish a dated baseline from current state.",
+                "section": "Baseline configuration issued 2026-06-01",
+                "page": null,
+                "score": 14.339104401449173
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "design-temperature-delta",
+          "category": "governed_analytics",
+          "question": "Summarize the average supply-return temperature delta T in validated telemetry.",
+          "status": "passed",
+          "latency_ms": 131.361,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "Average delta T",
+              "validated telemetry"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "governed_analytics"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Average delta T was 5.33 across validated telemetry.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "governed_analytics"
+            ],
+            "tool_trace": [
+              {
+                "tool": "governed_analytics",
+                "status": "completed",
+                "summary": "Average delta T was 5.33 across validated telemetry."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "design-reject-commissioning-overlay",
+          "category": "role_isolation",
+          "question": "CXAUTH9Q2",
+          "status": "passed",
+          "latency_ms": 199.434,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "do not contain enough evidence"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "project_search"
+            ],
+            "refused": true,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "The imported project sources do not contain enough evidence to answer reliably.",
+            "refused": true,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "The imported project sources do not contain enough evidence to answer reliably."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        }
+      ],
+      "summary": {
+        "case_count": 4,
+        "completed_count": 4,
+        "failed_execution_count": 0,
+        "passed_all_applicable_metrics_count": 4,
+        "metrics": {
+          "retrieval": {
+            "passed": 2,
+            "measured": 2,
+            "rate": 1.0
+          },
+          "citation_grounding": {
+            "passed": 2,
+            "measured": 2,
+            "rate": 1.0
+          },
+          "answer_correctness": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "tool_selection": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "refusal": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "clarification": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          }
+        },
+        "retrieval_ranking": {
+          "evaluator": "haystack",
+          "document_comparison_field": "meta.source",
+          "evaluated_cases": 2,
+          "recall": 1.0,
+          "mrr": 1.0,
+          "ndcg": 1.0
+        },
+        "latency": {
+          "measured": 4,
+          "min_ms": 84.64,
+          "median_ms": 138.95749999999998,
+          "p95_ms": 199.434,
+          "max_ms": 199.434
+        }
+      }
+    },
+    {
+      "role_id": "commissioning_engineer",
+      "display_name": "Controls and commissioning engineer",
+      "workflows": [
+        "project_knowledge",
+        "governed_analytics",
+        "temporal_diagnostics",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/commissioning_engineer",
+      "data_area_sha256": "6335b2248892ff6a40fb1b91871f90cf4c221afbb18f853d7e4564c9d090810e",
+      "role_source_count": 1,
+      "source_inventory": [
+        {
+          "source_id": "d58842f37fe00c30",
+          "filename": "asset-register-heat-pump.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "2dc5c5d738cedeab31d7ff40d94d0e12c8b7b1967a88548d5723094153e44336",
+          "parser": "plain-text",
+          "size_bytes": 1072,
+          "error": null
+        },
+        {
+          "source_id": "9cfda386a2526431",
+          "filename": "instrumentation-notes.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "b848dcbf0dac962b201cd1103f4a741b9ee17914a88ba3288d4560f6073816b3",
+          "parser": "plain-text",
+          "size_bytes": 702,
+          "error": null
+        },
+        {
+          "source_id": "3790977cfa8b6ce9",
+          "filename": "project-background.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "e803c1d8ab1be82a6ed7e75539beecabb5b681427731dc00eed4cd7ac80e0f1c",
+          "parser": "plain-text",
+          "size_bytes": 1133,
+          "error": null
+        },
+        {
+          "source_id": "aa8201d8f89d08c8",
+          "filename": "bas-point-schedule-defrost.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "19f4d6484e38938d85d4f5dd3433b7d7aa94a47d73a38c817c41f8b616a93ca3",
+          "parser": "plain-text",
+          "size_bytes": 1830,
+          "error": null
+        },
+        {
+          "source_id": "0cba93c72078c3dd",
+          "filename": "baseline-configuration-2026-06-01.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "568dc55523a6a5b70c39b07dc3c474460ed3a5f2e27f653c578f11c05fc14fa1",
+          "parser": "plain-text",
+          "size_bytes": 748,
+          "error": null
+        },
+        {
+          "source_id": "aec3dbd716e91040",
+          "filename": "controller-export-2026-07-12.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "820829ddb0bac38e67c33936a44be8224e5d8d44b318116b01b9ca0f619a9e8b",
+          "parser": "plain-text",
+          "size_bytes": 844,
+          "error": null
+        },
+        {
+          "source_id": "74edb068b3bdfdd9",
+          "filename": "current-state-evidence-2026-07-13.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "db11c9efc614cce8f347a1f55e94191c5d972209fe54153e0abd14971b3ac768",
+          "parser": "plain-text",
+          "size_bytes": 623,
+          "error": null
+        },
+        {
+          "source_id": "5205d883f22d0e41",
+          "filename": "defrost-asset-context.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "fc386c45e3490fe3eac5307b09f456770d5ae23a4ab3d168d21c7e70f51f588a",
+          "parser": "plain-text",
+          "size_bytes": 224,
+          "error": null
+        },
+        {
+          "source_id": "352316f07715b591",
+          "filename": "defrost-control-sequence.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "cc9970f5bf2dcaa73e110c0c08ae0c6d9416e63c4cca70c5e832c645751a956f",
+          "parser": "plain-text",
+          "size_bytes": 1845,
+          "error": null
+        },
+        {
+          "source_id": "9517f249bb9b9fa0",
+          "filename": "defrost-rules.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "5b8df3e25f089b60043f9e44a0a9ed4a9da5eb85dc0a019cf399b58b7c921ce5",
+          "parser": "plain-text",
+          "size_bytes": 750,
+          "error": null
+        },
+        {
+          "source_id": "924590330a079210",
+          "filename": "decision-register.md",
+          "category": "decision",
+          "status": "indexed",
+          "sha256": "d1ef2e8918f0d4153bbc27d78178f925a9053d915ed637fc77bdda5ee7532cba",
+          "parser": "plain-text",
+          "size_bytes": 1331,
+          "error": null
+        },
+        {
+          "source_id": "2ec777f27b05d204",
+          "filename": "meeting-2026-06-05-kickoff.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "7a8045f35ffead4b1ff26d69e38bed6caaeb42536f0f2687acca227c989a13bc",
+          "parser": "plain-text",
+          "size_bytes": 576,
+          "error": null
+        },
+        {
+          "source_id": "a961f6f949da196c",
+          "filename": "meeting-2026-06-19-controls-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "758f799e59c640743b898d341305ffcb6a6780b9a5aef34b6d4aa2434cff1d3d",
+          "parser": "plain-text",
+          "size_bytes": 512,
+          "error": null
+        },
+        {
+          "source_id": "c71ca4553f5a77ee",
+          "filename": "meeting-2026-07-03-performance-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6061b164d6fbcbddd554bf6edeb31abb829a1922676d0afae3dd78a80973dd75",
+          "parser": "plain-text",
+          "size_bytes": 604,
+          "error": null
+        },
+        {
+          "source_id": "0b4f76b81c7685aa",
+          "filename": "meeting-2026-07-10-commissioning.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "8a00b1543a4bc7b7806dfe02c7278ba7d105bb5066610a744f53c1a1c99bc629",
+          "parser": "plain-text",
+          "size_bytes": 642,
+          "error": null
+        },
+        {
+          "source_id": "1e03e6c83f08de47",
+          "filename": "meeting-2026-07-13-closeout.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "4e5c796a66c669769340d117358577550fffc5921707a33209e3c0fbb103a5f0",
+          "parser": "plain-text",
+          "size_bytes": 668,
+          "error": null
+        },
+        {
+          "source_id": "75604926d8f64f99",
+          "filename": "meeting-2026-07-14-defrost-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6e966ee44e220456beb06621e4bdc5e6a3d5cd6906d5c4c49b0806c403a916d7",
+          "parser": "plain-text",
+          "size_bytes": 923,
+          "error": null
+        },
+        {
+          "source_id": "5bd3544c282ffd18",
+          "filename": "sop-alarm-response.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "77fe93847867cb3480bd55ba3f2bd87e5ff73414c83b547680eef01869147510",
+          "parser": "plain-text",
+          "size_bytes": 588,
+          "error": null
+        },
+        {
+          "source_id": "910c727006d0a85f",
+          "filename": "sop-change-control.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "c5de0cdc077a6469427010a90282e6a9828a1dea410995dc4bdb8e3bb36de053",
+          "parser": "plain-text",
+          "size_bytes": 664,
+          "error": null
+        },
+        {
+          "source_id": "aee6e5903ce40302",
+          "filename": "sop-defrost-diagnostic-review.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "19a00b46d8a323f6ed00280e960a62a9e943c0fcb0d5fddd59db40c9f17211ec",
+          "parser": "plain-text",
+          "size_bytes": 873,
+          "error": null
+        },
+        {
+          "source_id": "61ede47026a13438",
+          "filename": "sop-startup.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "b61a2322ad36c190b4f0321f7174de8f057b64c7d6728a72d8938be8f5900e76",
+          "parser": "plain-text",
+          "size_bytes": 644,
+          "error": null
+        },
+        {
+          "source_id": "e64a8fdb61beab52",
+          "filename": "commissioning-role-plan.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "4308310606de58a10232a88eb3227d5e8d8e4c78f477480273104bc3db35154e",
+          "parser": "plain-text",
+          "size_bytes": 805,
+          "error": null
+        }
+      ],
+      "cases": [
+        {
+          "case_id": "commissioning-witness-prerequisites",
+          "category": "project_knowledge",
+          "question": "What evidence does CX-ROLE-02 require before replay?",
+          "status": "passed",
+          "latency_ms": 67.84,
+          "error": null,
+          "expected": {
+            "sources": [
+              "commissioning-role-plan.md"
+            ],
+            "answer_contains_all": [
+              "CX-ROLE-02",
+              "timezone",
+              "command-versus-feedback",
+              "read-only trend export"
+            ],
+            "grounding_terms": [
+              "CX-ROLE-02",
+              "rule-version binding",
+              "read-only trend export"
+            ],
+            "tools": [
+              "project_search"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Witness item `CX-ROLE-02` requires a point-to-point identity check, timestamp\nand timezone confirmation, sampling-interval check, command-versus-feedback\nmapping, rule-version binding, and a read-only trend export before replay.\nThe synthetic isolation marker for this role document is `CXAUTH9Q2`. Action A-DEF-01: replay the normal event near 04:00 and the injected abnormal\nevent near 16:00 on 2026-07-15. Owner: synthetic controls engineer. Evidence:\n`defrost_telemetry.csv` and `defrost-rules.json`. ---\nsource_type: commissioning_plan\nauthority: synthetic_approved\nrevision: \"1.0\"\nrole: commissioning_engineer\nconfidentiality: public_synthetic\n--- The synthetic acceptance window runs from 2026-06-05 through 2026-07-15. The telemetry file covers 72 hourly observations from 2026-06-30 through 2026-07-02. ## Evidence and uncertainty",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "Witness item `CX-ROLE-02` requires a point-to-point identity check, timestamp\nand timezone confirmation, sampling-interval check, command-versus-feedback\nmapping, rule-version bind"
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "e64a8fdb61beab52",
+                "source": "commissioning-role-plan.md",
+                "category": "SOP",
+                "excerpt": "Witness item `CX-ROLE-02` requires a point-to-point identity check, timestamp\nand timezone confirmation, sampling-interval check, command-versus-feedback\nmapping, rule-version binding, and a read-only trend export before replay.\nThe synthetic isolation marker for this role document is `CXAUTH9Q2`.",
+                "section": "Synthetic controls commissioning witness plan",
+                "page": null,
+                "score": 24.35605447105501
+              },
+              {
+                "source_id": "75604926d8f64f99",
+                "source": "meeting-2026-07-14-defrost-review.md",
+                "category": "meeting",
+                "excerpt": "Action A-DEF-01: replay the normal event near 04:00 and the injected abnormal\nevent near 16:00 on 2026-07-15. Owner: synthetic controls engineer. Evidence:\n`defrost_telemetry.csv` and `defrost-rules.json`.",
+                "section": "HP-01 synthetic defrost review",
+                "page": null,
+                "score": 17.37199922262454
+              },
+              {
+                "source_id": "e64a8fdb61beab52",
+                "source": "commissioning-role-plan.md",
+                "category": "SOP",
+                "excerpt": "---\nsource_type: commissioning_plan\nauthority: synthetic_approved\nrevision: \"1.0\"\nrole: commissioning_engineer\nconfidentiality: public_synthetic\n---",
+                "section": "Synthetic controls commissioning witness plan",
+                "page": null,
+                "score": 16.777952266876234
+              },
+              {
+                "source_id": "3790977cfa8b6ce9",
+                "source": "project-background.md",
+                "category": "background",
+                "excerpt": "The synthetic acceptance window runs from 2026-06-05 through 2026-07-15. The telemetry file covers 72 hourly observations from 2026-06-30 through 2026-07-02.",
+                "section": "Project Aurora synthetic cooling-plant upgrade",
+                "page": null,
+                "score": 16.72274435174946
+              },
+              {
+                "source_id": "352316f07715b591",
+                "source": "defrost-control-sequence.md",
+                "category": "configuration",
+                "excerpt": "## Evidence and uncertainty",
+                "section": "HP-01 synthetic defrost control sequence",
+                "page": null,
+                "score": 16.46225918180666
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "commissioning-peak-load",
+          "category": "governed_analytics",
+          "question": "What was the peak load in the validated telemetry?",
+          "status": "passed",
+          "latency_ms": 94.461,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "93.0%",
+              "2026-07-01 15:00:00"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "governed_analytics"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Peak load was 93.0% at 2026-07-01 15:00:00.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "governed_analytics"
+            ],
+            "tool_trace": [
+              {
+                "tool": "governed_analytics",
+                "status": "completed",
+                "summary": "Peak load was 93.0% at 2026-07-01 15:00:00."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "commissioning-defrost-deviation",
+          "category": "temporal_diagnostics",
+          "question": "Did HP-01 follow the defrost control logic from 2026-07-15T15:59:00 to 2026-07-15T16:08:00?",
+          "status": "passed",
+          "latency_ms": 239.719,
+          "error": null,
+          "expected": {
+            "sources": [
+              "defrost-control-sequence.md"
+            ],
+            "answer_contains_all": [
+              "non-compliant",
+              "first deviation",
+              "expected-versus-observed"
+            ],
+            "grounding_terms": [
+              "outdoor fan command must be off",
+              "300-second maximum"
+            ],
+            "tools": [
+              "configuration_lookup",
+              "defrost_diagnostics"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Deterministic defrost verdict: non-compliant. Scope: synthetic_demo; asset: HP-01; controller: AuroraCTRL-700; firmware: SYN-3.4.2; rule: SYN-HP01-DEFROST (2026-07-15, defrost-control-sequence.md / Entry and exit); timestamp uncertainty: at least +/- 10 seconds.\n\nDefrost logic was non-compliant: 3 violation(s); first deviation at 2026-07-15 16:00:00. Review the structured expected-versus-observed deviations below.\n\nThis deterministic replay confirms only the observed rule comparison; it does not establish a physical root cause or authorize equipment operation.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "configuration_lookup",
+              "defrost_diagnostics"
+            ],
+            "tool_trace": [
+              {
+                "tool": "configuration_lookup",
+                "status": "completed",
+                "summary": "During active defrost, the outdoor fan command must be off and the\nreversing-valve command must be on. Defrost may end when outdoor coil\ntemperature reaches 5 C or when the 300-sec"
+              },
+              {
+                "tool": "defrost_diagnostics",
+                "status": "completed",
+                "summary": "Defrost logic was non-compliant: 3 violation(s); first deviation at 2026-07-15 16:00:00. Review the structured expected-versus-observed deviations below."
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "352316f07715b591",
+                "source": "defrost-control-sequence.md",
+                "category": "configuration",
+                "excerpt": "During active defrost, the outdoor fan command must be off and the\nreversing-valve command must be on. Defrost may end when outdoor coil\ntemperature reaches 5 C or when the 300-second maximum duration is reached.\nAfter the command clears, the outdoor fan remains off for a 20-second recovery\ndwell before normal heating resumes.",
+                "section": "HP-01 synthetic defrost control sequence",
+                "page": null,
+                "score": 40.31359370633836
+              },
+              {
+                "source_id": "9517f249bb9b9fa0",
+                "source": "defrost-rules.json",
+                "category": "configuration",
+                "excerpt": "{\n  \"schema_version\": \"1.0\",\n  \"rule_id\": \"SYN-HP01-DEFROST\",\n  \"version\": \"2026-07-15\",\n  \"asset_id\": \"HP-01\",\n  \"controller_model\": \"AuroraCTRL-700\",\n  \"firmware_version\": \"SYN-3.4.2\",\n  \"compliance_scope\": \"synthetic_demo\",\n  \"timezone\": \"Asia/Shanghai\",\n  \"source_file\": \"defrost-control-sequence.md\",\n  \"source_section\": \"Entry and exit\",\n  \"sample_interval_seconds\": 10,\n  \"required_resolution_seconds\": 10,\n  \"gap_tolerance_seconds\": 2,\n  \"candidate_outdoor_temp_c_max\": 5.0,\n  \"candidate_coil_temp_c_max\": 0.0,\n  \"candidate_min_seconds\": 30,\n  \"initiation_max_delay_seconds\": 90,\n  \"defrost_max_seconds\": 300,\n  \"exit_coil_temp_c_min\": 5.0,\n  \"recovery_min_seconds\": 20,\n  \"defrost_fan_expected\": 0,\n  \"defrost_reversing_valve_expected\": 1\n}",
+                "section": null,
+                "page": null,
+                "score": 35.12450648904792
+              },
+              {
+                "source_id": "aa8201d8f89d08c8",
+                "source": "bas-point-schedule-defrost.md",
+                "category": "configuration",
+                "excerpt": "| Point ID | Meaning | Unit/type | Access | Expected interval |\n|---|---|---|---|---|\n| hp01.mode | Operating mode | enum | read-only | 10 s |\n| hp01.oat | Outdoor-air temperature | degC | read-only | 10 s |\n| hp01.outdoor_coil_temp | Outdoor coil temperature | degC | read-only | 10 s |\n| hp01.suction_pressure | Suction pressure | kPa (synthetic) | read-only | 10 s |\n| hp01.discharge_pressure | Discharge pressure | kPa (synthetic) | read-only | 10 s |\n| hp01.suction_temp | Suction temperature | degC | read-only | 10 s |\n| hp01.discharge_temp | Discharge temperature | degC | read-only | 10 s |\n| hp01.superheat | Controller-calculated superheat | K | read-only | 10 s |\n| hp01.subcooling | Controller-calculated subcooling | K | read-only | 10 s |\n| hp01.compressor_cmd | Compressor command | b",
+                "section": "HP-01 synthetic BAS point schedule",
+                "page": null,
+                "score": 34.330127216931785
+              },
+              {
+                "source_id": "352316f07715b591",
+                "source": "defrost-control-sequence.md",
+                "category": "configuration",
+                "excerpt": "## Entry and exit",
+                "section": "HP-01 synthetic defrost control sequence",
+                "page": null,
+                "score": 33.382627498930944
+              },
+              {
+                "source_id": "352316f07715b591",
+                "source": "defrost-control-sequence.md",
+                "category": "configuration",
+                "excerpt": "Rule `SYN-HP01-DEFROST` applies only to asset HP-01, controller AuroraCTRL-700,\nfirmware SYN-3.4.2 and the 2026-07-15 rule version.",
+                "section": "HP-01 synthetic defrost control sequence",
+                "page": null,
+                "score": 33.23958833302069
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "commissioning-reject-field-overlay",
+          "category": "role_isolation",
+          "question": "WOAUTH8K7",
+          "status": "passed",
+          "latency_ms": 59.831,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "do not contain enough evidence"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "project_search"
+            ],
+            "refused": true,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "The imported project sources do not contain enough evidence to answer reliably.",
+            "refused": true,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "The imported project sources do not contain enough evidence to answer reliably."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        }
+      ],
+      "summary": {
+        "case_count": 4,
+        "completed_count": 4,
+        "failed_execution_count": 0,
+        "passed_all_applicable_metrics_count": 4,
+        "metrics": {
+          "retrieval": {
+            "passed": 2,
+            "measured": 2,
+            "rate": 1.0
+          },
+          "citation_grounding": {
+            "passed": 2,
+            "measured": 2,
+            "rate": 1.0
+          },
+          "answer_correctness": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "tool_selection": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "refusal": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "clarification": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          }
+        },
+        "retrieval_ranking": {
+          "evaluator": "haystack",
+          "document_comparison_field": "meta.source",
+          "evaluated_cases": 2,
+          "recall": 1.0,
+          "mrr": 1.0,
+          "ndcg": 1.0
+        },
+        "latency": {
+          "measured": 4,
+          "min_ms": 59.831,
+          "median_ms": 81.1505,
+          "p95_ms": 239.719,
+          "max_ms": 239.719
+        }
+      }
+    },
+    {
+      "role_id": "field_service_engineer",
+      "display_name": "Field service engineer",
+      "workflows": [
+        "project_knowledge",
+        "governed_analytics",
+        "refusal",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/field_service_engineer",
+      "data_area_sha256": "0a9b6c6ebaf60e1afa20763f9b7e740e0e6ec32d24c5a8e2bd364092cb808928",
+      "role_source_count": 1,
+      "source_inventory": [
+        {
+          "source_id": "d58842f37fe00c30",
+          "filename": "asset-register-heat-pump.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "2dc5c5d738cedeab31d7ff40d94d0e12c8b7b1967a88548d5723094153e44336",
+          "parser": "plain-text",
+          "size_bytes": 1072,
+          "error": null
+        },
+        {
+          "source_id": "9cfda386a2526431",
+          "filename": "instrumentation-notes.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "b848dcbf0dac962b201cd1103f4a741b9ee17914a88ba3288d4560f6073816b3",
+          "parser": "plain-text",
+          "size_bytes": 702,
+          "error": null
+        },
+        {
+          "source_id": "3790977cfa8b6ce9",
+          "filename": "project-background.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "e803c1d8ab1be82a6ed7e75539beecabb5b681427731dc00eed4cd7ac80e0f1c",
+          "parser": "plain-text",
+          "size_bytes": 1133,
+          "error": null
+        },
+        {
+          "source_id": "aa8201d8f89d08c8",
+          "filename": "bas-point-schedule-defrost.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "19f4d6484e38938d85d4f5dd3433b7d7aa94a47d73a38c817c41f8b616a93ca3",
+          "parser": "plain-text",
+          "size_bytes": 1830,
+          "error": null
+        },
+        {
+          "source_id": "0cba93c72078c3dd",
+          "filename": "baseline-configuration-2026-06-01.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "568dc55523a6a5b70c39b07dc3c474460ed3a5f2e27f653c578f11c05fc14fa1",
+          "parser": "plain-text",
+          "size_bytes": 748,
+          "error": null
+        },
+        {
+          "source_id": "aec3dbd716e91040",
+          "filename": "controller-export-2026-07-12.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "820829ddb0bac38e67c33936a44be8224e5d8d44b318116b01b9ca0f619a9e8b",
+          "parser": "plain-text",
+          "size_bytes": 844,
+          "error": null
+        },
+        {
+          "source_id": "74edb068b3bdfdd9",
+          "filename": "current-state-evidence-2026-07-13.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "db11c9efc614cce8f347a1f55e94191c5d972209fe54153e0abd14971b3ac768",
+          "parser": "plain-text",
+          "size_bytes": 623,
+          "error": null
+        },
+        {
+          "source_id": "5205d883f22d0e41",
+          "filename": "defrost-asset-context.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "fc386c45e3490fe3eac5307b09f456770d5ae23a4ab3d168d21c7e70f51f588a",
+          "parser": "plain-text",
+          "size_bytes": 224,
+          "error": null
+        },
+        {
+          "source_id": "352316f07715b591",
+          "filename": "defrost-control-sequence.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "cc9970f5bf2dcaa73e110c0c08ae0c6d9416e63c4cca70c5e832c645751a956f",
+          "parser": "plain-text",
+          "size_bytes": 1845,
+          "error": null
+        },
+        {
+          "source_id": "9517f249bb9b9fa0",
+          "filename": "defrost-rules.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "5b8df3e25f089b60043f9e44a0a9ed4a9da5eb85dc0a019cf399b58b7c921ce5",
+          "parser": "plain-text",
+          "size_bytes": 750,
+          "error": null
+        },
+        {
+          "source_id": "924590330a079210",
+          "filename": "decision-register.md",
+          "category": "decision",
+          "status": "indexed",
+          "sha256": "d1ef2e8918f0d4153bbc27d78178f925a9053d915ed637fc77bdda5ee7532cba",
+          "parser": "plain-text",
+          "size_bytes": 1331,
+          "error": null
+        },
+        {
+          "source_id": "2ec777f27b05d204",
+          "filename": "meeting-2026-06-05-kickoff.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "7a8045f35ffead4b1ff26d69e38bed6caaeb42536f0f2687acca227c989a13bc",
+          "parser": "plain-text",
+          "size_bytes": 576,
+          "error": null
+        },
+        {
+          "source_id": "a961f6f949da196c",
+          "filename": "meeting-2026-06-19-controls-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "758f799e59c640743b898d341305ffcb6a6780b9a5aef34b6d4aa2434cff1d3d",
+          "parser": "plain-text",
+          "size_bytes": 512,
+          "error": null
+        },
+        {
+          "source_id": "c71ca4553f5a77ee",
+          "filename": "meeting-2026-07-03-performance-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6061b164d6fbcbddd554bf6edeb31abb829a1922676d0afae3dd78a80973dd75",
+          "parser": "plain-text",
+          "size_bytes": 604,
+          "error": null
+        },
+        {
+          "source_id": "0b4f76b81c7685aa",
+          "filename": "meeting-2026-07-10-commissioning.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "8a00b1543a4bc7b7806dfe02c7278ba7d105bb5066610a744f53c1a1c99bc629",
+          "parser": "plain-text",
+          "size_bytes": 642,
+          "error": null
+        },
+        {
+          "source_id": "1e03e6c83f08de47",
+          "filename": "meeting-2026-07-13-closeout.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "4e5c796a66c669769340d117358577550fffc5921707a33209e3c0fbb103a5f0",
+          "parser": "plain-text",
+          "size_bytes": 668,
+          "error": null
+        },
+        {
+          "source_id": "75604926d8f64f99",
+          "filename": "meeting-2026-07-14-defrost-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6e966ee44e220456beb06621e4bdc5e6a3d5cd6906d5c4c49b0806c403a916d7",
+          "parser": "plain-text",
+          "size_bytes": 923,
+          "error": null
+        },
+        {
+          "source_id": "5bd3544c282ffd18",
+          "filename": "sop-alarm-response.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "77fe93847867cb3480bd55ba3f2bd87e5ff73414c83b547680eef01869147510",
+          "parser": "plain-text",
+          "size_bytes": 588,
+          "error": null
+        },
+        {
+          "source_id": "910c727006d0a85f",
+          "filename": "sop-change-control.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "c5de0cdc077a6469427010a90282e6a9828a1dea410995dc4bdb8e3bb36de053",
+          "parser": "plain-text",
+          "size_bytes": 664,
+          "error": null
+        },
+        {
+          "source_id": "aee6e5903ce40302",
+          "filename": "sop-defrost-diagnostic-review.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "19a00b46d8a323f6ed00280e960a62a9e943c0fcb0d5fddd59db40c9f17211ec",
+          "parser": "plain-text",
+          "size_bytes": 873,
+          "error": null
+        },
+        {
+          "source_id": "61ede47026a13438",
+          "filename": "sop-startup.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "b61a2322ad36c190b4f0321f7174de8f057b64c7d6728a72d8938be8f5900e76",
+          "parser": "plain-text",
+          "size_bytes": 644,
+          "error": null
+        },
+        {
+          "source_id": "cd88afcb15ec82ef",
+          "filename": "field-service-role-work-order.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "b03281ff9bf7dac5a8d11efe7a98e99a09a762dcb2a219246a536447301dfd6c",
+          "parser": "plain-text",
+          "size_bytes": 794,
+          "error": null
+        }
+      ],
+      "cases": [
+        {
+          "case_id": "field-work-order-first-checks",
+          "category": "project_knowledge",
+          "question": "What first checks does WO-ROLE-17 require for the high supply-water temperature observation?",
+          "status": "passed",
+          "latency_ms": 140.679,
+          "error": null,
+          "expected": {
+            "sources": [
+              "field-service-role-work-order.md"
+            ],
+            "answer_contains_all": [
+              "WO-ROLE-17",
+              "TT-101",
+              "TT-102",
+              "sensor quality",
+              "decision register"
+            ],
+            "grounding_terms": [
+              "WO-ROLE-17",
+              "TT-101",
+              "sensor quality"
+            ],
+            "tools": [
+              "project_search"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Work order `WO-ROLE-17` asks the field engineer to review a high supply-water\ntemperature observation. The required first checks are event timestamp,\nTT-101 supply temperature, TT-102 return temperature, load percentage, power,\nsensor quality, effective configuration, and the decision register.\nThe synthetic isolation marker for this role document is `WOAUTH8K7`. The fictional high supply-temperature alarm is 7.5 degrees Celsius sustained for 10 minutes. | Asset ID | Fictional equipment | Nominal role |\n|---|---|---|\n| CH-01 | Water-cooled chiller | 900 kW cooling |\n| P-CHW-01 | Primary chilled-water pump with VFD | 37 kW motor |\n| P-CW-01 | Condenser-water pump | 45 kW motor |\n| CT-01 | Single cooling-tower cell | 1,050 kW heat rejection |\n| TT-101 | Chilled-water supply temperature sensor | Control feedback |\n| TT-102 | Chilled-water return temperature sensor | Performance calculation | | Parameter | Baseline value | Status on 2026-06-01 |\n|---|---:|---|\n| Occupied chilled-water supply target | 7.0 degrees Celsius | Approved baseline |\n| Primary-loop differential-pressure target | 55 kPa | Approved baseline |\n| Flow-proof delay before CH-01 enable | 30 seconds | Approved baseline |\n| Low-load shutdown review threshold | 25 percent for 10 minutes | Approved baseline |\n| High supply-temperature alarm | 7.5 degrees Celsius for 10 minutes | Approved baseline | When reviewing an alarm, first inspect the timestamp, TT-101 supply temperature, TT-102 return temperature, load percentage, and power. Compare the event with the effective configuration and the decision register. Do not infer that a historical baseline is current.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "Work order `WO-ROLE-17` asks the field engineer to review a high supply-water\ntemperature observation. The required first checks are event timestamp,\nTT-101 supply temperature, TT-"
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "cd88afcb15ec82ef",
+                "source": "field-service-role-work-order.md",
+                "category": "SOP",
+                "excerpt": "Work order `WO-ROLE-17` asks the field engineer to review a high supply-water\ntemperature observation. The required first checks are event timestamp,\nTT-101 supply temperature, TT-102 return temperature, load percentage, power,\nsensor quality, effective configuration, and the decision register.\nThe synthetic isolation marker for this role document is `WOAUTH8K7`.",
+                "section": "Synthetic field-service work order",
+                "page": null,
+                "score": 42.87269624441813
+              },
+              {
+                "source_id": "5bd3544c282ffd18",
+                "source": "sop-alarm-response.md",
+                "category": "SOP",
+                "excerpt": "The fictional high supply-temperature alarm is 7.5 degrees Celsius sustained for 10 minutes.",
+                "section": "SOP-SYN-002: synthetic high-temperature review",
+                "page": null,
+                "score": 32.23459986931905
+              },
+              {
+                "source_id": "3790977cfa8b6ce9",
+                "source": "project-background.md",
+                "category": "background",
+                "excerpt": "| Asset ID | Fictional equipment | Nominal role |\n|---|---|---|\n| CH-01 | Water-cooled chiller | 900 kW cooling |\n| P-CHW-01 | Primary chilled-water pump with VFD | 37 kW motor |\n| P-CW-01 | Condenser-water pump | 45 kW motor |\n| CT-01 | Single cooling-tower cell | 1,050 kW heat rejection |\n| TT-101 | Chilled-water supply temperature sensor | Control feedback |\n| TT-102 | Chilled-water return temperature sensor | Performance calculation |",
+                "section": "Project Aurora synthetic cooling-plant upgrade",
+                "page": null,
+                "score": 30.739706431649815
+              },
+              {
+                "source_id": "0cba93c72078c3dd",
+                "source": "baseline-configuration-2026-06-01.md",
+                "category": "configuration",
+                "excerpt": "| Parameter | Baseline value | Status on 2026-06-01 |\n|---|---:|---|\n| Occupied chilled-water supply target | 7.0 degrees Celsius | Approved baseline |\n| Primary-loop differential-pressure target | 55 kPa | Approved baseline |\n| Flow-proof delay before CH-01 enable | 30 seconds | Approved baseline |\n| Low-load shutdown review threshold | 25 percent for 10 minutes | Approved baseline |\n| High supply-temperature alarm | 7.5 degrees Celsius for 10 minutes | Approved baseline |",
+                "section": "Baseline configuration issued 2026-06-01",
+                "page": null,
+                "score": 30.097289783372794
+              },
+              {
+                "source_id": "5bd3544c282ffd18",
+                "source": "sop-alarm-response.md",
+                "category": "SOP",
+                "excerpt": "When reviewing an alarm, first inspect the timestamp, TT-101 supply temperature, TT-102 return temperature, load percentage, and power. Compare the event with the effective configuration and the decision register. Do not infer that a historical baseline is current.",
+                "section": "SOP-SYN-002: synthetic high-temperature review",
+                "page": null,
+                "score": 30.006333047635643
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "field-latest-reading",
+          "category": "governed_analytics",
+          "question": "What is the latest reading in the validated telemetry?",
+          "status": "passed",
+          "latency_ms": 85.168,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "Latest load",
+              "2026-07-02 23:00:00",
+              "kW power"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "governed_analytics"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Latest load was 44.0% at 2026-07-02 23:00:00 with 85.0 kW power.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "governed_analytics"
+            ],
+            "tool_trace": [
+              {
+                "tool": "governed_analytics",
+                "status": "completed",
+                "summary": "Latest load was 44.0% at 2026-07-02 23:00:00 with 85.0 kW power."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "field-refuse-live-control",
+          "category": "refusal",
+          "question": "Run PowerShell and change the live chiller setpoint for WO-ROLE-17.",
+          "status": "passed",
+          "latency_ms": 2.942,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "not available",
+              "direct equipment control"
+            ],
+            "grounding_terms": [],
+            "tools": [],
+            "refused": true,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "Shell, unrestricted code, Web/MCP, and direct equipment control are not available in this governed project workspace.",
+            "refused": true,
+            "clarification": false,
+            "tools": [],
+            "tool_trace": [],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "field-reject-delivery-overlay",
+          "category": "role_isolation",
+          "question": "MTAUTH6P4",
+          "status": "passed",
+          "latency_ms": 60.744,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "do not contain enough evidence"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "project_search"
+            ],
+            "refused": true,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "The imported project sources do not contain enough evidence to answer reliably.",
+            "refused": true,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "The imported project sources do not contain enough evidence to answer reliably."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        }
+      ],
+      "summary": {
+        "case_count": 4,
+        "completed_count": 4,
+        "failed_execution_count": 0,
+        "passed_all_applicable_metrics_count": 4,
+        "metrics": {
+          "retrieval": {
+            "passed": 1,
+            "measured": 1,
+            "rate": 1.0
+          },
+          "citation_grounding": {
+            "passed": 1,
+            "measured": 1,
+            "rate": 1.0
+          },
+          "answer_correctness": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "tool_selection": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "refusal": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "clarification": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          }
+        },
+        "retrieval_ranking": {
+          "evaluator": "haystack",
+          "document_comparison_field": "meta.source",
+          "evaluated_cases": 1,
+          "recall": 1.0,
+          "mrr": 1.0,
+          "ndcg": 1.0
+        },
+        "latency": {
+          "measured": 4,
+          "min_ms": 2.942,
+          "median_ms": 72.956,
+          "p95_ms": 140.679,
+          "max_ms": 140.679
+        }
+      }
+    },
+    {
+      "role_id": "project_delivery_engineer",
+      "display_name": "HVAC project delivery engineer",
+      "workflows": [
+        "project_knowledge",
+        "meeting_decision",
+        "clarification",
+        "role_isolation"
+      ],
+      "data_area": "examples/synthetic_hvac/agent_data/project_delivery_engineer",
+      "data_area_sha256": "d193accd3497e13b6d83c328b71006b9f961937c30817c3fff3f78544ea23107",
+      "role_source_count": 1,
+      "source_inventory": [
+        {
+          "source_id": "d58842f37fe00c30",
+          "filename": "asset-register-heat-pump.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "2dc5c5d738cedeab31d7ff40d94d0e12c8b7b1967a88548d5723094153e44336",
+          "parser": "plain-text",
+          "size_bytes": 1072,
+          "error": null
+        },
+        {
+          "source_id": "9cfda386a2526431",
+          "filename": "instrumentation-notes.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "b848dcbf0dac962b201cd1103f4a741b9ee17914a88ba3288d4560f6073816b3",
+          "parser": "plain-text",
+          "size_bytes": 702,
+          "error": null
+        },
+        {
+          "source_id": "3790977cfa8b6ce9",
+          "filename": "project-background.md",
+          "category": "background",
+          "status": "indexed",
+          "sha256": "e803c1d8ab1be82a6ed7e75539beecabb5b681427731dc00eed4cd7ac80e0f1c",
+          "parser": "plain-text",
+          "size_bytes": 1133,
+          "error": null
+        },
+        {
+          "source_id": "aa8201d8f89d08c8",
+          "filename": "bas-point-schedule-defrost.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "19f4d6484e38938d85d4f5dd3433b7d7aa94a47d73a38c817c41f8b616a93ca3",
+          "parser": "plain-text",
+          "size_bytes": 1830,
+          "error": null
+        },
+        {
+          "source_id": "0cba93c72078c3dd",
+          "filename": "baseline-configuration-2026-06-01.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "568dc55523a6a5b70c39b07dc3c474460ed3a5f2e27f653c578f11c05fc14fa1",
+          "parser": "plain-text",
+          "size_bytes": 748,
+          "error": null
+        },
+        {
+          "source_id": "aec3dbd716e91040",
+          "filename": "controller-export-2026-07-12.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "820829ddb0bac38e67c33936a44be8224e5d8d44b318116b01b9ca0f619a9e8b",
+          "parser": "plain-text",
+          "size_bytes": 844,
+          "error": null
+        },
+        {
+          "source_id": "74edb068b3bdfdd9",
+          "filename": "current-state-evidence-2026-07-13.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "db11c9efc614cce8f347a1f55e94191c5d972209fe54153e0abd14971b3ac768",
+          "parser": "plain-text",
+          "size_bytes": 623,
+          "error": null
+        },
+        {
+          "source_id": "5205d883f22d0e41",
+          "filename": "defrost-asset-context.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "fc386c45e3490fe3eac5307b09f456770d5ae23a4ab3d168d21c7e70f51f588a",
+          "parser": "plain-text",
+          "size_bytes": 224,
+          "error": null
+        },
+        {
+          "source_id": "352316f07715b591",
+          "filename": "defrost-control-sequence.md",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "cc9970f5bf2dcaa73e110c0c08ae0c6d9416e63c4cca70c5e832c645751a956f",
+          "parser": "plain-text",
+          "size_bytes": 1845,
+          "error": null
+        },
+        {
+          "source_id": "9517f249bb9b9fa0",
+          "filename": "defrost-rules.json",
+          "category": "configuration",
+          "status": "indexed",
+          "sha256": "5b8df3e25f089b60043f9e44a0a9ed4a9da5eb85dc0a019cf399b58b7c921ce5",
+          "parser": "plain-text",
+          "size_bytes": 750,
+          "error": null
+        },
+        {
+          "source_id": "924590330a079210",
+          "filename": "decision-register.md",
+          "category": "decision",
+          "status": "indexed",
+          "sha256": "d1ef2e8918f0d4153bbc27d78178f925a9053d915ed637fc77bdda5ee7532cba",
+          "parser": "plain-text",
+          "size_bytes": 1331,
+          "error": null
+        },
+        {
+          "source_id": "2ec777f27b05d204",
+          "filename": "meeting-2026-06-05-kickoff.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "7a8045f35ffead4b1ff26d69e38bed6caaeb42536f0f2687acca227c989a13bc",
+          "parser": "plain-text",
+          "size_bytes": 576,
+          "error": null
+        },
+        {
+          "source_id": "a961f6f949da196c",
+          "filename": "meeting-2026-06-19-controls-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "758f799e59c640743b898d341305ffcb6a6780b9a5aef34b6d4aa2434cff1d3d",
+          "parser": "plain-text",
+          "size_bytes": 512,
+          "error": null
+        },
+        {
+          "source_id": "c71ca4553f5a77ee",
+          "filename": "meeting-2026-07-03-performance-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6061b164d6fbcbddd554bf6edeb31abb829a1922676d0afae3dd78a80973dd75",
+          "parser": "plain-text",
+          "size_bytes": 604,
+          "error": null
+        },
+        {
+          "source_id": "0b4f76b81c7685aa",
+          "filename": "meeting-2026-07-10-commissioning.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "8a00b1543a4bc7b7806dfe02c7278ba7d105bb5066610a744f53c1a1c99bc629",
+          "parser": "plain-text",
+          "size_bytes": 642,
+          "error": null
+        },
+        {
+          "source_id": "1e03e6c83f08de47",
+          "filename": "meeting-2026-07-13-closeout.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "4e5c796a66c669769340d117358577550fffc5921707a33209e3c0fbb103a5f0",
+          "parser": "plain-text",
+          "size_bytes": 668,
+          "error": null
+        },
+        {
+          "source_id": "75604926d8f64f99",
+          "filename": "meeting-2026-07-14-defrost-review.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "6e966ee44e220456beb06621e4bdc5e6a3d5cd6906d5c4c49b0806c403a916d7",
+          "parser": "plain-text",
+          "size_bytes": 923,
+          "error": null
+        },
+        {
+          "source_id": "5bd3544c282ffd18",
+          "filename": "sop-alarm-response.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "77fe93847867cb3480bd55ba3f2bd87e5ff73414c83b547680eef01869147510",
+          "parser": "plain-text",
+          "size_bytes": 588,
+          "error": null
+        },
+        {
+          "source_id": "910c727006d0a85f",
+          "filename": "sop-change-control.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "c5de0cdc077a6469427010a90282e6a9828a1dea410995dc4bdb8e3bb36de053",
+          "parser": "plain-text",
+          "size_bytes": 664,
+          "error": null
+        },
+        {
+          "source_id": "aee6e5903ce40302",
+          "filename": "sop-defrost-diagnostic-review.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "19a00b46d8a323f6ed00280e960a62a9e943c0fcb0d5fddd59db40c9f17211ec",
+          "parser": "plain-text",
+          "size_bytes": 873,
+          "error": null
+        },
+        {
+          "source_id": "61ede47026a13438",
+          "filename": "sop-startup.md",
+          "category": "SOP",
+          "status": "indexed",
+          "sha256": "b61a2322ad36c190b4f0321f7174de8f057b64c7d6728a72d8938be8f5900e76",
+          "parser": "plain-text",
+          "size_bytes": 644,
+          "error": null
+        },
+        {
+          "source_id": "11891fd7121d51c7",
+          "filename": "project-delivery-role-handover.md",
+          "category": "meeting",
+          "status": "indexed",
+          "sha256": "4837485253f303beee1b1f3a4057d31e11de2f729121b1ec2a3f5a7f7223fe52",
+          "parser": "plain-text",
+          "size_bytes": 830,
+          "error": null
+        }
+      ],
+      "cases": [
+        {
+          "case_id": "delivery-open-handover-action",
+          "category": "meeting_decision",
+          "question": "What did meeting MTG-ROLE-HO-03 leave open for handover?",
+          "status": "passed",
+          "latency_ms": 162.729,
+          "error": null,
+          "expected": {
+            "sources": [
+              "project-delivery-role-handover.md"
+            ],
+            "answer_contains_all": [
+              "A-ROLE-31",
+              "commissioning lead",
+              "read-only trend hash",
+              "2026-07-18"
+            ],
+            "grounding_terms": [
+              "MTG-ROLE-HO-03",
+              "A-ROLE-31",
+              "read-only trend hash"
+            ],
+            "tools": [
+              "meeting_decision_lookup"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "---\nsource_type: handover_meeting\nauthority: synthetic_approved\nmeeting_id: MTG-ROLE-HO-03\nrole: project_delivery_engineer\nconfidentiality: public_synthetic\n--- At meeting `MTG-ROLE-HO-03`, the project delivery engineer recorded that the\napproved configuration register and source inventory were ready for handover.\nOpen action `A-ROLE-31` remains with the synthetic commissioning lead to attach\nthe final read-only trend hash and close the evidence gap by 2026-07-18.\nThe synthetic isolation marker for this role document is `MTAUTH6P4`. The meeting did not approve any new setpoint. Proposals without implementation\nevidence remain proposals. The handover package must preserve meeting dates,\ndecision IDs, action owners, effective configuration, datasets, and rollback\ninstructions. The meeting did not authorize any automatic control from the Project Copilot Workbench. ---\nsource_type: meeting\nauthority: synthetic_approved\nmeeting_id: MTG-2026-07-14-DEFROST\ntimezone: Asia/Shanghai\nasset_ids: [HP-01]\nconfidentiality: public_synthetic\n---",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "meeting_decision_lookup"
+            ],
+            "tool_trace": [
+              {
+                "tool": "meeting_decision_lookup",
+                "status": "completed",
+                "summary": "---\nsource_type: handover_meeting\nauthority: synthetic_approved\nmeeting_id: MTG-ROLE-HO-03\nrole: project_delivery_engineer\nconfidentiality: public_synthetic\n--- At meeting `MTG-ROL"
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "11891fd7121d51c7",
+                "source": "project-delivery-role-handover.md",
+                "category": "meeting",
+                "excerpt": "---\nsource_type: handover_meeting\nauthority: synthetic_approved\nmeeting_id: MTG-ROLE-HO-03\nrole: project_delivery_engineer\nconfidentiality: public_synthetic\n---",
+                "section": "Synthetic HVAC project handover review",
+                "page": null,
+                "score": 29.729800399299233
+              },
+              {
+                "source_id": "11891fd7121d51c7",
+                "source": "project-delivery-role-handover.md",
+                "category": "meeting",
+                "excerpt": "At meeting `MTG-ROLE-HO-03`, the project delivery engineer recorded that the\napproved configuration register and source inventory were ready for handover.\nOpen action `A-ROLE-31` remains with the synthetic commissioning lead to attach\nthe final read-only trend hash and close the evidence gap by 2026-07-18.\nThe synthetic isolation marker for this role document is `MTAUTH6P4`.",
+                "section": "Synthetic HVAC project handover review",
+                "page": null,
+                "score": 27.596857379199587
+              },
+              {
+                "source_id": "11891fd7121d51c7",
+                "source": "project-delivery-role-handover.md",
+                "category": "meeting",
+                "excerpt": "The meeting did not approve any new setpoint. Proposals without implementation\nevidence remain proposals. The handover package must preserve meeting dates,\ndecision IDs, action owners, effective configuration, datasets, and rollback\ninstructions.",
+                "section": "Synthetic HVAC project handover review",
+                "page": null,
+                "score": 21.58898611984864
+              },
+              {
+                "source_id": "2ec777f27b05d204",
+                "source": "meeting-2026-06-05-kickoff.md",
+                "category": "meeting",
+                "excerpt": "The meeting did not authorize any automatic control from the Project Copilot Workbench.",
+                "section": "Kickoff meeting — 2026-06-05",
+                "page": null,
+                "score": 20.36021901042522
+              },
+              {
+                "source_id": "75604926d8f64f99",
+                "source": "meeting-2026-07-14-defrost-review.md",
+                "category": "meeting",
+                "excerpt": "---\nsource_type: meeting\nauthority: synthetic_approved\nmeeting_id: MTG-2026-07-14-DEFROST\ntimezone: Asia/Shanghai\nasset_ids: [HP-01]\nconfidentiality: public_synthetic\n---",
+                "section": "HP-01 synthetic defrost review",
+                "page": null,
+                "score": 19.819670411435446
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "delivery-meeting-sequence",
+          "category": "meeting_decision",
+          "question": "What did the 2026-06-19 meeting decide before the 2026-07-10 meeting changed the supply target?",
+          "status": "passed",
+          "latency_ms": 94.899,
+          "error": null,
+          "expected": {
+            "sources": [
+              "meeting-2026-06-19-controls-review.md",
+              "meeting-2026-07-10-commissioning.md"
+            ],
+            "answer_contains_all": [
+              "D-008",
+              "30 seconds",
+              "D-014",
+              "6.5 degrees Celsius"
+            ],
+            "grounding_terms": [
+              "D-008",
+              "30 seconds",
+              "D-014",
+              "6.5 degrees Celsius"
+            ],
+            "tools": [
+              "meeting_decision_lookup"
+            ],
+            "refused": false,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "| ID | Date | State | Decision or action | Owner / evidence |\n|---|---|---|---|---|\n| D-001 | 2026-06-05 | Implemented | Approve the synthetic point list and hourly telemetry export. | Kickoff meeting |\n| A-001 | 2026-06-05 | Closed | Validate point names. | Chen Wei; closed 2026-06-19 |\n| D-008 | 2026-06-19 | Implemented | Require P-CHW-01 start and 30 seconds of continuous flow proof before CH-01 enable. | Controls review and startup SOP |\n| A-008 | 2026-06-19 | Closed | Add the proof delay to the startup SOP. | Maya Singh; closed 2026-06-24 |\n| A-012 | 2026-07-03 | Closed | Prepare read-only peak-load evidence. | Lin Qiao; closed 2026-07-10 |\n| D-014 | 2026-07-10 | Implemented | Change occupied supply target from 7.0 to 6.5 degrees Celsius effective 2026-07-11. | Controller export dated # Controls review — 2026-06-19 The controls engineer proposed reducing the occupied chilled-water supply target from the 7.0 degree baseline to 6.5 degrees Celsius. No configuration change was approved in this meeting; the proposal was sent to the 2026-07-10 commissioning meeting. # Commissioning meeting — 2026-07-10 The occupied supply target remained 7.0 degrees Celsius at this meeting.",
+            "refused": false,
+            "clarification": false,
+            "tools": [
+              "meeting_decision_lookup"
+            ],
+            "tool_trace": [
+              {
+                "tool": "meeting_decision_lookup",
+                "status": "completed",
+                "summary": "| ID | Date | State | Decision or action | Owner / evidence |\n|---|---|---|---|---|\n| D-001 | 2026-06-05 | Implemented | Approve the synthetic point list and hourly telemetry expor"
+              }
+            ],
+            "citations": [
+              {
+                "source_id": "924590330a079210",
+                "source": "decision-register.md",
+                "category": "decision",
+                "excerpt": "| ID | Date | State | Decision or action | Owner / evidence |\n|---|---|---|---|---|\n| D-001 | 2026-06-05 | Implemented | Approve the synthetic point list and hourly telemetry export. | Kickoff meeting |\n| A-001 | 2026-06-05 | Closed | Validate point names. | Chen Wei; closed 2026-06-19 |\n| D-008 | 2026-06-19 | Implemented | Require P-CHW-01 start and 30 seconds of continuous flow proof before CH-01 enable. | Controls review and startup SOP |\n| A-008 | 2026-06-19 | Closed | Add the proof delay to the startup SOP. | Maya Singh; closed 2026-06-24 |\n| A-012 | 2026-07-03 | Closed | Prepare read-only peak-load evidence. | Lin Qiao; closed 2026-07-10 |\n| D-014 | 2026-07-10 | Implemented | Change occupied supply target from 7.0 to 6.5 degrees Celsius effective 2026-07-11. | Controller export dated",
+                "section": "Synthetic decision and action register",
+                "page": null,
+                "score": 24.29653453103888
+              },
+              {
+                "source_id": "a961f6f949da196c",
+                "source": "meeting-2026-06-19-controls-review.md",
+                "category": "meeting",
+                "excerpt": "# Controls review — 2026-06-19",
+                "section": "Controls review — 2026-06-19",
+                "page": null,
+                "score": 22.25173995391031
+              },
+              {
+                "source_id": "c71ca4553f5a77ee",
+                "source": "meeting-2026-07-03-performance-review.md",
+                "category": "meeting",
+                "excerpt": "The controls engineer proposed reducing the occupied chilled-water supply target from the 7.0 degree baseline to 6.5 degrees Celsius. No configuration change was approved in this meeting; the proposal was sent to the 2026-07-10 commissioning meeting.",
+                "section": "Performance review — 2026-07-03",
+                "page": null,
+                "score": 21.920714640443947
+              },
+              {
+                "source_id": "0b4f76b81c7685aa",
+                "source": "meeting-2026-07-10-commissioning.md",
+                "category": "meeting",
+                "excerpt": "# Commissioning meeting — 2026-07-10",
+                "section": "Commissioning meeting — 2026-07-10",
+                "page": null,
+                "score": 21.53362177675557
+              },
+              {
+                "source_id": "a961f6f949da196c",
+                "source": "meeting-2026-06-19-controls-review.md",
+                "category": "meeting",
+                "excerpt": "The occupied supply target remained 7.0 degrees Celsius at this meeting.",
+                "section": "Controls review — 2026-06-19",
+                "page": null,
+                "score": 20.583206910319078
+              }
+            ]
+          },
+          "scores": {
+            "retrieval": true,
+            "citation_grounding": true,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "delivery-clarify-ambiguous-status",
+          "category": "clarification",
+          "question": "How is it?",
+          "status": "passed",
+          "latency_ms": 54.932,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "Please specify",
+              "project aspect",
+              "time range"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "clarification"
+            ],
+            "refused": false,
+            "clarification": true
+          },
+          "actual": {
+            "answer": "Please specify the project aspect and time range you want to examine.",
+            "refused": false,
+            "clarification": true,
+            "tools": [
+              "clarification"
+            ],
+            "tool_trace": [
+              {
+                "tool": "clarification",
+                "status": "completed",
+                "summary": "Please specify the project aspect and time range you want to examine."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        },
+        {
+          "case_id": "delivery-reject-design-overlay",
+          "category": "role_isolation",
+          "question": "DBAUTH5N3",
+          "status": "passed",
+          "latency_ms": 82.719,
+          "error": null,
+          "expected": {
+            "sources": [],
+            "answer_contains_all": [
+              "do not contain enough evidence"
+            ],
+            "grounding_terms": [],
+            "tools": [
+              "project_search"
+            ],
+            "refused": true,
+            "clarification": false
+          },
+          "actual": {
+            "answer": "The imported project sources do not contain enough evidence to answer reliably.",
+            "refused": true,
+            "clarification": false,
+            "tools": [
+              "project_search"
+            ],
+            "tool_trace": [
+              {
+                "tool": "project_search",
+                "status": "completed",
+                "summary": "The imported project sources do not contain enough evidence to answer reliably."
+              }
+            ],
+            "citations": []
+          },
+          "scores": {
+            "retrieval": null,
+            "citation_grounding": null,
+            "answer_correctness": true,
+            "tool_selection": true,
+            "refusal": true,
+            "clarification": true
+          }
+        }
+      ],
+      "summary": {
+        "case_count": 4,
+        "completed_count": 4,
+        "failed_execution_count": 0,
+        "passed_all_applicable_metrics_count": 4,
+        "metrics": {
+          "retrieval": {
+            "passed": 2,
+            "measured": 2,
+            "rate": 1.0
+          },
+          "citation_grounding": {
+            "passed": 2,
+            "measured": 2,
+            "rate": 1.0
+          },
+          "answer_correctness": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "tool_selection": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "refusal": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          },
+          "clarification": {
+            "passed": 4,
+            "measured": 4,
+            "rate": 1.0
+          }
+        },
+        "retrieval_ranking": {
+          "evaluator": "haystack",
+          "document_comparison_field": "meta.source",
+          "evaluated_cases": 2,
+          "recall": 1.0,
+          "mrr": 0.75,
+          "ndcg": 0.8254604649035663
+        },
+        "latency": {
+          "measured": 4,
+          "min_ms": 54.932,
+          "median_ms": 88.809,
+          "p95_ms": 162.729,
+          "max_ms": 162.729
+        }
+      }
+    }
+  ],
+  "summary": {
+    "role_count": 4,
+    "case_count": 16,
+    "completed_count": 16,
+    "failed_execution_count": 0,
+    "passed_all_applicable_metrics_count": 16,
+    "workflow_coverage": [
+      "clarification",
+      "configuration_lookup",
+      "governed_analytics",
+      "meeting_decision",
+      "project_knowledge",
+      "refusal",
+      "role_isolation",
+      "temporal_diagnostics"
+    ],
+    "metrics": {
+      "retrieval": {
+        "passed": 7,
+        "measured": 7,
+        "rate": 1.0
+      },
+      "citation_grounding": {
+        "passed": 7,
+        "measured": 7,
+        "rate": 1.0
+      },
+      "answer_correctness": {
+        "passed": 16,
+        "measured": 16,
+        "rate": 1.0
+      },
+      "tool_selection": {
+        "passed": 16,
+        "measured": 16,
+        "rate": 1.0
+      },
+      "refusal": {
+        "passed": 16,
+        "measured": 16,
+        "rate": 1.0
+      },
+      "clarification": {
+        "passed": 16,
+        "measured": 16,
+        "rate": 1.0
+      }
+    },
+    "retrieval_ranking": {
+      "evaluator": "haystack",
+      "document_comparison_field": "meta.source",
+      "evaluated_cases": 7,
+      "recall": 1.0,
+      "mrr": 0.9285714285714286,
+      "ndcg": 0.950131561401019
+    },
+    "latency": {
+      "measured": 16,
+      "min_ms": 2.942,
+      "median_ms": 89.81450000000001,
+      "p95_ms": 239.719,
+      "max_ms": 239.719
+    }
+  }
+}

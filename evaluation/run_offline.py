@@ -156,27 +156,46 @@ def _category_for_document(path: Path) -> str:
     return "background"
 
 
-def _load_imports(corpus_root: Path) -> list[ImportedFile]:
-    documents_root = corpus_root / "docs" / "source"
-    if not documents_root.is_dir():
-        raise EvaluationContractError(f"Missing document corpus: {documents_root}")
+def _load_imports(
+    corpus_root: Path, additional_documents_root: Path | None = None
+) -> list[ImportedFile]:
+    document_roots = [corpus_root / "docs" / "source"]
+    if additional_documents_root is not None:
+        document_roots.append(additional_documents_root / "docs" / "source")
+    missing = [str(path) for path in document_roots if not path.is_dir()]
+    if missing:
+        raise EvaluationContractError(f"Missing document corpus: {missing}")
     imports: list[ImportedFile] = []
     names: set[str] = set()
-    for path in sorted(documents_root.rglob("*")):
-        if not path.is_file() or path.suffix.casefold() not in {".md", ".txt", ".json"}:
-            continue
-        if path.name in names:
-            raise EvaluationContractError(
-                f"Synthetic source basenames must be unique: {path.name}"
+    for documents_root in document_roots:
+        resolved_documents_root = documents_root.resolve()
+        for path in sorted(documents_root.rglob("*")):
+            if path.is_symlink() or path.is_junction():
+                raise EvaluationContractError(
+                    f"Synthetic document corpus cannot contain links: {path}"
+                )
+            if not path.resolve().is_relative_to(resolved_documents_root):
+                raise EvaluationContractError(
+                    f"Synthetic document corpus path escapes its root: {path}"
+                )
+            if not path.is_file() or path.suffix.casefold() not in {
+                ".md",
+                ".txt",
+                ".json",
+            }:
+                continue
+            if path.name in names:
+                raise EvaluationContractError(
+                    f"Synthetic source basenames must be unique: {path.name}"
+                )
+            names.add(path.name)
+            imports.append(
+                ImportedFile(
+                    filename=path.name,
+                    content=path.read_bytes(),
+                    category=_category_for_document(path),
+                )
             )
-        names.add(path.name)
-        imports.append(
-            ImportedFile(
-                filename=path.name,
-                content=path.read_bytes(),
-                category=_category_for_document(path),
-            )
-        )
     if not imports:
         raise EvaluationContractError("Synthetic document corpus is empty")
     return imports
@@ -357,11 +376,18 @@ def run_evaluation(
     gold_path: str | Path,
     output_path: str | Path,
     runtime_root: str | Path | None = None,
+    additional_documents_root: str | Path | None = None,
+    evaluation_context: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     evaluation_started = datetime.now(UTC)
     corpus = Path(corpus_root).resolve()
     gold = Path(gold_path).resolve()
     output = Path(output_path).resolve()
+    additional_documents = (
+        Path(additional_documents_root).resolve()
+        if additional_documents_root is not None
+        else None
+    )
     telemetry_path = _validate_corpus(corpus)
     cases = load_gold_cases(gold)
 
@@ -382,7 +408,9 @@ def run_evaluation(
         )
         manager.activate(project_id)
         indexer = ProjectIndexer(manager)
-        inventory = indexer.import_files(project_id, _load_imports(corpus))
+        inventory = indexer.import_files(
+            project_id, _load_imports(corpus, additional_documents)
+        )
         analytics = GovernedAnalyticsTool(
             AnalyticsWorkspace.build(
                 csv_path=telemetry_path,
@@ -522,6 +550,8 @@ def run_evaluation(
                 "latency": _latency_summary(latencies),
             },
         }
+        if evaluation_context:
+            report["evaluation_context"] = dict(evaluation_context)
         _atomic_json_write(output, report)
         return report
     finally:
