@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 from dataclasses import dataclass
@@ -16,6 +17,10 @@ class Finding:
 RUNTIME_DATABASE_SUFFIXES = {".duckdb", ".sqlite", ".sqlite3"}
 FORBIDDEN_NAMES = {".env", "credentials.json", "secrets.yaml", "secrets.yml"}
 MAX_PUBLIC_FILE_BYTES = 2_000_000
+MAX_APPROVED_SYNTHETIC_DATABASE_BYTES = 10_000_000
+APPROVED_SYNTHETIC_DATABASES = {
+    "examples/agentic_hvac_bakeoff/datasets/hvac_bakeoff.duckdb"
+}
 UNAPPROVED_BINARY_SUFFIXES = {
     ".7z",
     ".doc",
@@ -86,6 +91,29 @@ def _candidate_files(public_root: Path) -> list[Path]:
     )
 
 
+def _is_approved_synthetic_database(
+    public_root: Path,
+    path: Path,
+    relative: str,
+) -> bool:
+    if relative not in APPROVED_SYNTHETIC_DATABASES:
+        return False
+    if path.stat().st_size > MAX_APPROVED_SYNTHETIC_DATABASE_BYTES:
+        return False
+    example_root = public_root / "examples" / "agentic_hvac_bakeoff"
+    provenance = example_root / "SYNTHETIC_DATA_PROVENANCE.md"
+    manifest_path = example_root / "manifest.json"
+    if not provenance.is_file() or not manifest_path.is_file():
+        return False
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        with path.open("rb") as handle:
+            header = handle.read(12)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    return manifest.get("fully_synthetic") is True and header[8:12] == b"DUCK"
+
+
 def scan_public_tree(root: str | Path) -> list[Finding]:
     public_root = Path(root).resolve()
     findings: list[Finding] = []
@@ -101,8 +129,18 @@ def scan_public_tree(root: str | Path) -> list[Finding]:
         relative = path.relative_to(public_root).as_posix()
         if path.name.casefold() in FORBIDDEN_NAMES:
             findings.append(Finding(relative, "forbidden-config-file"))
-        if path.suffix.casefold() in RUNTIME_DATABASE_SUFFIXES:
+        approved_synthetic_database = _is_approved_synthetic_database(
+            public_root,
+            path,
+            relative,
+        )
+        if (
+            path.suffix.casefold() in RUNTIME_DATABASE_SUFFIXES
+            and not approved_synthetic_database
+        ):
             findings.append(Finding(relative, "runtime-database"))
+        if approved_synthetic_database:
+            continue
 
         if path.suffix.casefold() == ".csv":
             parts = Path(relative).parts

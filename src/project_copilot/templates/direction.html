@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>项目知识与数据助手</title>
+    <link rel="stylesheet" href="/static/direction.css">
+    <script src="/static/direction.js" defer></script>
+  </head>
+  <body>
+    <main class="direction-shell" data-testid="direction-chat">
+      <header class="direction-header">
+        <div>
+          <span class="direction-kicker">PROJECT COPILOT</span>
+          <h1>项目知识与数据助手</h1>
+          <p>像问同事一样，查询项目文档、机组配置和运行数据。</p>
+        </div>
+        <div class="header-actions">
+          <a class="manage-link" href="/workbench">资料管理</a>
+          {% if model_backed %}
+          <span class="demo-badge model-badge">真实模型 · 只读分析</span>
+          {% else %}
+          <span class="demo-badge">离线方向演示</span>
+          {% endif %}
+        </div>
+      </header>
+
+      <div class="context-strip" aria-label="当前分析范围">
+        <span>合成验证项目</span>
+        <span>4 台机组</span>
+        <span>Asia/Shanghai</span>
+        <span>数据截至 2026-01-17 23:59</span>
+        {% if model_backed %}<span>已批准模型服务</span>{% endif %}
+      </div>
+
+      <section class="conversation" aria-label="对话">
+        <article class="message assistant-message">
+          <div class="avatar" aria-hidden="true">AI</div>
+          <div class="message-body">
+            <p>我可以把知识依据和数据计算放在同一个回答里。先试试下面的问题：</p>
+            <div class="suggestions" aria-label="示例问题">
+              <button type="button" data-question="HP-02为什么修改送风设定，修改后的效果怎么样？">分析 HP-02 配置变更效果</button>
+              <button type="button" data-question="原始数据和去重后的数据分别有多少行？">核对导入数据行数</button>
+              <button type="button" data-question="哪台机组更节能？">比较机组能效</button>
+            </div>
+          </div>
+        </article>
+        <div id="messages" aria-live="polite"></div>
+      </section>
+
+      <form id="direction-form" class="composer">
+        <label class="sr-only" for="direction-question">输入问题</label>
+        <textarea id="direction-question" rows="2" maxlength="1000" required placeholder="输入你想查询的项目问题……"></textarea>
+        <button type="submit">发送</button>
+      </form>
+      {% if model_backed %}
+      <p class="demo-note">模型：{{ model_name }}。回答只使用合成项目资料和只读数据库，不会控制现场设备。<span class="sr-only">{{ egress_display }}</span></p>
+      {% else %}
+      <p class="demo-note">本页用合成数据验证产品方向；开放式理解能力需要接入公司批准的大模型后评测。</p>
+      {% endif %}
+    </main>
+  </body>
+</html>

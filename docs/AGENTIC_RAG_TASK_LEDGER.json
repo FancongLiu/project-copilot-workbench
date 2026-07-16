@@ -1,0 +1,193 @@
+{
+  "schema_version": "1",
+  "ledger_id": "project-copilot-agentic-rag-direction-20260716",
+  "status_authority": "this_file",
+  "checkpoint_projection": "docs/AGENTIC_RAG_CHECKPOINT.md",
+  "event_log": "docs/AGENTIC_RAG_TASK_EVENTS.jsonl",
+  "status": "active",
+  "revision": 4,
+  "write_owner": "root",
+  "objective": "Rapidly deliver a directionally correct commercial-HVAC Agentic RAG single-chat website, then deepen it from Chairman trial feedback and measured bake-off evidence.",
+  "product_contract": {
+    "input": [
+      "commercial-HVAC documents, configurations, point dictionaries, meetings, decisions, work orders and SOPs",
+      "structured telemetry or approved analytical tables",
+      "a natural-language user question"
+    ],
+    "process": [
+      "decide whether the question requires knowledge retrieval, database analysis or both",
+      "retrieve source evidence and/or execute a governed read-only data query",
+      "clarify missing definitions instead of guessing",
+      "compose one engineer-readable answer"
+    ],
+    "output": [
+      "clear Markdown answer",
+      "tables and governed charts when useful",
+      "citation cards showing filename, useful original excerpt, location and relevance",
+      "no internal IDs or unnecessary implementation terminology"
+    ]
+  },
+  "chairman_corrections": [
+    {
+      "id": "AR-C001",
+      "summary": "Agentic RAG is the governing architecture, not an optional label. The product must autonomously choose knowledge, data or combined tools."
+    },
+    {
+      "id": "AR-C002",
+      "summary": "Do not claim a framework is best from documentation or popularity. Use the same HVAC corpus, model and gold questions to measure candidates."
+    },
+    {
+      "id": "AR-C003",
+      "summary": "The goal is a solution that satisfies the business outcome, not theoretical optimality. Prefer a fast usable direction build followed by evidence-led deepening."
+    },
+    {
+      "id": "AR-C004",
+      "summary": "Build realistic synthetic multi-unit ten-second telemetry and matching configuration knowledge first so every architecture decision can be backtested."
+    },
+    {
+      "id": "AR-C005",
+      "summary": "Defrost is only one test case. It must not be the homepage, navigation model or product boundary."
+    },
+    {
+      "id": "AR-C006",
+      "summary": "No silent capability downgrade is allowed. An offline scripted demo may validate page direction, but it cannot satisfy or be presented as the real intelligence acceptance gate."
+    },
+    {
+      "id": "AR-C007",
+      "summary": "The current Codex Switch configuration provides an authorized OpenAI-compatible Responses API endpoint and model. Use it for model-backed evaluation without copying credentials into the repository or logs."
+    }
+  ],
+  "safety_boundaries": [
+    "Do not modify OnionQuant runtime, Cron, context_state, Inbox or Outbox.",
+    "Use only fully synthetic or public-safe data in the public repository.",
+    "Use read-only database credentials, query validation and bounded results for model-generated queries.",
+    "Do not expose unrestricted shell, Python, Web, MCP or physical equipment control to ordinary users.",
+    "Do not force-push or destructively reset Git history."
+  ],
+  "candidates": [
+    {
+      "id": "haystack-duckdb",
+      "role": "fast lightweight direction build",
+      "status": "model-backed browser gate passed; full 52-case bake-off pending"
+    },
+    {
+      "id": "ragflow-wren",
+      "role": "leading quality hypothesis",
+      "status": "needs measured bake-off"
+    },
+    {
+      "id": "db-gpt",
+      "role": "simpler all-in-one challenger",
+      "status": "needs measured bake-off"
+    }
+  ],
+  "slices": [
+    {
+      "id": "AR-01",
+      "title": "Requirement correction, current research and measurable selection contract",
+      "status": "completed",
+      "acceptance": [
+        "single-chat product contract",
+        "Agentic RAG preserved",
+        "no unmeasured best-framework claim",
+        "candidate and falsification criteria recorded"
+      ],
+      "evidence": [
+        "docs/AGENTIC_RAG_TASK_LEDGER.json",
+        "docs/AGENTIC_RAG_CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "AR-02",
+      "title": "Reproducible multi-unit HVAC telemetry, knowledge corpus and hidden truth",
+      "status": "completed",
+      "dependencies": ["AR-01"],
+      "acceptance": [
+        "multiple assets and operating modes",
+        "ten-second telemetry",
+        "data-quality defects and labeled events",
+        "configuration, point map, meetings, decisions and service evidence",
+        "fully synthetic provenance"
+      ],
+      "evidence": [
+        "scripts/generate_agentic_hvac_bakeoff.py",
+        "examples/agentic_hvac_bakeoff/manifest.json",
+        "examples/agentic_hvac_bakeoff/datasets/telemetry.csv",
+        "examples/agentic_hvac_bakeoff/datasets/telemetry.parquet",
+        "examples/agentic_hvac_bakeoff/datasets/hvac_bakeoff.duckdb",
+        "examples/agentic_hvac_bakeoff/hidden_truth/events.json",
+        "evaluation/test_agentic_rag_bakeoff.py"
+      ]
+    },
+    {
+      "id": "AR-03",
+      "title": "Knowledge, database, combined-query, chart and safety benchmark",
+      "status": "completed",
+      "dependencies": ["AR-02"],
+      "acceptance": [
+        "frozen gold questions and exact expected evidence",
+        "repeatable numerical truth",
+        "clarification and refusal cases",
+        "cross-project isolation cases"
+      ],
+      "evidence": [
+        "evaluation/agentic_rag_bakeoff.json",
+        "evaluation/run_agentic_rag_bakeoff.py",
+        "evaluation/results/agentic-hvac-gold.json",
+        "evaluation/test_agentic_rag_gold.py",
+        "fresh focused verification: 6 passed"
+      ]
+    },
+    {
+      "id": "AR-04",
+      "title": "Fast single-chat direction build using the first candidate that clears the evidence gate",
+      "status": "completed",
+      "dependencies": ["AR-03"],
+      "acceptance": [
+        "one intuitive chat page",
+        "model-backed knowledge, database and combined routing through the authorized Responses API",
+        "Markdown, tables, governed charts and citation cards",
+        "no defrost-centric navigation",
+        "the offline scripted shell is labeled as a direction-only aid and is not counted as intelligence completion"
+      ],
+      "evidence": [
+        "src/project_copilot/direction.py",
+        "src/project_copilot/templates/direction.html",
+        "src/project_copilot/static/direction.js",
+        "src/project_copilot/static/direction.css",
+        "tests/test_direction_agent.py",
+        "tests/test_direction_demo.py",
+        "real Responses-API desktop plus multi-turn 320px browser journey passed",
+        "final independent rereview: Critical 0, Important 0",
+        "fresh release verification: 196 passed, 5 documented optional skips"
+      ]
+    },
+    {
+      "id": "AR-05",
+      "title": "Measured local bake-off, browser journey and independent review",
+      "status": "in_progress",
+      "dependencies": ["AR-04"],
+      "acceptance": [
+        "same model and corpus across candidates",
+        "raw per-case evidence retained",
+        "human HVAC-engineer journey",
+        "no release-blocking review findings"
+      ]
+    },
+    {
+      "id": "AR-06",
+      "title": "Chairman trial handoff, deployment documentation, commit and push",
+      "status": "pending",
+      "dependencies": ["AR-05"],
+      "acceptance": [
+        "local trial URL",
+        "directional limitations stated",
+        "company-PC handoff updated",
+        "non-force commit and push"
+      ]
+    }
+  ],
+  "current_blockers": [],
+  "next_slice_ids": ["AR-05"],
+  "updated_at": "2026-07-16T23:10:43+08:00"
+}

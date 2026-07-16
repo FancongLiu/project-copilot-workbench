@@ -525,6 +525,7 @@ The production Agent path is enabled only when all of these are present:
 | `PROJECT_COPILOT_MODEL_MODE=company` | Select the real company model path |
 | `PROJECT_COPILOT_OPENAI_BASE_URL` | Full OpenAI-compatible API base, normally ending in `/v1` |
 | `PROJECT_COPILOT_OPENAI_MODEL` | Company-approved model/deployment identifier |
+| `PROJECT_COPILOT_OPENAI_WIRE_API` | `responses` for the Agentic RAG direction workflow; `chat_completions` only for a reviewed legacy endpoint |
 | `PROJECT_COPILOT_OPENAI_API_KEY` | Secret injected at process launch; never committed or stored in the example file |
 | `PROJECT_COPILOT_ALLOWED_HOSTS` | Comma-separated exact hostnames; no URL paths or wildcard domains |
 | `PROJECT_COPILOT_CA_BUNDLE` | Optional PEM bundle for an internal/private CA |
@@ -543,6 +544,7 @@ $env:PROJECT_COPILOT_OPENAI_API_KEY = Get-Secret `
 . "D:\ProjectCopilot\releases\REPLACE_WITH_COMMIT\company-v2.example.ps1" `
   -OpenAIBaseUrl "https://ai-gateway.example.invalid/v1" `
   -OpenAIModel "approved-model-id" `
+  -OpenAIWireApi "responses" `
   -AllowedHosts @("ai-gateway.example.invalid") `
   -CaBundle "C:\CompanyPKI\company-ca-bundle.pem"
 ```

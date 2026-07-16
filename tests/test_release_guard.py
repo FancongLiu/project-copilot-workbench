@@ -1,4 +1,5 @@
 import subprocess
+import json
 from pathlib import Path
 
 from project_copilot.release_guard import scan_public_tree
@@ -82,6 +83,34 @@ def test_release_guard_rejects_arbitrary_binary_content(tmp_path: Path) -> None:
 
     assert [(finding.path, finding.rule) for finding in findings] == [
         ("payload.bin", "unapproved-binary")
+    ]
+
+
+def test_release_guard_allows_only_the_reviewed_synthetic_direction_database(
+    tmp_path: Path,
+) -> None:
+    example = tmp_path / "examples" / "agentic_hvac_bakeoff"
+    datasets = example / "datasets"
+    datasets.mkdir(parents=True)
+    (example / "SYNTHETIC_DATA_PROVENANCE.md").write_text(
+        "This dataset is fully synthetic and not engineering guidance.",
+        encoding="utf-8",
+    )
+    (example / "manifest.json").write_text(
+        json.dumps({"fully_synthetic": True}),
+        encoding="utf-8",
+    )
+    duckdb_header = b"12345678DUCK" + b"\0" * 32
+    (datasets / "hvac_bakeoff.duckdb").write_bytes(duckdb_header)
+    (datasets / "unreviewed.duckdb").write_bytes(b"not a real database")
+
+    findings = scan_public_tree(tmp_path)
+
+    assert [(finding.path, finding.rule) for finding in findings] == [
+        (
+            "examples/agentic_hvac_bakeoff/datasets/unreviewed.duckdb",
+            "runtime-database",
+        )
     ]
 
 

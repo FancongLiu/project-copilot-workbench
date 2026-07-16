@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import os
+import tomllib
+from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
@@ -15,9 +18,10 @@ class CompanyAPIError(RuntimeError):
 @dataclass(frozen=True)
 class CompanyAPISettings:
     base_url: str
-    api_key: str
+    api_key: str = field(repr=False)
     model: str
     allowed_hosts: tuple[str, ...]
+    wire_api: str = "chat_completions"
 
     def __post_init__(self) -> None:
         parsed = urlparse(self.base_url)
@@ -31,6 +35,52 @@ class CompanyAPISettings:
             raise CompanyAPIError("Company API requires HTTPS for non-loopback hosts")
         if not self.model.strip():
             raise CompanyAPIError("Company API model must be configured")
+        if self.wire_api not in {"chat_completions", "responses"}:
+            raise CompanyAPIError("Company API wire protocol is unsupported")
+
+
+def load_codex_switch_settings(
+    config_path: str | Path | None = None,
+) -> CompanyAPISettings:
+    """Load the active Codex provider only after explicit local-runtime approval."""
+
+    if os.environ.get("PROJECT_COPILOT_ACK_CODEX_SWITCH", "").casefold() != "true":
+        raise CompanyAPIError(
+            "Codex Switch access requires PROJECT_COPILOT_ACK_CODEX_SWITCH=true"
+        )
+    selected = Path(
+        config_path
+        or os.environ.get("PROJECT_COPILOT_CODEX_CONFIG", "")
+        or Path.home() / ".codex" / "config.toml"
+    ).expanduser()
+    try:
+        config = tomllib.loads(selected.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise CompanyAPIError("Codex Switch configuration is unavailable") from exc
+    provider_name = str(config.get("model_provider", ""))
+    provider = config.get("model_providers", {}).get(provider_name, {})
+    if not isinstance(provider, dict):
+        raise CompanyAPIError("Codex Switch active provider is invalid")
+    base_url = str(provider.get("base_url", "")).rstrip("/")
+    wire_api = str(provider.get("wire_api", ""))
+    token = str(provider.get("experimental_bearer_token", ""))
+    if not token:
+        auth_path = selected.with_name("auth.json")
+        try:
+            auth = json.loads(auth_path.read_text(encoding="utf-8"))
+            token = str(auth.get("OPENAI_API_KEY", ""))
+        except (OSError, json.JSONDecodeError):
+            token = ""
+    if not token:
+        raise CompanyAPIError("Codex Switch credential is unavailable")
+    host = (urlparse(base_url).hostname or "").casefold()
+    return CompanyAPISettings(
+        base_url=base_url,
+        api_key=token,
+        model=str(config.get("model", "")),
+        allowed_hosts=(host,),
+        wire_api=wire_api,
+    )
 
 
 class CompanyModelClient:

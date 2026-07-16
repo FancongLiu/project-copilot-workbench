@@ -8,6 +8,9 @@ dist/
 build/
 *.egg-info/
 *.duckdb
+!examples/agentic_hvac_bakeoff/datasets/hvac_bakeoff.duckdb
+examples/agentic_hvac_bakeoff/datasets/telemetry.csv
+examples/agentic_hvac_bakeoff/datasets/telemetry.parquet
 *.sqlite
 *.sqlite3
 .env

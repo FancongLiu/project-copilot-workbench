@@ -21,6 +21,10 @@ answers, and a fully synthetic HVAC evaluation suite.
 - Run a bounded Haystack Agent with project search, configuration lookup,
   meeting/decision lookup, governed analytics, source inspection, and
   clarification tools.
+- Offer a model-backed single-Chat direction surface that uses Haystack's
+  maintained Responses API generator, iterative project retrieval, and a
+  SQLGlot-guarded single-SELECT DuckDB tool for broader natural-language data
+  questions.
 - Return exact source citations, useful excerpts, sections/pages when the
   parser provides them, and a concise tool activity trace.
 - Validate telemetry with Polars/Pandera, query a read-only DuckDB snapshot,
@@ -31,7 +35,9 @@ answers, and a fully synthetic HVAC evaluation suite.
   explicit asset/controller/firmware scope; the Agent only routes and explains
   the governed result.
 - Refuse unsupported evidence requests and prohibit arbitrary Shell, Python,
-  Web, MCP, model-generated SQL, and physical equipment control.
+  Web, MCP, unrestricted SQL, and physical equipment control. The direction
+  data tool accepts only one bounded read-only SELECT over an allowlisted table
+  and fails closed when the generated query violates policy.
 
 The repository contains only generic code and a CC0 fully synthetic HVAC
 example. Real company data, endpoints, certificates, credentials, runtime
@@ -72,6 +78,12 @@ scripts\run.cmd
 Open `http://127.0.0.1:8788`. The default deterministic mode is offline and
 uses the bundled synthetic project.
 
+The current source checkout also contains a compact Agentic RAG direction
+trial. When a Responses-compatible company model is configured, the root URL
+opens one Chinese Chat that combines project evidence and synthetic HVAC data.
+See the [direction handoff](docs/agentic-rag-direction-handoff.md) before using
+it; the synthetic answers are evaluation evidence, not field guidance.
+
 Create and import a separate workspace from the CLI:
 
 ```powershell
@@ -90,6 +102,9 @@ Production mode uses Haystack's OpenAI-compatible generator with an exact-host
 allowlist, HTTPS enforcement for non-loopback endpoints, optional internal CA,
 proxy inheritance disabled, zero retries, and strict tool schemas. Inject
 secrets through an approved launcher; never store them in this repository.
+
+Set `PROJECT_COPILOT_OPENAI_WIRE_API=responses` for a Responses-compatible
+gateway. `chat_completions` remains supported for reviewed legacy endpoints.
 
 ```powershell
 $env:PROJECT_COPILOT_OPENAI_API_KEY = Get-Secret -Name ProjectCopilot -AsPlainText
@@ -122,6 +137,8 @@ Run the frozen offline evaluation and write per-case evidence:
   --output evaluation\results\deterministic-baseline.json
 .venv\Scripts\python.exe -m evaluation.run_hvac_role_benchmark `
   --output evaluation\results\hvac-role-benchmark.json
+.venv\Scripts\python.exe scripts\generate_agentic_hvac_bakeoff.py
+.venv\Scripts\python.exe evaluation\run_agentic_rag_bakeoff.py
 ```
 
 The gate covers unit/integration/security mutation cases, deterministic
@@ -146,6 +163,7 @@ limitations.
 - [Administrator and user guide](docs/admin-user-guide.md)
 - [Acceptance checklist](docs/acceptance-checklist.md)
 - [Evaluation method and limitations](docs/evaluation.md)
+- [Agentic RAG direction-build and continuation handoff](docs/agentic-rag-direction-handoff.md)
 - [Optional LightRAG direct-deploy profile](docs/light-rag-direct-deploy.md)
 
 The application binds only to `127.0.0.1`, `localhost`, or `::1`. It has no

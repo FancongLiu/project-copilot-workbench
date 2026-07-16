@@ -17,7 +17,20 @@ class GuardedQuery:
 
 
 class SQLSelectGuard:
-    _allowed_function_types = (exp.Avg, exp.Cast, exp.Count, exp.Max, exp.Nullif)
+    _allowed_function_types = (
+        exp.Avg,
+        exp.And,
+        exp.Case,
+        exp.Cast,
+        exp.Count,
+        exp.If,
+        exp.Max,
+        exp.Min,
+        exp.Nullif,
+        exp.Round,
+        exp.Sum,
+        exp.TimestampTrunc,
+    )
 
     def __init__(
         self,
@@ -69,26 +82,45 @@ class SQLSelectGuard:
         if unsafe_stars:
             raise SQLPolicyError("Wildcard column selection is not allowed")
 
-        tables = tuple(
-            sorted(
-                {
-                    table.name.casefold()
-                    for table in statement.find_all(exp.Table)
-                    if table.name
-                }
+        table_nodes = list(statement.find_all(exp.Table))
+        if len(table_nodes) != 1 or statement.args.get("joins"):
+            raise SQLPolicyError(
+                "Query must read exactly one approved table without joins"
             )
+        tables = tuple(
+            sorted({table.name.casefold() for table in table_nodes if table.name})
         )
         unknown_tables = sorted(set(tables) - self.allowed_tables)
         if unknown_tables:
             raise SQLPolicyError(f"Tables are not allowed: {unknown_tables}")
 
+        for projection in statement.expressions:
+            expression = (
+                projection.this if isinstance(projection, exp.Alias) else projection
+            )
+            if isinstance(expression, exp.Count) and expression.find(exp.Star):
+                continue
+            if not isinstance(expression, exp.Column) and not list(
+                expression.find_all(exp.Column)
+            ):
+                raise SQLPolicyError(
+                    "Every selected value must derive from an approved column"
+                )
+
         if self.allowed_columns is not None:
+            projection_aliases = {
+                alias.alias.casefold()
+                for alias in statement.expressions
+                if isinstance(alias, exp.Alias) and alias.alias
+            }
             columns = {
                 column.name.casefold()
                 for column in statement.find_all(exp.Column)
                 if column.name
             }
-            unknown_columns = sorted(columns - self.allowed_columns)
+            unknown_columns = sorted(
+                columns - self.allowed_columns - projection_aliases
+            )
             if unknown_columns:
                 raise SQLPolicyError(f"Columns are not allowed: {unknown_columns}")
 

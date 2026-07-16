@@ -6,6 +6,24 @@ The evaluation suite freezes a public, fully synthetic Project Package and a gol
 
 This baseline measures the deterministic test double. It does not claim that an untested company model, a larger real corpus, or a different embedding backend has the same quality.
 
+The separate `examples/agentic_hvac_bakeoff` corpus is the current Agentic RAG
+direction campaign. It contains four synthetic assets, 72 hours of ten-second
+telemetry, knowledge/configuration evidence, 15 injected event or data-quality
+types, and 52 candidate-neutral questions. Its deterministic numerical truth
+is recomputed from DuckDB rather than copied from prose:
+
+```powershell
+& ".venv\Scripts\python.exe" scripts/generate_agentic_hvac_bakeoff.py
+& ".venv\Scripts\python.exe" evaluation/run_agentic_rag_bakeoff.py
+& ".venv\Scripts\python.exe" -m pytest `
+  evaluation/test_agentic_rag_bakeoff.py `
+  evaluation/test_agentic_rag_gold.py -q
+```
+
+The model-backed direction browser journey is evidence for one combined case,
+not a 52-case quality score. Platform selection remains open until the same
+model, corpus and frozen cases are run against each candidate.
+
 ## Why the repository uses a small offline harness
 
 A 2026-07-15 search and GitHub review checked maintained evaluation projects rather than inventing a replacement framework:

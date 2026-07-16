@@ -225,6 +225,7 @@ Start with embeddings disabled. Expected startup variables are:
 PROJECT_COPILOT_MODEL_MODE=company
 PROJECT_COPILOT_OPENAI_BASE_URL=<approved HTTPS /v1 URL>
 PROJECT_COPILOT_OPENAI_MODEL=<approved identifier>
+PROJECT_COPILOT_OPENAI_WIRE_API=responses
 PROJECT_COPILOT_ALLOWED_HOSTS=<exact host list>
 PROJECT_COPILOT_OPENAI_API_KEY=<injected secret>
 PROJECT_COPILOT_CA_BUNDLE=<optional reviewed PEM path>

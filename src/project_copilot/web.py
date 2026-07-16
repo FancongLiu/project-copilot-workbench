@@ -5,13 +5,17 @@ import os
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from haystack.components.generators.chat import OpenAIChatGenerator
+from haystack.components.generators.chat import (
+    OpenAIChatGenerator,
+    OpenAIResponsesChatGenerator,
+)
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -19,13 +23,17 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from project_copilot.agent import DeterministicChatGenerator, ProjectAgent
 from project_copilot.analysis import AnalysisIntentError, ApprovedAnalysisEngine
 from project_copilot.analytics import AnalyticsValidationError, AnalyticsWorkspace
-from project_copilot.company_api import CompanyAPISettings
+from project_copilot.company_api import (
+    CompanyAPISettings,
+    load_codex_switch_settings,
+)
 from project_copilot.contract import ProjectPackage, load_project_package
 from project_copilot.defrost_diagnostics import (
     DefrostAssetContext,
     DefrostDiagnosticsEngine,
     DefrostRulePack,
 )
+from project_copilot.direction import DirectionAgent, DirectionDemo, DirectionToolbox
 from project_copilot.embeddings import OpenAIEmbeddingBackend
 from project_copilot.ingestion import ImportedFile, IngestionError, ProjectIndexer
 from project_copilot.ingestion import SentenceTransformersReranker
@@ -45,6 +53,16 @@ REPOSITORY_ROOT = PACKAGE_DIR.parents[1]
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=1_000)
     request_id: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class DirectionTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2_000)
+
+
+class DirectionQuestionRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=1_000)
+    history: list[DirectionTurn] = Field(default_factory=list, max_length=6)
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -132,23 +150,52 @@ def _build_chat_generator():  # type: ignore[no-untyped-def]
     mode = os.getenv("PROJECT_COPILOT_MODEL_MODE", "deterministic").casefold()
     if mode == "deterministic":
         return DeterministicChatGenerator(), "deterministic-test-double"
-    if mode != "company":
+    if mode == "codex-switch":
+        settings = load_codex_switch_settings()
+    elif mode == "company":
+        allowed_hosts = tuple(
+            host.strip()
+            for host in os.environ.get("PROJECT_COPILOT_ALLOWED_HOSTS", "").split(",")
+            if host.strip()
+        )
+        settings = CompanyAPISettings(
+            base_url=os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
+            api_key=os.environ.get("PROJECT_COPILOT_OPENAI_API_KEY", ""),
+            model=os.environ.get("PROJECT_COPILOT_OPENAI_MODEL", ""),
+            allowed_hosts=allowed_hosts,
+            wire_api=os.environ.get(
+                "PROJECT_COPILOT_OPENAI_WIRE_API", "chat_completions"
+            ),
+        )
+    else:
         raise RuntimeError(f"Unsupported model mode: {mode}")
-    allowed_hosts = tuple(
-        host.strip()
-        for host in os.environ.get("PROJECT_COPILOT_ALLOWED_HOSTS", "").split(",")
-        if host.strip()
-    )
-    settings = CompanyAPISettings(
-        base_url=os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
-        api_key=os.environ.get("PROJECT_COPILOT_OPENAI_API_KEY", ""),
-        model=os.environ.get("PROJECT_COPILOT_OPENAI_MODEL", ""),
-        allowed_hosts=allowed_hosts,
-    )
     http_client_kwargs: dict[str, object] = {
         "trust_env": False,
         "verify": build_tls_context(os.environ.get("PROJECT_COPILOT_CA_BUNDLE")),
     }
+    if settings.wire_api == "responses":
+        return (
+            OpenAIResponsesChatGenerator(
+                api_key=Secret.from_token(settings.api_key),
+                model=settings.model,
+                api_base_url=settings.base_url,
+                timeout=90,
+                max_retries=0,
+                generation_kwargs={
+                    "store": False,
+                    "reasoning": {
+                        "effort": os.environ.get(
+                            "PROJECT_COPILOT_REASONING_EFFORT", "high"
+                        )
+                    },
+                },
+                tools_strict=True,
+                http_client_kwargs=http_client_kwargs,
+            ),
+            "codex-switch-responses"
+            if mode == "codex-switch"
+            else "company-openai-responses",
+        )
     return (
         OpenAIChatGenerator(
             api_key=Secret.from_token(settings.api_key),
@@ -245,15 +292,14 @@ def create_app(
         for workspace in manager.list_workspaces():
             indexer.reindex(workspace.project_id)
     chat_generator, model_mode = _build_chat_generator()
+    chat_base_url = str(getattr(chat_generator, "api_base_url", "") or "")
+    model_backed = model_mode != "deterministic-test-double"
     egress_detail = {
         "chat": (
             "approved-remote"
-            if model_mode == "company-openai-compatible"
-            and _is_remote_endpoint(
-                os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", "")
-            )
+            if model_backed and _is_remote_endpoint(chat_base_url)
             else "loopback"
-            if model_mode == "company-openai-compatible"
+            if model_backed
             else "disabled"
         ),
         "embedding": (
@@ -336,6 +382,19 @@ def create_app(
     app.state.analytics = default_analytics
     app.state.analysis = legacy_analysis
     app.state.model_mode = model_mode
+    source_direction_corpus = REPOSITORY_ROOT / "examples" / "agentic_hvac_bakeoff"
+    bundled_direction_corpus = PACKAGE_DIR / "direction_demo"
+    direction_corpus = (
+        source_direction_corpus
+        if source_direction_corpus.is_dir()
+        else bundled_direction_corpus
+    )
+    app.state.direction_demo = (
+        DirectionAgent(DirectionToolbox(direction_corpus), chat_generator)
+        if model_backed
+        else DirectionDemo(direction_corpus)
+    )
+    app.state.direction_model_backed = model_backed
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost", "::1", "[::1]", "testserver"],
@@ -522,8 +581,7 @@ def create_app(
         )
         return response
 
-    @app.get("/", response_class=HTMLResponse)
-    def dashboard(request: Request):  # type: ignore[no-untyped-def]
+    def workbench_response(request: Request):  # type: ignore[no-untyped-def]
         active = manager.active_workspace()
         model_mode_display = (
             "Demonstration test mode - not for field decisions"
@@ -548,6 +606,44 @@ def create_app(
                 "downstream_approval_acknowledged": downstream_approval_acknowledged,
             },
         )
+
+    @app.get("/", response_class=HTMLResponse)
+    def dashboard(request: Request):  # type: ignore[no-untyped-def]
+        if model_backed:
+            return templates.TemplateResponse(
+                request=request,
+                name="direction.html",
+                context={
+                    "model_backed": True,
+                    "model_name": getattr(chat_generator, "model", "公司模型"),
+                    "egress_display": egress_display,
+                },
+            )
+        return workbench_response(request)
+
+    @app.get("/workbench", response_class=HTMLResponse)
+    def workbench(request: Request):  # type: ignore[no-untyped-def]
+        return workbench_response(request)
+
+    @app.get("/direction", response_class=HTMLResponse)
+    def direction(request: Request):  # type: ignore[no-untyped-def]
+        return templates.TemplateResponse(
+            request=request,
+            name="direction.html",
+            context={
+                "model_backed": model_backed,
+                "model_name": getattr(chat_generator, "model", "离线测试"),
+                "egress_display": egress_display,
+            },
+        )
+
+    @app.post("/api/direction/query")
+    async def query_direction(payload: DirectionQuestionRequest) -> dict[str, object]:
+        history = [turn.model_dump() for turn in payload.history]
+        async_answer = getattr(app.state.direction_demo, "answer_async", None)
+        if async_answer is not None:
+            return await async_answer(payload.question, history=history)
+        return app.state.direction_demo.answer(payload.question, history=history)
 
     @app.get("/api/health")
     def health() -> dict[str, object]:

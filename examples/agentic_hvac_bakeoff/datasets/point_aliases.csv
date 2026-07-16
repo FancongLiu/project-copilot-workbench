@@ -1,0 +1,12 @@
+canonical,alias,unit
+suction_pressure_kpa_g,吸气压力,kPa(g)
+suction_pressure_kpa_g,低压,kPa(g)
+suction_pressure_kpa_g,P_SUC,kPa(g)
+suction_pressure_kpa_g,LP,kPa(g)
+compressor_cmd_hz,压缩机命令频率,Hz
+compressor_cmd_hz,CMP_CMD,Hz
+compressor_fb_hz,压缩机实际频率,Hz
+compressor_fb_hz,CMP_FB,Hz
+discharge_temp_c,排气温度,C
+discharge_temp_c,T_DIS,C
+discharge_temp_c,DLT,C

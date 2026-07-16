@@ -61,3 +61,5 @@ packages = ["src/project_copilot"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "examples/synthetic_hvac" = "project_copilot/demo_project"
+"examples/agentic_hvac_bakeoff/datasets/hvac_bakeoff.duckdb" = "project_copilot/direction_demo/datasets/hvac_bakeoff.duckdb"
+"examples/agentic_hvac_bakeoff/docs/source" = "project_copilot/direction_demo/docs/source"

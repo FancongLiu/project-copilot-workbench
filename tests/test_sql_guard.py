@@ -64,3 +64,20 @@ def test_sql_guard_rejects_unknown_columns() -> None:
 
     with pytest.raises(SQLPolicyError, match="Columns are not allowed"):
         guard.validate("select employee_name from telemetry")
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "select 999 as energy_kwh",
+        "select 999 as energy_kwh from telemetry",
+        "select count(*) from telemetry a cross join telemetry b",
+    ],
+)
+def test_sql_guard_rejects_tableless_constants_and_join_amplification(
+    sql: str,
+) -> None:
+    guard = SQLSelectGuard(allowed_tables={"telemetry"})
+
+    with pytest.raises(SQLPolicyError):
+        guard.validate(sql)

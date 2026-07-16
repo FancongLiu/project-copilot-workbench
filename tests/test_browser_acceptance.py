@@ -341,3 +341,78 @@ def test_desktop_and_mobile_workbench_acceptance() -> None:
     ]
     assert len(expected_simulated_failures) == 2
     assert unexpected_console_errors == []
+
+
+@pytest.mark.skipif(
+    not os.getenv("PROJECT_COPILOT_BROWSER_URL"),
+    reason="browser acceptance server is not running",
+)
+def test_direction_chat_model_backed_engineer_journey() -> None:
+    base_url = os.environ["PROJECT_COPILOT_BROWSER_URL"].rstrip("/")
+    screenshot_dir = Path(os.getenv("PROJECT_COPILOT_SCREENSHOT_DIR", "artifacts"))
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    console_errors: list[str] = []
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        page.on(
+            "console",
+            lambda message: (
+                console_errors.append(message.text) if message.type == "error" else None
+            ),
+        )
+        page.goto(base_url, wait_until="networkidle")
+
+        expect(page).to_have_title("项目知识与数据助手")
+        expect(page.get_by_test_id("direction-chat")).to_be_visible()
+        expect(page.get_by_text("真实模型 · 只读分析")).to_be_visible()
+        expect(page.locator("[data-testid='direction-chat']")).to_have_count(1)
+
+        page.locator("#direction-question").fill(
+            "HP-02为什么修改送风设定，修改后的效果怎么样？"
+        )
+        page.locator("#direction-form button").click()
+        answer = page.locator("#messages .assistant-message").last
+        expect(answer).to_be_visible(timeout=120_000)
+        expect(answer.locator(".answer-heading").first).to_be_visible()
+        expect(answer.locator(".answer-table").first).to_be_visible()
+        expect(answer.locator("svg[role='img']").first).to_be_visible()
+        assert answer.locator(".citation-card").count() >= 2
+        expect(answer).to_contain_text("controls-review.md")
+        expect(answer).to_contain_text("telemetry.csv")
+        expect(answer).to_contain_text("已依据项目证据回答")
+        expect(answer).to_contain_text("已核对项目资料")
+        expect(answer).to_contain_text("已计算运行数据")
+        page.screenshot(
+            path=screenshot_dir / "direction-model-backed-desktop.png",
+            full_page=True,
+        )
+
+        answer_count = page.locator("#messages .assistant-message").count()
+        page.locator("#direction-question").fill(
+            "刚才这个修改前后，电耗变化是多少？请保留 kWh 单位。"
+        )
+        page.locator("#direction-form button").click()
+        expect(page.locator("#messages .assistant-message")).to_have_count(
+            answer_count + 1,
+            timeout=120_000,
+        )
+        follow_up = page.locator("#messages .assistant-message").last
+        expect(follow_up).to_contain_text("kWh")
+        expect(follow_up).to_contain_text("telemetry.csv")
+        expect(follow_up).to_contain_text("已依据项目证据回答")
+
+        page.set_viewport_size({"width": 320, "height": 700})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth + 1"
+        )
+        expect(page.locator("#direction-question")).to_be_visible()
+        expect(page.locator("#direction-form button")).to_be_visible()
+        page.screenshot(
+            path=screenshot_dir / "direction-model-backed-mobile.png",
+            full_page=True,
+        )
+        browser.close()
+
+    assert console_errors == []

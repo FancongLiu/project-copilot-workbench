@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0",
+  "fully_synthetic": true,
+  "expected_raw_rows": 103650,
+  "expected_unique_rows": 103620,
+  "expected_missing_grid_points": 60,
+  "events": [
+    {
+      "event_id": "D01",
+      "event_type": "data_gap",
+      "asset_id": "HP-02",
+      "start": "2026-01-15T03:00:00+08:00",
+      "end": "2026-01-15T03:10:00+08:00",
+      "expected_observation": "60 expected ten-second points are absent.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "D02",
+      "event_type": "duplicate_record",
+      "asset_id": "HP-03",
+      "start": "2026-01-15T08:00:00+08:00",
+      "end": "2026-01-15T08:05:00+08:00",
+      "expected_observation": "30 timestamp keys have one duplicate row each.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "D03",
+      "event_type": "out_of_order_record",
+      "asset_id": "HP-04",
+      "start": "2026-01-15T12:00:00+08:00",
+      "end": "2026-01-15T12:10:00+08:00",
+      "expected_observation": "The 60 records are written in reverse timestamp order.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "D04",
+      "event_type": "sensor_drift",
+      "asset_id": "HP-01",
+      "start": "2026-01-15T14:00:00+08:00",
+      "end": "2026-01-15T16:00:00+08:00",
+      "expected_observation": "Suction-temperature bias rises linearly from zero to six kelvin.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O01",
+      "event_type": "command_feedback_mismatch",
+      "asset_id": "HP-02",
+      "start": "2026-01-15T18:00:00+08:00",
+      "end": "2026-01-15T18:07:00+08:00",
+      "expected_observation": "Command remains 50 Hz while feedback remains zero for 420 seconds.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O02",
+      "event_type": "high_discharge_temperature",
+      "asset_id": "HP-03",
+      "start": "2026-01-15T20:00:00+08:00",
+      "end": "2026-01-15T20:20:00+08:00",
+      "expected_observation": "Discharge temperature is 130 C for 120 samples.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O03",
+      "event_type": "short_cycling",
+      "asset_id": "HP-04",
+      "start": "2026-01-16T00:00:00+08:00",
+      "end": "2026-01-16T01:00:00+08:00",
+      "expected_observation": "Six synthetic starts occur with five-minute on and off periods.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O04",
+      "event_type": "efficiency_degradation",
+      "asset_id": "HP-01",
+      "start": "2026-01-16T04:00:00+08:00",
+      "end": "2026-01-16T05:00:00+08:00",
+      "expected_observation": "Power is 20 kW, output is 40 kW and COP is 2.0.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O05",
+      "event_type": "configuration_change",
+      "asset_id": "HP-02",
+      "start": "2026-01-16T10:00:00+08:00",
+      "end": "2026-01-16T14:00:00+08:00",
+      "expected_observation": "At noon the synthetic supply-air setpoint changes from 12 C to 10 C.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O06",
+      "event_type": "defrost_sequence",
+      "asset_id": "HP-01",
+      "start": "2026-01-16T18:30:00+08:00",
+      "end": "2026-01-16T18:38:00+08:00",
+      "expected_observation": "One synthetic defrost lasts 480 seconds; compressor stays on, outdoor fan stays off and coil temperature rises 14 C.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O07",
+      "event_type": "valve_stuck",
+      "asset_id": "HP-03",
+      "start": "2026-01-17T02:00:00+08:00",
+      "end": "2026-01-17T02:30:00+08:00",
+      "expected_observation": "EEV command alternates between 20 and 80 percent while feedback is fixed at 35 percent.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O08",
+      "event_type": "low_suction_pressure",
+      "asset_id": "HP-04",
+      "start": "2026-01-17T06:00:00+08:00",
+      "end": "2026-01-17T07:00:00+08:00",
+      "expected_observation": "Low suction pressure, high superheat and reduced capacity resemble several possible faults but do not prove a cause.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "D05",
+      "event_type": "telemetry_freeze",
+      "asset_id": "HP-02",
+      "start": "2026-01-17T08:00:00+08:00",
+      "end": "2026-01-17T08:15:00+08:00",
+      "expected_observation": "A sensor tuple is frozen for 90 samples while quality remains good.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O09",
+      "event_type": "flow_proof_loss",
+      "asset_id": "HP-01",
+      "start": "2026-01-15T10:20:00+08:00",
+      "end": "2026-01-15T10:20:40+08:00",
+      "expected_observation": "Flow proof is lost; compressor feedback falls after 30 seconds and A102 appears.",
+      "scope": "synthetic_evaluation_contract_only"
+    },
+    {
+      "event_id": "O10",
+      "event_type": "fan_feedback_loss",
+      "asset_id": "HP-04",
+      "start": "2026-01-17T12:00:00+08:00",
+      "end": "2026-01-17T12:15:00+08:00",
+      "expected_observation": "Outdoor-fan command is 80 percent while feedback is zero and A311 is active.",
+      "scope": "synthetic_evaluation_contract_only"
+    }
+  ]
+}

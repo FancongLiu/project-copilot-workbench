@@ -1,0 +1,8 @@
+point,unit,meaning,access,aliases
+compressor_cmd_hz,Hz,requested compressor frequency,command,压缩机命令频率 | CMP_CMD
+compressor_fb_hz,Hz,observed compressor frequency,read,压缩机实际频率 | CMP_FB
+suction_pressure_kpa_g,kPa(g),gauge suction pressure,read,吸气压力 | 低压 | P_SUC | LP
+discharge_pressure_kpa_g,kPa(g),gauge discharge pressure,read,
+discharge_temp_c,C,discharge temperature,read,排气温度 | T_DIS | DLT
+eev_cmd_pct,%,electronic expansion-valve command,command,
+eev_fb_pct,%,electronic expansion-valve feedback,read,
