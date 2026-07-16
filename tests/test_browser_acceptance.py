@@ -344,8 +344,9 @@ def test_desktop_and_mobile_workbench_acceptance() -> None:
 
 
 @pytest.mark.skipif(
-    not os.getenv("PROJECT_COPILOT_BROWSER_URL"),
-    reason="browser acceptance server is not running",
+    not os.getenv("PROJECT_COPILOT_BROWSER_URL")
+    or os.getenv("PROJECT_COPILOT_DIRECTION_BROWSER") != "1",
+    reason="real-model direction browser acceptance is not enabled",
 )
 def test_direction_chat_model_backed_engineer_journey() -> None:
     base_url = os.environ["PROJECT_COPILOT_BROWSER_URL"].rstrip("/")

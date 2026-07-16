@@ -40,9 +40,25 @@ def _tree_digest(root: Path) -> str:
     ):
         digest.update(path.relative_to(root).as_posix().encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        content = path.read_bytes()
+        if path.suffix.casefold() in {".csv", ".json", ".md"}:
+            content = content.replace(b"\r\n", b"\n")
+        digest.update(content)
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def test_tree_digest_normalizes_cross_platform_text_line_endings(
+    tmp_path: Path,
+) -> None:
+    windows_tree = tmp_path / "windows"
+    posix_tree = tmp_path / "posix"
+    windows_tree.mkdir()
+    posix_tree.mkdir()
+    (windows_tree / "sample.csv").write_bytes(b"name,value\r\nunit,1\r\n")
+    (posix_tree / "sample.csv").write_bytes(b"name,value\nunit,1\n")
+
+    assert _tree_digest(windows_tree) == _tree_digest(posix_tree)
 
 
 @pytest.fixture(scope="module")
