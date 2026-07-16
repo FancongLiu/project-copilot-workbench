@@ -1,6 +1,6 @@
 # Project Copilot Workbench V2 compact checkpoint
 
-Last updated: 2026-07-16 09:10 (Asia/Shanghai)
+Last updated: 2026-07-16 09:17 (Asia/Shanghai)
 
 ## Objective and authority
 
@@ -47,8 +47,11 @@ append-only transition summary.
   fallback, missing artifact binding, provenance/link boundary, stale Vanna,
   and cross-role-negative gaps. All were remediated and rereviewed at Critical
   0 and Important 0. Fresh `scripts/verify.cmd` passed 158 tests with 4
-  documented optional skips. Commit, non-force push, and final remote/server
-  confirmation are the only handoff actions after this checkpoint write.
+  documented optional skips. Commit
+  `e2159439ad6b07bb47daa5bd537bb673402befef` was pushed without force;
+  GitHub Actions run `29463554769` passed Ubuntu, Windows, browser, real
+  offline Docling, package/install, dependency audit, SBOM, license and
+  Gitleaks jobs. The local trial server remains healthy and loopback-only.
 
 - Branch: `main`, base commit `41d1b448bdfc0c6288f51b146a96ccb4610fda73`
   before V2 edits. Delivery commit `6559256` and verified remediation commit
