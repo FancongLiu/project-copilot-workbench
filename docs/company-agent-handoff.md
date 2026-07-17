@@ -11,6 +11,86 @@ The company PC is the only place where approved company documents, endpoints,
 model names, certificates, credentials, runtime indexes and local evaluation
 sets may exist.
 
+## Current UI architecture trial (2026-07-18)
+
+Do not rebuild the old `/workbench` dashboard. It redirects to the ordinary
+single Chat. The current branch exposes four comparison routes under
+`/versions`; they all use the same private workspace, model and governed tools.
+Use `/versions/evidence` as the leading direction, but do not replace `/` until
+the Chairman has compared all four pages.
+
+Do not treat the architecture trial as intelligence acceptance. The final
+14-case shared-backend run completed all requests but passed only 1/14
+automatic hard gates; independent HVAC review scored pass 0, partial 6 and
+fail 8 (21.4/100). Preserve that result and repeat the same questions after
+company localization. A prettier V2/V3 page does not convert a failed answer
+into a pass.
+
+Runtime installation must use the pinned Python lock, including
+`pytz==2026.2`. Browser Markdown is already vendored as Marked 18.0.6 and
+DOMPurify 3.4.12, so a company deployment does not need Node.js or internet
+access to render answers. Never replace the local scripts with CDN URLs.
+
+Acceptance must include:
+
+1. Submit two questions rapidly and confirm only one backend request runs at a
+   time and the second request receives the first turn as history.
+2. Render nested Markdown links, bare `docs/...` paths and Windows absolute
+   paths and confirm only human labels remain visible.
+3. Verify V2 shows at most two original filenames plus the total count, while
+   its evidence panel shows every exact filename and excerpt.
+4. Verify V3 does not force-open the deliverable on mobile.
+5. Run MX09 from `evaluation/four_version_complex_questions.json`; confirm it
+   never asks for today's date when the historical range is explicit, and
+   record answer grounding separately instead of assuming it passed.
+
+## Current single-Chat deployment contract (2026-07-17)
+
+This section supersedes older instructions that separated `/` and
+`/workbench`:
+
+- Open `http://127.0.0.1:8788/`. This is the only ordinary engineer-facing
+  page; `/workbench` redirects to it.
+- Select the active workspace, then upload one or more files beside the Chat
+  composer. The server stores them in the external runtime, indexes them
+  automatically, and reports per-file success or failure.
+- Ask knowledge and data questions in the same Chat. Citations show the
+  original filename first; internal storage names and absolute paths must not
+  be shown.
+- Keep the runtime outside the source checkout and release directory. A safe
+  Windows layout is `D:\ProjectCopilot\app\0.2.0` for the immutable app and
+  `D:\ProjectCopilot\runtime` for private sources, indexes and databases.
+- Optional PDF/DOCX/PPTX/XLSX ingestion requires the `documents` extra and
+  locally prefetched Docling artifacts. Run
+  `scripts/prefetch_docling_assets.py` on the connected builder, transfer its
+  verified output, then set `PROJECT_COPILOT_DOCLING_TOKENIZER_PATH` and
+  `PROJECT_COPILOT_DOCLING_ARTIFACTS_PATH` to those local directories. Set
+  `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` on the restricted PC.
+- To index an approved local project tree without copying private data into
+  Git, use `--catalog-root`, `--public-worktree`, and
+  `--catalog-project-id`. The catalog is read-only and excludes Git metadata,
+  runtimes, inbox/outbox state, task leases, execution state, secrets, keys,
+  caches and build outputs.
+
+Example launch after installing the reviewed wheel:
+
+```powershell
+$env:PROJECT_COPILOT_MODEL_MODE = "company"
+$env:PROJECT_COPILOT_OPENAI_BASE_URL = "https://approved-host.example/v1"
+$env:PROJECT_COPILOT_MODEL = "approved-model-id"
+$env:PROJECT_COPILOT_ALLOWED_HOSTS = "approved-host.example"
+$env:PROJECT_COPILOT_DOCLING_TOKENIZER_PATH = "D:\ProjectCopilot\models\all-MiniLM-L6-v2"
+$env:PROJECT_COPILOT_DOCLING_ARTIFACTS_PATH = "D:\ProjectCopilot\models\docling"
+$env:HF_HUB_OFFLINE = "1"
+$env:TRANSFORMERS_OFFLINE = "1"
+project-copilot --runtime D:\ProjectCopilot\runtime --host 127.0.0.1 --port 8788
+```
+
+Do not copy the development machine's model credentials. The company launcher
+must inject its own approved secret. Verify `/api/health`, upload a synthetic
+PDF, ask an exact-filename question, inspect the citation, restart the process,
+and repeat the query before opening real company material.
+
 ## 1. Role and completion definition
 
 Your role is deployment operator and acceptance recorder, not architecture
@@ -307,6 +387,32 @@ the verified source tree:
   --output D:\ProjectCopilot\evaluation\synthetic-role-result.json
 ```
 
+Also run the public 52-case Agentic RAG contract against an approved company
+Responses endpoint or a separately approved test endpoint. Keep results outside
+Git when they contain any company-specific model or operational metadata:
+
+This endpoint exercises the bundled synthetic direction corpus. For company
+Project Package acceptance, activate the imported workspace in the root Chat
+and also retain workspace-scoped API evidence for auditability.
+
+```powershell
+& .venv\Scripts\python.exe -m evaluation.run_agentic_rag_candidate `
+  --candidate-id company-approved-agentic-rag `
+  --endpoint http://127.0.0.1:8788/api/direction/query `
+  --model-label approved-company-model `
+  --output D:\ProjectCopilot\evaluation\agentic-rag-live.json `
+  --resume
+```
+
+The final public synthetic v35 reference completed 52/52 requests without
+execution failure. Its automatic checks passed 52/52 behavior, 52/52 tool
+contract and 44/44 exact evidence contract. These are structural/grounding
+checks, not answer correctness. Preserve the raw result and the independently
+bound 52-case HVAC review separately; final v35 accepted 52/52 and is bound to
+raw-result SHA
+`f17bf6a25f333570ebb73daeb3c43bed13069438c19c32b5bf27a1208285fbca`.
+Never edit raw JSON to match a human decision.
+
 The public benchmark is a deterministic smoke test only. Its four role areas
 show the required private layout: design engineer, controls/commissioning
 engineer, field-service engineer, and project-delivery engineer. Build the
@@ -340,6 +446,20 @@ official/GitHub solutions for the failure class and compare mature options.
 Checkpoint `CP-06` is complete only when the data owner accepts the measured
 results. Never invent or round a success percentage without the underlying
 case counts.
+
+For company telemetry, keep typed read-only operations for recurring sequence
+work. The current public reference implements snapshot-wide data-quality,
+control-event, alarm-event and allowlisted metric-extreme tools. Extend these
+operations under tests instead of allowing the model to execute CTEs, window
+functions, file access or unrestricted SQL.
+
+The root model-backed Chat reads the active imported workspace; the
+workspace-scoped API remains available for automated acceptance. The synthetic
+direction Agent is bounded to 11 steps, 10 tools and 180 seconds. Event
+windows use `[start_time, end_time)`, compressor mismatch windows under 60
+seconds are observations, and A311 is an alarm code rather than an asset ID.
+The live benchmark aborts after two consecutive provider failures and resumes
+only after provenance validation.
 
 ## 11. Human HVAC-engineer UX acceptance
 

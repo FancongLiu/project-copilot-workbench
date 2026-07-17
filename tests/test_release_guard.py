@@ -18,7 +18,7 @@ def test_release_guard_finds_secret_like_content_and_runtime_databases(
     findings = scan_public_tree(tmp_path)
 
     assert {finding.rule for finding in findings} == {
-        "secret-like-token",
+        "forbidden-private-path",
         "runtime-database",
     }
 
@@ -30,6 +30,27 @@ def test_release_guard_accepts_synthetic_public_tree(tmp_path: Path) -> None:
     )
 
     assert scan_public_tree(tmp_path) == []
+
+
+def test_release_guard_rejects_environment_codex_and_credential_patterns(
+    tmp_path: Path,
+) -> None:
+    paths = (
+        ".env.production",
+        ".envrc",
+        ".codex/config.toml",
+        "ops/service-token.json",
+        "project.local/private-runtime/index.json",
+    )
+    for relative in paths:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("placeholder", encoding="utf-8")
+
+    findings = scan_public_tree(tmp_path)
+
+    assert {finding.path for finding in findings} == set(paths)
+    assert {finding.rule for finding in findings} == {"forbidden-private-path"}
 
 
 def test_release_guard_rejects_oversized_and_unapproved_binary_files(

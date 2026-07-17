@@ -4,6 +4,23 @@ A public-safe project knowledge and governed analytics workbench. V2 adds
 durable project workspaces, auditable imports, bounded Haystack tool use, cited
 answers, and a fully synthetic HVAC evaluation suite.
 
+## Four architecture trial
+
+The local direction build keeps the current compact Chat at `/` and exposes
+three architecture-level alternatives over the same model, private index,
+read-only tools and source contract:
+
+- `/versions` — comparison entry;
+- `/versions/baseline` — frozen regression control;
+- `/versions/conversation` — continuous questioning with a visible queue;
+- `/versions/evidence` — answer plus on-demand evidence workbench;
+- `/versions/canvas` — concise Chat plus a stable engineering deliverable.
+
+The variants do not copy or fork the backend. Current independent review favors
+the evidence workbench as the default foundation, the queue as a shared input
+capability and the canvas only for complex tables/charts. The root route remains
+unchanged until the Chairman completes direction acceptance.
+
 ![Workbench desktop view](docs/assets/workbench-desktop.png)
 
 ## V2 capabilities
@@ -78,11 +95,15 @@ scripts\run.cmd
 Open `http://127.0.0.1:8788`. The default deterministic mode is offline and
 uses the bundled synthetic project.
 
-The current source checkout also contains a compact Agentic RAG direction
-trial. When a Responses-compatible company model is configured, the root URL
-opens one Chinese Chat that combines project evidence and synthetic HVAC data.
-See the [direction handoff](docs/agentic-rag-direction-handoff.md) before using
-it; the synthetic answers are evaluation evidence, not field guidance.
+The root URL now opens one Chinese Chat for the active workspace. Users upload
+one or more files beside the composer; indexing runs automatically, and the
+same Chat immediately answers from the imported workspace or performs governed
+data analysis. Citations use the original filename as their primary label.
+`/workbench` redirects to `/`; the older technical management page is not part
+of the ordinary user workflow. Administrative CLI and workspace-scoped APIs
+remain available for deployment and diagnostics. See the
+[direction handoff](docs/agentic-rag-direction-handoff.md) before using the
+bundled synthetic HVAC corpus as evaluation evidence.
 
 Create and import a separate workspace from the CLI:
 
@@ -146,6 +167,30 @@ retrieval/answer/tool/refusal evaluation, public-release scanning, Ruff, and
 desktop/mobile browser acceptance in CI. Packaging CI also builds and installs
 the wheel, runs `pip-audit`, emits a CycloneDX SBOM, runs LicenseCheck, and
 executes Gitleaks.
+
+The final real-model Agentic RAG run is retained at
+`evaluation/results/agentic-rag-haystack-duckdb-live-v35.json`. It completed
+52/52 requests with zero execution failures and passed 52/52 structural
+behavior checks, 52/52 tool contracts, and 44/44 exact evidence contracts.
+These are automatic structure/grounding checks, not an answer-correctness
+percentage; the separate 52-case HVAC adjudication is retained under
+`evaluation/reviews/` and accepted 52/52 final answers with result SHA
+`f17bf6a25f333570ebb73daeb3c43bed13069438c19c32b5bf27a1208285fbca`.
+The bounded direction Agent uses at most 11 steps, 10 tool calls, and 180
+seconds per request.
+
+The harder final four-version benchmark is intentionally reported separately
+from the earlier narrow 52-case contract. Its 14 real-model requests all
+completed, but only 1/14 passed the automatic hard gate; independent HVAC
+review scored pass 0, partial 6 and fail 8 (21.4/100). This means the four UI
+routes are valid architecture trials, not proof that the shared backend already
+matches an expert general-purpose Chat. See
+`evaluation/reviews/four-version-complex-benchmark-human-review-20260718.md`.
+
+The final release wheel is 4,610,767 bytes (about 4.6 MB). The wheel and source
+distribution exclude benchmark `hidden_truth`. The measured source, configuration, and
+business-data payload is about 51 MB; RAGFlow's 50 GB allowance belongs to its
+complete multi-service deployment and is not a requirement for this workbench.
 
 The current deterministic baseline contains 23 frozen cases. It includes five
 defrost time-window replays over an 8,640-row, ten-second synthetic day plus a

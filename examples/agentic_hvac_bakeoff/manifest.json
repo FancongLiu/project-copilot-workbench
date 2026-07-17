@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generator_version": "hvac-synth-v1",
+  "generator_version": "hvac-synth-v2",
   "fully_synthetic": true,
   "license": "CC0-1.0",
   "engineering_use": "evaluation_only_not_engineering_guidance",

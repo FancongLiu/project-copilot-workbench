@@ -78,6 +78,34 @@ Open `http://127.0.0.1:8788` and check:
   intentionally configured;
 - deterministic mode is visibly distinguishable from the company model mode.
 
+The root page is the single Chat for the active workspace in deterministic and
+approved-model modes. Upload one or more files beside the composer; the app
+indexes them automatically and answers from that workspace. `/workbench`
+redirects to `/`. The workspace-scoped
+`/api/workspaces/{project_id}/copilot/query` endpoint remains available for
+automation and preserves workspace isolation.
+
+In the synthetic acceptance view, users do not choose database or RAG tools.
+Ask in ordinary engineering language; the bounded Agent selects project search,
+read-only SQL, typed snapshot inspection or a governed metric-extreme window.
+For questions such as “哪台机组缺数据”“哪次命令没有反馈”“画出排温异常趋势” or
+“用 P_SUC 查低吸气压力时段”, check the answer's time zone, data boundary,
+table/chart and source cards before using the result. The app never deletes
+rows, changes thresholds, resets alarms or controls equipment.
+
+Event windows use `[start_time, end_time)`: the displayed end is one sample
+interval after the final matching sample. A compressor command-feedback
+difference shorter than 60 seconds is an observation, not a formal event under
+the current synthetic contract. Alarm codes such as `A311` must be searched as
+alarm codes; they are not equipment IDs. For `A311`, verify the returned asset,
+duration, outdoor-fan command and feedback, then read the linked work order and
+SOP before recommending inspection. Never recommend a remote reset.
+
+The direction Agent is bounded to 11 steps, 10 tool calls and 180 seconds. If two
+consecutive model-provider failures occur during a benchmark, the runner aborts
+and writes a resumable checkpoint instead of silently recording low-quality
+answers.
+
 ## Administrator workflow
 
 ### 1. Verify the release and runtime policy

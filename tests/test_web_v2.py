@@ -58,8 +58,9 @@ def test_web_workspace_upload_inventory_and_primary_agent_flow(tmp_path: Path) -
 
     dashboard = client.get("/")
     assert dashboard.status_code == 200
-    assert 'data-testid="workspace-panel"' in dashboard.text
-    assert 'data-testid="copilot-panel"' in dashboard.text
+    assert 'data-testid="direction-chat"' in dashboard.text
+    assert 'data-testid="workspace-panel"' not in dashboard.text
+    assert 'data-testid="copilot-panel"' not in dashboard.text
 
     created = client.post(
         "/api/workspaces",
@@ -583,6 +584,7 @@ experimental_bearer_token = "placeholder-secret"
     assert generator.api_base_url == "https://ai.internal.example/v1"
     assert generator.model == "company-reasoning-model"
     assert generator.generation_kwargs["store"] is False
+    assert generator.timeout == 150
     assert mode == "codex-switch-responses"
 
 

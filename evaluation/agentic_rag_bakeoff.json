@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "benchmark_id": "agentic-hvac-bakeoff-20260716",
+  "benchmark_id": "agentic-hvac-bakeoff-20260717-v6",
   "fully_synthetic": true,
   "candidate_neutral": true,
   "license": "CC0-1.0",
@@ -13,6 +13,10 @@
       "evidence_contract": [
         "current-unit-configuration.md",
         "change-register.md"
+      ],
+      "tool_contract": [
+        "search_project_knowledge",
+        "inspect_configuration_history"
       ]
     },
     {
@@ -166,15 +170,6 @@
       ]
     },
     {
-      "id": "D06",
-      "category": "data",
-      "question": "HP-01吸气温度漂移了多少？",
-      "expected": "0到6 C，平均偏差3 C",
-      "evidence_contract": [
-        "telemetry_clean"
-      ]
-    },
-    {
       "id": "D07",
       "category": "data",
       "question": "哪次压缩机有命令但没有反馈？",
@@ -202,15 +197,6 @@
       ]
     },
     {
-      "id": "D10",
-      "category": "data",
-      "question": "HP-01低效时段用了多少电？",
-      "expected": "20 kWh，输出40 kWh，COP 2",
-      "evidence_contract": [
-        "telemetry_clean"
-      ]
-    },
-    {
       "id": "D11",
       "category": "data",
       "question": "HP-02改设定前后效果如何？",
@@ -218,6 +204,9 @@
       "evidence_contract": [
         "telemetry_clean",
         "config_history"
+      ],
+      "tool_contract": [
+        "inspect_configuration_change_effect"
       ]
     },
     {
@@ -260,7 +249,7 @@
       "id": "D16",
       "category": "data",
       "question": "所有报警最多的是哪台机组？",
-      "expected": "按报警事件而不是报警行数统计",
+      "expected": "四台机组各1个连续报警事件，并列；不得按报警采样行数排名",
       "evidence_contract": [
         "telemetry_clean"
       ]
@@ -278,7 +267,16 @@
       "id": "D18",
       "category": "data",
       "question": "HP-01流量证明丢失后发生了什么？",
-      "expected": "30秒后压缩机反馈归零并出现A102",
+      "expected": "30秒后压缩机反馈一个采样点归零并出现A102，命令保持，随后恢复",
+      "evidence_contract": [
+        "telemetry_clean"
+      ]
+    },
+    {
+      "id": "Q01",
+      "category": "data",
+      "question": "哪台机组更节能？",
+      "expected": "默认按完整快照的负荷加权COP比较，并明确窗口、口径和限制",
       "evidence_contract": [
         "telemetry_clean"
       ]
@@ -291,13 +289,17 @@
       "evidence_contract": [
         "controls-review.md",
         "telemetry_clean"
+      ],
+      "tool_contract": [
+        "search_project_knowledge",
+        "inspect_configuration_change_effect"
       ]
     },
     {
       "id": "C02",
       "category": "combined",
       "question": "这次除霜符合本项目合同吗？",
-      "expected": "三项动作满足合成合同",
+      "expected": "核对持续时间、压缩机运行、外风机停止和盘管升温四项合同",
       "evidence_contract": [
         "control-sequence.md",
         "telemetry_clean"
@@ -321,23 +323,27 @@
       "evidence_contract": [
         "point-dictionary.csv",
         "telemetry_clean"
+      ],
+      "tool_contract": [
+        "query_hvac_database",
+        "inspect_metric_extreme"
       ]
     },
     {
       "id": "C05",
       "category": "combined",
-      "question": "哪台机组已知问题最多？",
-      "expected": "HP-02事件种类最多；变更不应误判为故障",
+      "question": "综合项目工单和当前遥测，哪台机组最值得优先排查？",
+      "expected": "HP-04；有两张服务工单并出现低吸气压力、短循环和风机反馈异常",
       "evidence_contract": [
-        "telemetry_clean",
-        "controls-review.md"
+        "service-work-orders.md",
+        "telemetry_clean"
       ]
     },
     {
       "id": "C06",
       "category": "combined",
-      "question": "HP-01为什么在10:20停机？",
-      "expected": "首个偏差是流量证明丢失，不扩展机械根因",
+      "question": "HP-01在10:20流量证明丢失后，控制与反馈发生了什么？",
+      "expected": "30秒后压缩机反馈仅一个采样点归零并出现A102，命令保持且随后恢复；不能声称持续停机或机械根因",
       "evidence_contract": [
         "control-sequence.md",
         "telemetry_clean"
@@ -349,19 +355,24 @@
       "question": "排温报警是否证明空气侧堵塞？",
       "expected": "报警成立但根因未证实",
       "evidence_contract": [
-        "service-work-orders.md",
+        "current-unit-configuration.md",
+        "data-analysis-sop.md",
         "telemetry_clean"
       ]
     },
     {
       "id": "C08",
       "category": "combined",
-      "question": "旧配置能否解释当前HP-02表现？",
-      "expected": "不能把已废止12 C当作当前配置",
+      "question": "旧的12 C送风设定能否用来解释当前HP-02送风温度和能耗表现？",
+      "expected": "旧12 C只能解释变更前性能基线，不能当作当前配置",
       "evidence_contract": [
         "superseded-unit-configuration.md",
         "change-register.md",
         "telemetry_clean"
+      ],
+      "tool_contract": [
+        "search_project_knowledge",
+        "inspect_configuration_change_effect"
       ]
     },
     {
@@ -386,12 +397,31 @@
       ]
     },
     {
-      "id": "Q01",
-      "category": "clarification",
-      "question": "哪台机组更节能？",
-      "expected": "询问时间窗、负荷归一化和指标",
+      "id": "Q03",
+      "category": "combined",
+      "question": "停机是不是太频繁？",
+      "expected": "按当前短循环合同和完整快照分析；HP-04一小时6次启动",
       "evidence_contract": [
+        "current-unit-configuration.md",
         "telemetry_clean"
+      ]
+    },
+    {
+      "id": "D06",
+      "category": "clarification",
+      "question": "HP-01吸气温度漂移了多少？",
+      "expected": "询问漂移基准和时间范围；单一传感器遥测不能证明隐藏偏差",
+      "evidence_contract": [
+        "data-analysis-sop.md"
+      ]
+    },
+    {
+      "id": "D10",
+      "category": "clarification",
+      "question": "HP-01低效时段用了多少电？",
+      "expected": "询问低效判定阈值或明确时段，再计算电耗",
+      "evidence_contract": [
+        "data-analysis-sop.md"
       ]
     },
     {
@@ -401,15 +431,6 @@
       "expected": "询问资产、日期和正常标准",
       "evidence_contract": [
         "project-overview.md"
-      ]
-    },
-    {
-      "id": "Q03",
-      "category": "clarification",
-      "question": "停机是不是太频繁？",
-      "expected": "询问机组、时间窗和频繁定义",
-      "evidence_contract": [
-        "current-unit-configuration.md"
       ]
     },
     {
@@ -463,7 +484,12 @@
       "question": "把HP-02改参数前后做成表格。",
       "expected": "Markdown表格与计算值一致",
       "evidence_contract": [
-        "telemetry_clean"
+        "config_history",
+        "controls-review.md"
+      ],
+      "tool_contract": [
+        "search_project_knowledge",
+        "inspect_configuration_history"
       ]
     },
     {

@@ -207,6 +207,8 @@ class ImportedFile:
     filename: str
     content: bytes
     category: str
+    original_filename: str | None = None
+    source_location: str | None = None
 
 
 @dataclass(frozen=True)
@@ -219,6 +221,8 @@ class SourceRecord:
     parser: str
     size_bytes: int
     error: str | None = None
+    original_filename: str | None = None
+    source_location: str | None = None
 
 
 @dataclass(frozen=True)
@@ -230,6 +234,7 @@ class SourceCitation:
     section: str | None
     page: int | None
     score: float
+    source_location: str | None = None
 
 
 @dataclass(frozen=True)
@@ -252,11 +257,64 @@ def _search_tokens(text: str) -> str:
     return " ".join(token for token in jieba.cut_for_search(text) if token.strip())
 
 
+def _relevant_excerpt(content: str, question: str, *, max_chars: int = 800) -> str:
+    if len(content) <= max_chars:
+        return content
+    normalized_content = content.casefold()
+    query_terms = tuple(
+        dict.fromkeys(
+            token.casefold()
+            for token in re.findall(r"[\w.-]{4,}", question, flags=re.UNICODE)
+            if not token.casefold().endswith(
+                (".md", ".txt", ".json", ".csv", ".pdf", ".docx", ".pptx", ".xlsx")
+            )
+        )
+    )
+    occurrences: dict[str, list[int]] = {}
+    for term in query_terms:
+        positions: list[int] = []
+        start = 0
+        while True:
+            position = normalized_content.find(term, start)
+            if position < 0:
+                break
+            positions.append(position)
+            start = position + max(1, len(term))
+        if positions:
+            occurrences[term] = positions
+    if not occurrences:
+        return content[:max_chars]
+
+    latest_start = max(0, len(content) - max_chars)
+    candidate_starts = {0, latest_start}
+    for term, positions in occurrences.items():
+        for position in positions:
+            candidate_starts.update(
+                {
+                    min(latest_start, max(0, position)),
+                    min(latest_start, max(0, position - max_chars // 3)),
+                    min(latest_start, max(0, position + len(term) - max_chars)),
+                }
+            )
+
+    def score(window_start: int) -> tuple[int, int]:
+        window_end = window_start + max_chars
+        covered_terms = sum(
+            any(window_start <= position < window_end for position in positions)
+            for positions in occurrences.values()
+        )
+        return covered_terms, -window_start
+
+    selected_start = max(candidate_starts, key=score)
+    return content[selected_start : selected_start + max_chars]
+
+
 class ProjectIndexer:
     MAX_FILE_BYTES = 5_000_000
     MAX_ARCHIVE_BYTES = 50_000_000
     MAX_FILES = 500
     MIN_BM25_SCORE = 0.1
+    MAX_UNSPLIT_TEXT_CHARS = 4_000
     CATEGORIES = {
         "background",
         "configuration",
@@ -265,7 +323,16 @@ class ProjectIndexer:
         "decision",
         "dataset",
     }
-    TEXT_EXTENSIONS = {".md", ".txt", ".json"}
+    TEXT_EXTENSIONS = {
+        ".md",
+        ".txt",
+        ".json",
+        ".py",
+        ".toml",
+        ".yaml",
+        ".yml",
+        ".ini",
+    }
     OFFICE_EXTENSIONS = {
         ".pdf",
         ".docx",
@@ -298,15 +365,35 @@ class ProjectIndexer:
         with self._workspace_lock(workspace):
             return self._import_files_unlocked(workspace, files)
 
-    def _import_files_unlocked(
-        self, workspace: Workspace, files: list[ImportedFile]
+    def replace_files(
+        self, project_id: str, files: list[ImportedFile]
     ) -> list[SourceRecord]:
-        if not files or len(files) > self.MAX_FILES:
+        """Replace the workspace snapshot with exactly these source files."""
+        workspace = self._get_workspace(project_id)
+        with self._workspace_lock(workspace):
+            return self._import_files_unlocked(
+                workspace,
+                files,
+                replace_existing=True,
+            )
+
+    def _import_files_unlocked(
+        self,
+        workspace: Workspace,
+        files: list[ImportedFile],
+        *,
+        replace_existing: bool = False,
+    ) -> list[SourceRecord]:
+        if len(files) > self.MAX_FILES or (not files and not replace_existing):
             raise IngestionError("Import must contain between 1 and 500 files")
-        prepared: list[tuple[ImportedFile, str, str, str]] = []
+        prepared: list[tuple[ImportedFile, str, str, str, str, str]] = []
         batch_names: dict[str, str] = {}
         for item in files:
             filename = self._safe_filename(item.filename)
+            original_filename = self._safe_filename(item.original_filename or filename)
+            source_location = self._safe_source_location(
+                item.source_location or original_filename
+            )
             canonical_name = self._canonical_filename(filename)
             if canonical_name in batch_names:
                 raise IngestionError(
@@ -334,15 +421,35 @@ class ProjectIndexer:
                     f"Unsupported source format: {extension or 'none'}"
                 )
             digest = hashlib.sha256(item.content).hexdigest()
-            prepared.append((item, filename, parser, digest))
+            prepared.append(
+                (
+                    item,
+                    filename,
+                    parser,
+                    digest,
+                    original_filename,
+                    source_location,
+                )
+            )
 
         current = self._current_snapshot_unlocked(workspace)
-        records = {
-            self._canonical_filename(item.filename): item
-            for item in self._read_snapshot_sources(current)
-        }
+        records = (
+            {}
+            if replace_existing
+            else {
+                self._canonical_filename(item.filename): item
+                for item in self._read_snapshot_sources(current)
+            }
+        )
         overrides: dict[str, bytes] = {}
-        for item, filename, parser, digest in prepared:
+        for (
+            item,
+            filename,
+            parser,
+            digest,
+            original_filename,
+            source_location,
+        ) in prepared:
             canonical_name = self._canonical_filename(filename)
             existing = records.get(canonical_name)
             if existing is not None and existing.filename != filename:
@@ -361,6 +468,8 @@ class ProjectIndexer:
                 sha256=digest,
                 parser=parser,
                 size_bytes=len(item.content),
+                original_filename=original_filename,
+                source_location=source_location,
             )
         updated, _ = self._publish_candidate_snapshot(
             workspace,
@@ -369,7 +478,7 @@ class ProjectIndexer:
             overrides=overrides,
         )
         refreshed = {item.filename: item for item in updated}
-        return [refreshed[filename] for _, filename, _, _ in prepared]
+        return [refreshed[filename] for _, filename, _, _, _, _ in prepared]
 
     def list_sources(self, project_id: str) -> list[SourceRecord]:
         workspace = self._get_workspace(project_id)
@@ -442,7 +551,13 @@ class ProjectIndexer:
                 [item for item in records if item.source_id != source_id],
             )
 
-    def inspect_source(self, project_id: str, source_id: str) -> dict[str, object]:
+    def inspect_source(
+        self,
+        project_id: str,
+        source_id: str,
+        *,
+        query: str | None = None,
+    ) -> dict[str, object]:
         workspace = self._get_workspace(project_id)
         with self._workspace_lock(workspace):
             snapshot = self._current_snapshot_unlocked(workspace)
@@ -457,11 +572,41 @@ class ProjectIndexer:
             if source is None:
                 raise IngestionError(f"Unknown source: {source_id}")
             path = snapshot.sources_path / source.filename
-            preview = (
-                path.read_text(encoding="utf-8")[:4_000]
-                if source.parser == "plain-text"
-                else "Dataset source; content preview is not exposed through the Agent."
-            )
+            if source.parser == "plain-text":
+                content = path.read_text(encoding="utf-8")
+                preview = content[:4_000]
+                if query and content:
+                    chunks = DocumentSplitter(
+                        split_by="word",
+                        split_length=180,
+                        split_overlap=30,
+                    ).run(documents=[Document(content=content)])["documents"]
+                    store = InMemoryDocumentStore()
+                    store.write_documents(
+                        [
+                            Document(
+                                id=hashlib.sha256(
+                                    f"{source.source_id}:{index}:{chunk.content}".encode()
+                                ).hexdigest(),
+                                content=_search_tokens(chunk.content or ""),
+                                meta={"original_content": chunk.content or ""},
+                            )
+                            for index, chunk in enumerate(chunks)
+                            if (chunk.content or "").strip()
+                        ]
+                    )
+                    matched = InMemoryBM25Retriever(store, top_k=3).run(
+                        query=_search_tokens(query)
+                    )["documents"]
+                    relevant = "\n\n".join(
+                        str(document.meta["original_content"]) for document in matched
+                    ).strip()
+                    if relevant:
+                        preview = relevant[:8_000]
+            else:
+                preview = (
+                    "Dataset source; content preview is not exposed through the Agent."
+                )
             return {"source": asdict(source), "preview": preview}
 
     def reindex(self, project_id: str) -> int:
@@ -486,7 +631,16 @@ class ProjectIndexer:
     ) -> tuple[list[SourceRecord], int]:
         project_id = workspace.project_id
         documents: list[Document] = []
-        splitter = DocumentSplitter(split_by="passage", split_length=1, split_overlap=0)
+        passage_splitter = DocumentSplitter(
+            split_by="passage",
+            split_length=1,
+            split_overlap=0,
+        )
+        long_text_splitter = DocumentSplitter(
+            split_by="word",
+            split_length=180,
+            split_overlap=30,
+        )
         updated_records: list[SourceRecord] = []
         for source in source_records:
             if source.parser == "dataset":
@@ -522,7 +676,10 @@ class ProjectIndexer:
                     content=content,
                     meta={
                         "project_source_id": source.source_id,
-                        "source": source.filename,
+                        "source": source.original_filename or source.filename,
+                        "source_location": source.source_location
+                        or source.original_filename
+                        or source.filename,
                         "category": source.category,
                         "section": parsed.section or self._first_heading(content),
                         "page": parsed.page,
@@ -530,6 +687,11 @@ class ProjectIndexer:
                     },
                 )
                 if source.parser == "plain-text":
+                    splitter = (
+                        long_text_splitter
+                        if len(content) > self.MAX_UNSPLIT_TEXT_CHARS
+                        else passage_splitter
+                    )
                     chunks.extend(splitter.run(documents=[base_document])["documents"])
                 else:
                     chunks.append(base_document)
@@ -585,6 +747,7 @@ class ProjectIndexer:
         question: str,
         *,
         categories: set[str] | None = None,
+        source_ids: set[str] | None = None,
         top_k: int = 5,
     ) -> SearchResult:
         workspace = self._get_workspace(project_id)
@@ -596,13 +759,30 @@ class ProjectIndexer:
                 self._reindex_unlocked(workspace)
                 snapshot = self._current_snapshot_unlocked(workspace)
             store = InMemoryDocumentStore.load_from_disk(str(snapshot.index_path))
-        filters = None
+        filter_conditions: list[dict[str, object]] = []
         if categories:
-            filters = {
-                "field": "meta.category",
-                "operator": "in",
-                "value": sorted(categories),
-            }
+            filter_conditions.append(
+                {
+                    "field": "meta.category",
+                    "operator": "in",
+                    "value": sorted(categories),
+                }
+            )
+        if source_ids:
+            filter_conditions.append(
+                {
+                    "field": "meta.project_source_id",
+                    "operator": "in",
+                    "value": sorted(source_ids),
+                }
+            )
+        filters: dict[str, object] | None
+        if len(filter_conditions) == 1:
+            filters = filter_conditions[0]
+        elif filter_conditions:
+            filters = {"operator": "AND", "conditions": filter_conditions}
+        else:
+            filters = None
         candidate_top_k = max(top_k * 3, 10) if self.reranker else top_k
         bm25_documents = InMemoryBM25Retriever(store, top_k=candidate_top_k).run(
             query=_search_tokens(question), filters=filters
@@ -638,7 +818,10 @@ class ProjectIndexer:
                 source_id=str(document.meta["project_source_id"]),
                 source=str(document.meta["source"]),
                 category=str(document.meta["category"]),
-                excerpt=str(document.meta["original_content"])[:800],
+                excerpt=_relevant_excerpt(
+                    str(document.meta["original_content"]),
+                    question,
+                ),
                 section=(
                     str(document.meta["section"])
                     if document.meta.get("section")
@@ -648,6 +831,7 @@ class ProjectIndexer:
                     int(document.meta["page"]) if document.meta.get("page") else None
                 ),
                 score=float(document.score or 0.0),
+                source_location=str(document.meta.get("source_location") or "") or None,
             )
             for document in matched
         )
@@ -889,6 +1073,19 @@ class ProjectIndexer:
     @staticmethod
     def _canonical_filename(filename: str) -> str:
         return filename.casefold()
+
+    @staticmethod
+    def _safe_source_location(location: str) -> str:
+        normalized = location.replace("\\", "/").strip()
+        candidate = PurePosixPath(normalized)
+        if (
+            not normalized
+            or candidate.is_absolute()
+            or any(part in {"", ".", ".."} for part in candidate.parts)
+            or len(normalized) > 500
+        ):
+            raise IngestionError("Source location must be a safe relative path")
+        return candidate.as_posix()
 
     @staticmethod
     def _first_heading(content: str) -> str | None:

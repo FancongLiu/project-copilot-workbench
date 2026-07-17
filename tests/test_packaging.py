@@ -23,6 +23,14 @@ def test_wheel_declares_complete_license_files() -> None:
     assert "Permission to use, copy, modify" in notices
 
 
+def test_runtime_declares_duckdb_timezone_dependency() -> None:
+    pyproject = tomllib.loads(
+        (REPOSITORY_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    )
+
+    assert "pytz==2026.2" in pyproject["project"]["dependencies"]
+
+
 def test_wheel_includes_compact_agentic_hvac_direction_corpus() -> None:
     pyproject = tomllib.loads(
         (REPOSITORY_ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -44,3 +52,12 @@ def test_wheel_includes_compact_agentic_hvac_direction_corpus() -> None:
         / "datasets"
         / "hvac_bakeoff.duckdb"
     ).is_file()
+
+
+def test_sdist_excludes_agentic_benchmark_hidden_truth() -> None:
+    pyproject = tomllib.loads(
+        (REPOSITORY_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    excluded = set(pyproject["tool"]["hatch"]["build"]["targets"]["sdist"]["exclude"])
+
+    assert "examples/agentic_hvac_bakeoff/hidden_truth/**" in excluded

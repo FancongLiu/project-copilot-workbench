@@ -17,6 +17,9 @@ The project depends on unmodified open-source packages installed through Python 
 | Sentence Transformers Haystack integration | Optional local cross-encoder reranking | Apache-2.0 | https://github.com/deepset-ai/haystack-core-integrations/tree/main/integrations/sentence_transformers |
 | transitions | Versioned commercial-HVAC control state replay | MIT | https://github.com/pytransitions/transitions |
 | Lucide | Interface icons | ISC | https://github.com/lucide-icons/lucide |
+| Cytoscape.js 3.34.0 | Local interactive project-map visualization | MIT | https://github.com/cytoscape/cytoscape.js |
+| Marked 18.0.6 | Browser Markdown parsing | MIT | https://github.com/markedjs/marked |
+| DOMPurify 3.4.12 | Browser HTML sanitization | Apache-2.0 | https://github.com/cure53/DOMPurify |
 
 No upstream project endorses or sponsors this repository.
 

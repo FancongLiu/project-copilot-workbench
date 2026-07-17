@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>项目知识与数据助手</title>
     <link rel="stylesheet" href="/static/direction.css">
+    <script src="/static/vendor/dompurify/purify.min.js" defer></script>
+    <script src="/static/vendor/marked/marked.umd.js" defer></script>
     <script src="/static/direction.js" defer></script>
   </head>
   <body>
-    <main class="direction-shell" data-testid="direction-chat">
+    <main class="direction-shell" data-testid="direction-chat" data-architecture="{{ architecture }}" data-workspace-name="{{ workspace_name }}" data-source-count="{{ source_count }}">
       <header class="direction-header">
         <div>
           <span class="direction-kicker">PROJECT COPILOT</span>
@@ -16,7 +18,7 @@
           <p>像问同事一样，查询项目文档、机组配置和运行数据。</p>
         </div>
         <div class="header-actions">
-          <a class="manage-link" href="/workbench">资料管理</a>
+          {% if show_version_nav %}<a class="version-link" href="/versions">四版对比</a>{% endif %}
           {% if model_backed %}
           <span class="demo-badge model-badge">真实模型 · 只读分析</span>
           {% else %}
@@ -26,33 +28,69 @@
       </header>
 
       <div class="context-strip" aria-label="当前分析范围">
-        <span>合成验证项目</span>
-        <span>4 台机组</span>
-        <span>Asia/Shanghai</span>
-        <span>数据截至 2026-01-17 23:59</span>
+        <span data-testid="active-project">{{ workspace_name }}</span>
+        <span data-testid="active-source-count">{{ source_count }} 个文件</span>
+        <span>本地私有索引</span>
+        {% if show_version_nav %}<span>{{ architecture_name }}</span>{% endif %}
         {% if model_backed %}<span>已批准模型服务</span>{% endif %}
       </div>
 
-      <section class="conversation" aria-label="对话">
-        <article class="message assistant-message">
-          <div class="avatar" aria-hidden="true">AI</div>
-          <div class="message-body">
-            <p>我可以把知识依据和数据计算放在同一个回答里。先试试下面的问题：</p>
-            <div class="suggestions" aria-label="示例问题">
-              <button type="button" data-question="HP-02为什么修改送风设定，修改后的效果怎么样？">分析 HP-02 配置变更效果</button>
-              <button type="button" data-question="原始数据和去重后的数据分别有多少行？">核对导入数据行数</button>
-              <button type="button" data-question="哪台机组更节能？">比较机组能效</button>
+      <div class="work-area">
+        <section id="conversation" class="conversation" aria-label="对话">
+          <article class="message assistant-message">
+            <div class="avatar" aria-hidden="true">AI</div>
+            <div class="message-body">
+              <p>我可以把知识依据和数据计算放在同一个回答里。先试试下面的问题：</p>
+              <div class="suggestions" aria-label="示例问题">
+                <button type="button" data-question="这个项目当前的目标和未完成事项是什么？">查询项目目标</button>
+                <button type="button" data-question="最近有哪些配置、决定或变更？">核对配置与变更</button>
+                <button type="button" data-question="有哪些数据、回测或分析结果可以查询？">查看数据与回测</button>
+              </div>
             </div>
-          </div>
-        </article>
-        <div id="messages" aria-live="polite"></div>
+          </article>
+          <div id="messages" aria-live="polite"></div>
+        </section>
+
+        {% if architecture == "evidence" %}
+        <aside id="evidence-workbench" class="evidence-workbench" data-testid="evidence-workbench" hidden>
+          <header>
+            <div><strong>回答依据</strong><small>原始文件名、命中原文与检索路径</small></div>
+            <button id="evidence-workbench-close" type="button" aria-label="关闭回答依据">关闭</button>
+          </header>
+          <div id="evidence-workbench-content"></div>
+        </aside>
+        {% endif %}
+
+        {% if architecture == "canvas" %}
+        <aside id="artifact-canvas" class="artifact-canvas" data-testid="artifact-canvas" hidden>
+          <header>
+            <div><strong>工程成果</strong><small>完整分析、表格、图表与依据</small></div>
+            <button id="artifact-canvas-close" type="button" aria-label="关闭工程成果">关闭</button>
+          </header>
+          <div id="artifact-canvas-content"></div>
+        </aside>
+        {% endif %}
+
+      </div>
+
+      {% if architecture == "conversation" %}
+      <section id="prompt-queue" class="prompt-queue" data-testid="prompt-queue" hidden>
+        <strong>待发送问题</strong>
+        <div id="prompt-queue-items"></div>
       </section>
+      {% endif %}
 
       <form id="direction-form" class="composer">
+        <label class="upload-button" for="direction-files" title="&#19978;&#20256;&#25991;&#20214;" aria-label="&#19978;&#20256;&#25991;&#20214;">
+          <span aria-hidden="true">+</span>
+          <span class="upload-button-label">&#19978;&#20256;</span>
+        </label>
+        <input id="direction-files" class="sr-only" type="file" multiple accept=".md,.txt,.pdf,.docx,.pptx,.xlsx,.csv,.json,.html,.htm,.odt,.ods,.odp,.zip">
         <label class="sr-only" for="direction-question">输入问题</label>
         <textarea id="direction-question" rows="2" maxlength="1000" required placeholder="输入你想查询的项目问题……"></textarea>
         <button type="submit">发送</button>
       </form>
+      <p id="upload-status" class="upload-status" role="status" aria-live="polite"></p>
       {% if model_backed %}
       <p class="demo-note">模型：{{ model_name }}。回答只使用合成项目资料和只读数据库，不会控制现场设备。<span class="sr-only">{{ egress_display }}</span></p>
       {% else %}

@@ -41,7 +41,7 @@ security:
     return root
 
 
-def test_web_app_serves_operational_dashboard(tmp_path: Path) -> None:
+def test_web_app_serves_single_chat_homepage(tmp_path: Path) -> None:
     app = create_app(
         project_root=build_project(tmp_path / "project"),
         runtime_root=tmp_path / "runtime",
@@ -51,9 +51,10 @@ def test_web_app_serves_operational_dashboard(tmp_path: Path) -> None:
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Project Copilot Workbench" in response.text
     assert "Synthetic HVAC Plant" in response.text
-    assert 'data-testid="knowledge-panel"' in response.text
+    assert 'data-testid="direction-chat"' in response.text
+    assert 'data-testid="active-project"' in response.text
+    assert 'data-testid="knowledge-panel"' not in response.text
     assert response.headers["x-content-type-options"] == "nosniff"
     assert "default-src 'self'" in response.headers["content-security-policy"]
 
@@ -140,7 +141,7 @@ def test_repository_synthetic_example_starts_without_external_services(
     assert response.json()["network_allowed"] is False
 
 
-def test_dashboard_identifies_anythingllm_provider_when_configured(
+def test_health_identifies_anythingllm_without_exposing_provider_jargon_in_chat(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -160,9 +161,11 @@ def test_dashboard_identifies_anythingllm_provider_when_configured(
     )
 
     response = client.get("/")
+    health = client.get("/api/health")
 
     assert response.status_code == 200
-    assert "AnythingLLM query" in response.text
+    assert "AnythingLLM query" not in response.text
+    assert health.json()["knowledge_provider"] == "anythingllm-query"
 
 
 def test_web_app_blocks_untrusted_hosts_and_cross_site_posts(tmp_path: Path) -> None:

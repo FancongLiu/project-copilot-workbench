@@ -76,6 +76,7 @@ def test_generator_produces_a_deterministic_multi_asset_ten_second_corpus(
     manifest = json.loads(
         (generated_corpus / "manifest.json").read_text(encoding="utf-8")
     )
+    assert manifest["generator_version"] == "hvac-synth-v2"
     assert manifest["fully_synthetic"] is True
     assert manifest["license"] == "CC0-1.0"
     assert manifest["sample_interval_seconds"] == 10
@@ -155,6 +156,38 @@ def test_generated_telemetry_covers_hvac_points_and_known_data_quality_faults(
 
     parsed = [datetime.fromisoformat(row["timestamp"]) for row in rows]
     assert any(current < previous for previous, current in zip(parsed, parsed[1:]))
+
+
+def test_current_hp02_telemetry_setpoint_matches_effective_configuration(
+    generated_corpus: Path,
+) -> None:
+    connection = duckdb.connect(
+        str(generated_corpus / "datasets" / "hvac_bakeoff.duckdb"),
+        read_only=True,
+    )
+    try:
+        latest_setpoint = connection.execute(
+            """
+            SELECT supply_air_sp_c
+            FROM telemetry_clean
+            WHERE asset_id = 'HP-02'
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """
+        ).fetchone()[0]
+        effective_configuration = connection.execute(
+            """
+            SELECT parameter_value
+            FROM config_history
+            WHERE asset_id = 'HP-02'
+              AND parameter_name = 'supply_air_sp_c'
+              AND valid_to IS NULL
+            """
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert latest_setpoint == effective_configuration == 10
 
 
 def test_generated_hidden_truth_labels_general_hvac_events_not_only_defrost(
@@ -251,3 +284,81 @@ def test_bakeoff_manifest_covers_knowledge_data_combined_ux_and_safety() -> None
     assert all(case["question"].strip() for case in cases)
     assert all(case["expected"] for case in cases)
     assert all(case["evidence_contract"] for case in cases)
+
+
+def test_benchmark_contracts_do_not_require_hidden_or_ambiguous_truth() -> None:
+    payload = json.loads(QUESTION_MANIFEST.read_text(encoding="utf-8"))
+    cases = {case["id"]: case for case in payload["cases"]}
+
+    assert cases["D06"]["category"] == "clarification"
+    assert "基准" in cases["D06"]["expected"]
+    assert cases["D10"]["category"] == "clarification"
+    assert "低效" in cases["D10"]["expected"]
+    assert "四台机组" in cases["D16"]["expected"]
+    assert "并列" in cases["D16"]["expected"]
+    assert "HP-04" in cases["C05"]["expected"]
+    assert "service-work-orders.md" in cases["C05"]["evidence_contract"]
+    assert cases["C04"]["tool_contract"] == [
+        "query_hvac_database",
+        "inspect_metric_extreme",
+    ]
+    assert cases["K01"]["tool_contract"] == [
+        "search_project_knowledge",
+        "inspect_configuration_history",
+    ]
+    assert cases["D11"]["tool_contract"] == ["inspect_configuration_change_effect"]
+    assert cases["C01"]["tool_contract"] == [
+        "search_project_knowledge",
+        "inspect_configuration_change_effect",
+    ]
+    assert cases["C08"]["tool_contract"] == [
+        "search_project_knowledge",
+        "inspect_configuration_change_effect",
+    ]
+    assert "旧的12 C送风设定" in cases["C08"]["question"]
+    assert cases["P01"]["tool_contract"] == [
+        "search_project_knowledge",
+        "inspect_configuration_history",
+    ]
+    assert "持续停机" in cases["C06"]["expected"]
+    assert cases["Q01"]["category"] == "data"
+    assert cases["Q03"]["category"] == "combined"
+    assert cases["P01"]["evidence_contract"] == [
+        "config_history",
+        "controls-review.md",
+    ]
+
+
+def test_short_cycling_truth_contains_six_real_off_to_on_transitions(
+    generated_corpus: Path,
+) -> None:
+    connection = duckdb.connect(
+        str(generated_corpus / "datasets" / "hvac_bakeoff.duckdb"),
+        read_only=True,
+    )
+    try:
+        start_count = connection.execute(
+            """
+            WITH transitions AS (
+                SELECT
+                    asset_id,
+                    timestamp,
+                    enable_cmd,
+                    lag(enable_cmd) OVER (
+                        PARTITION BY asset_id ORDER BY timestamp
+                    ) AS previous_enable
+                FROM telemetry_clean
+            )
+            SELECT count(*)
+            FROM transitions
+            WHERE asset_id = 'HP-04'
+              AND timestamp >= TIMESTAMPTZ '2026-01-16 00:00:00+08:00'
+              AND timestamp < TIMESTAMPTZ '2026-01-16 01:00:00+08:00'
+              AND enable_cmd = 1
+              AND previous_enable = 0
+            """
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert start_count == 6

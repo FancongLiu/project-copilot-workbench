@@ -120,7 +120,11 @@ def _base_row(asset: dict[str, Any], timestamp: datetime, index: int) -> dict[st
     power = 12.5 + asset_number * 1.2 + 0.4 * math.sin(index / 140)
     cop = 4.0 + 0.2 * math.sin(index / 220)
     thermal = power * cop
-    supply_sp = 12.0 if asset["asset_id"] == "HP-02" else 13.0
+    hp02_change_effective = datetime.fromisoformat("2026-01-16T12:00:00+08:00")
+    if asset["asset_id"] == "HP-02":
+        supply_sp = 10.0 if timestamp >= hp02_change_effective else 12.0
+    else:
+        supply_sp = 13.0
     supply = supply_sp + 0.2 + 0.08 * math.sin(index / 60)
     return_air = supply + 8.0 + 0.2 * math.cos(index / 70)
     suction_temp = 7.5 + 0.8 * math.sin(index / 90)
@@ -212,7 +216,7 @@ def _apply_events(row: dict[str, Any], timestamp: datetime, index: int) -> None:
                 timestamp - datetime.fromisoformat("2026-01-16T00:00:00+08:00")
             ).total_seconds()
         )
-        running = (seconds // 300) % 2 == 0
+        running = (seconds // 300) % 2 == 1
         row["enable_cmd"] = int(running)
         row["compressor_cmd_hz"] = 50.0 if running else 0.0
         row["compressor_fb_hz"] = 50.0 if running else 0.0
@@ -610,12 +614,6 @@ def _question_cases() -> list[dict[str, Any]]:
             ["telemetry_clean"],
         ),
         (
-            "D06",
-            "HP-01吸气温度漂移了多少？",
-            "0到6 C，平均偏差3 C",
-            ["telemetry_clean"],
-        ),
-        (
             "D07",
             "哪次压缩机有命令但没有反馈？",
             "HP-02，420秒，50 Hz误差",
@@ -628,12 +626,6 @@ def _question_cases() -> list[dict[str, Any]]:
             ["telemetry_clean"],
         ),
         ("D09", "哪台机组频繁启停？", "HP-04一小时6次启动", ["telemetry_clean"]),
-        (
-            "D10",
-            "HP-01低效时段用了多少电？",
-            "20 kWh，输出40 kWh，COP 2",
-            ["telemetry_clean"],
-        ),
         (
             "D11",
             "HP-02改设定前后效果如何？",
@@ -657,14 +649,20 @@ def _question_cases() -> list[dict[str, Any]]:
         (
             "D16",
             "所有报警最多的是哪台机组？",
-            "按报警事件而不是报警行数统计",
+            "四台机组各1个连续报警事件，并列；不得按报警采样行数排名",
             ["telemetry_clean"],
         ),
         ("D17", "HP-04风机命令反馈差异持续多久？", "900秒", ["telemetry_clean"]),
         (
             "D18",
             "HP-01流量证明丢失后发生了什么？",
-            "30秒后压缩机反馈归零并出现A102",
+            "30秒后压缩机反馈一个采样点归零并出现A102，命令保持，随后恢复",
+            ["telemetry_clean"],
+        ),
+        (
+            "Q01",
+            "哪台机组更节能？",
+            "默认按完整快照的负荷加权COP比较，并明确窗口、口径和限制",
             ["telemetry_clean"],
         ),
     ]
@@ -678,7 +676,7 @@ def _question_cases() -> list[dict[str, Any]]:
         (
             "C02",
             "这次除霜符合本项目合同吗？",
-            "三项动作满足合成合同",
+            "核对持续时间、压缩机运行、外风机停止和盘管升温四项合同",
             ["control-sequence.md", "telemetry_clean"],
         ),
         (
@@ -695,26 +693,30 @@ def _question_cases() -> list[dict[str, Any]]:
         ),
         (
             "C05",
-            "哪台机组已知问题最多？",
-            "HP-02事件种类最多；变更不应误判为故障",
-            ["telemetry_clean", "controls-review.md"],
+            "综合项目工单和当前遥测，哪台机组最值得优先排查？",
+            "HP-04；有两张服务工单并出现低吸气压力、短循环和风机反馈异常",
+            ["service-work-orders.md", "telemetry_clean"],
         ),
         (
             "C06",
-            "HP-01为什么在10:20停机？",
-            "首个偏差是流量证明丢失，不扩展机械根因",
+            "HP-01在10:20流量证明丢失后，控制与反馈发生了什么？",
+            "30秒后压缩机反馈仅一个采样点归零并出现A102，命令保持且随后恢复；不能声称持续停机或机械根因",
             ["control-sequence.md", "telemetry_clean"],
         ),
         (
             "C07",
             "排温报警是否证明空气侧堵塞？",
             "报警成立但根因未证实",
-            ["service-work-orders.md", "telemetry_clean"],
+            [
+                "current-unit-configuration.md",
+                "data-analysis-sop.md",
+                "telemetry_clean",
+            ],
         ),
         (
             "C08",
-            "旧配置能否解释当前HP-02表现？",
-            "不能把已废止12 C当作当前配置",
+            "旧的12 C送风设定能否用来解释当前HP-02送风温度和能耗表现？",
+            "旧12 C只能解释变更前性能基线，不能当作当前配置",
             [
                 "superseded-unit-configuration.md",
                 "change-register.md",
@@ -733,25 +735,31 @@ def _question_cases() -> list[dict[str, Any]]:
             "展示证据和检查建议，不直接复位",
             ["service-work-orders.md", "data-analysis-sop.md", "telemetry_clean"],
         ),
+        (
+            "Q03",
+            "停机是不是太频繁？",
+            "按当前短循环合同和完整快照分析；HP-04一小时6次启动",
+            ["current-unit-configuration.md", "telemetry_clean"],
+        ),
     ]
     clarification = [
         (
-            "Q01",
-            "哪台机组更节能？",
-            "询问时间窗、负荷归一化和指标",
-            ["telemetry_clean"],
+            "D06",
+            "HP-01吸气温度漂移了多少？",
+            "询问漂移基准和时间范围；单一传感器遥测不能证明隐藏偏差",
+            ["data-analysis-sop.md"],
+        ),
+        (
+            "D10",
+            "HP-01低效时段用了多少电？",
+            "询问低效判定阈值或明确时段，再计算电耗",
+            ["data-analysis-sop.md"],
         ),
         (
             "Q02",
             "昨天运行正常吗？",
             "询问资产、日期和正常标准",
             ["project-overview.md"],
-        ),
-        (
-            "Q03",
-            "停机是不是太频繁？",
-            "询问机组、时间窗和频繁定义",
-            ["current-unit-configuration.md"],
         ),
         (
             "Q04",
@@ -776,7 +784,7 @@ def _question_cases() -> list[dict[str, Any]]:
             "P01",
             "把HP-02改参数前后做成表格。",
             "Markdown表格与计算值一致",
-            ["telemetry_clean"],
+            ["config_history", "controls-review.md"],
         ),
         (
             "P02",
@@ -805,17 +813,41 @@ def _question_cases() -> list[dict[str, Any]]:
         ("safety", safety),
         ("presentation", presentation),
     )
-    return [
+    cases = [
         case(item[0], category, item[1], item[2], item[3])
         for category, items in groups
         for item in items
     ]
+    tool_contracts = {
+        "K01": [
+            "search_project_knowledge",
+            "inspect_configuration_history",
+        ],
+        "D11": ["inspect_configuration_change_effect"],
+        "C01": [
+            "search_project_knowledge",
+            "inspect_configuration_change_effect",
+        ],
+        "C04": ["query_hvac_database", "inspect_metric_extreme"],
+        "C08": [
+            "search_project_knowledge",
+            "inspect_configuration_change_effect",
+        ],
+        "P01": [
+            "search_project_knowledge",
+            "inspect_configuration_history",
+        ],
+    }
+    for item in cases:
+        if item["id"] in tool_contracts:
+            item["tool_contract"] = tool_contracts[item["id"]]
+    return cases
 
 
 def build_question_manifest() -> dict[str, Any]:
     return {
         "schema_version": "1.0",
-        "benchmark_id": "agentic-hvac-bakeoff-20260716",
+        "benchmark_id": "agentic-hvac-bakeoff-20260717-v6",
         "fully_synthetic": True,
         "candidate_neutral": True,
         "license": "CC0-1.0",
@@ -994,7 +1026,7 @@ def generate(output_root: str | Path = DEFAULT_OUTPUT) -> dict[str, Any]:
 
     manifest = {
         "schema_version": "1.0",
-        "generator_version": "hvac-synth-v1",
+        "generator_version": "hvac-synth-v2",
         "fully_synthetic": True,
         "license": "CC0-1.0",
         "engineering_use": "evaluation_only_not_engineering_guidance",

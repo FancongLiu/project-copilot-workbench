@@ -1,7 +1,27 @@
 const form = document.querySelector("#direction-form");
 const questionInput = document.querySelector("#direction-question");
 const messages = document.querySelector("#messages");
+const conversation = document.querySelector("#conversation");
+const fileInput = document.querySelector("#direction-files");
+const uploadStatus = document.querySelector("#upload-status");
+const uploadButton = document.querySelector(".upload-button");
+const directionShell = document.querySelector("[data-testid='direction-chat']");
+const architecture = directionShell?.dataset.architecture || "baseline";
+const promptQueue = document.querySelector("#prompt-queue");
+const promptQueueItems = document.querySelector("#prompt-queue-items");
+const evidenceWorkbench = document.querySelector("#evidence-workbench");
+const evidenceWorkbenchContent = document.querySelector("#evidence-workbench-content");
+const evidenceWorkbenchClose = document.querySelector("#evidence-workbench-close");
+const artifactCanvas = document.querySelector("#artifact-canvas");
+const artifactCanvasContent = document.querySelector("#artifact-canvas-content");
+const artifactCanvasClose = document.querySelector("#artifact-canvas-close");
+const projectMap = document.querySelector("[data-testid='project-map']");
+const projectMapToggle = document.querySelector("#project-map-toggle");
 const conversationHistory = [];
+const queuedPrompts = [];
+let requestInFlight = false;
+window.projectGraph = null;
+window.projectGraphSummarized = false;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -10,53 +30,87 @@ function element(tag, className, text) {
   return node;
 }
 
-function appendInline(container, text) {
-  text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).forEach((part) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      container.append(element("strong", "", part.slice(2, -2)));
-    } else {
-      container.append(document.createTextNode(part));
-    }
+const internalPathPatterns = [
+  /\b(?:background|company|configuration|datasets|docs|project\.local|runtime|src)[\\/][^\s<>"'`，。；：、)\]}]+/gi,
+  /\b[A-Za-z]:[\\/][^\s<>"'`，。；：、)\]}]+/g,
+];
+const posixAbsolutePathPattern = /(^|[\s(（【:：，,；;])(\/(?:[^/\s<>"'`，。；：、)\]}]+\/)+[^/\s<>"'`，。；：、)\]}]+)/g;
+
+function hideInternalPaths(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach((node) => {
+    let text = node.textContent;
+    internalPathPatterns.forEach((pattern) => {
+      text = text.replace(pattern, "");
+    });
+    node.textContent = text
+      .replace(posixAbsolutePathPattern, (_match, prefix) => prefix)
+      .replace(/\s{2,}/g, " ");
   });
 }
 
-function renderMarkdown(container, markdown, hasStructuredTables = false) {
-  let list = null;
-  markdown.split("\n").forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) {
-      list = null;
-      return;
-    }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      list = null;
-      const tag = heading[1].length === 1 ? "h2" : heading[1].length === 2 ? "h3" : "h4";
-      container.append(element(tag, "answer-heading", heading[2]));
-      return;
-    }
-    const boldHeading = line.match(/^\*\*([^*]+)\*\*[:：]?$/);
-    if (boldHeading) {
-      list = null;
-      container.append(element("h3", "answer-heading", boldHeading[1]));
-      return;
-    }
-    if (hasStructuredTables && line.startsWith("|") && line.endsWith("|")) return;
-    if (line.startsWith("- ")) {
-      if (!list) {
-        list = element("ul", "answer-list");
-        container.append(list);
-      }
-      const item = element("li");
-      appendInline(item, line.slice(2));
-      list.append(item);
-      return;
-    }
-    list = null;
-    const paragraph = element("p");
-    appendInline(paragraph, line);
-    container.append(paragraph);
+function safeMarkdownFragment(markdown) {
+  if (!window.marked || !window.DOMPurify) {
+    throw new Error("Markdown renderer unavailable");
+  }
+  const template = document.createElement("template");
+  template.innerHTML = window.DOMPurify.sanitize(
+    window.marked.parse(String(markdown || ""), {gfm: true, breaks: true}),
+    {
+      FORBID_TAGS: ["embed", "form", "iframe", "img", "object", "script", "style"],
+      FORBID_ATTR: ["style"],
+    },
+  );
+  template.content.querySelectorAll("a").forEach((link) => {
+    const label = element("span", "inline-source-label", link.textContent || "参考资料");
+    link.replaceWith(label);
   });
+  hideInternalPaths(template.content);
+  return template.content;
+}
+
+function isSecondaryContext(line) {
+  const normalized = line.replace(/^[-*#\s]+/, "").replace(/\*\*/g, "").trim();
+  const prefixes = [
+    "\u7edf\u8ba1\u65f6\u6bb5",
+    "\u7edf\u8ba1\u8303\u56f4",
+    "\u6570\u636e\u6765\u81ea",
+    "\u6570\u636e\u6765\u6e90",
+    "\u8be5\u7ed3\u8bba",
+    "\u672c\u7ed3\u8bba",
+    "\u7531\u4e8e",
+    "\u53e3\u5f84",
+    "\u9650\u5236",
+    "\u8bf4\u660e",
+  ];
+  return prefixes.some((prefix) => normalized.startsWith(prefix));
+}
+
+function renderMarkdown(container, markdown, hasStructuredTables = false) {
+  const fragment = safeMarkdownFragment(markdown);
+  fragment.querySelectorAll("h1, h2, h3, h4").forEach((heading) => {
+    heading.classList.add("answer-heading");
+  });
+  fragment.querySelectorAll("ul, ol").forEach((list) => {
+    list.classList.add("answer-list");
+  });
+  fragment.querySelectorAll("table").forEach((table) => {
+    if (hasStructuredTables) table.remove();
+    else table.classList.add("answer-table");
+  });
+  const contextNodes = Array.from(fragment.children).filter((node) =>
+    node.tagName === "P" && isSecondaryContext(node.textContent || ""),
+  );
+  contextNodes.forEach((node) => node.remove());
+  container.append(fragment);
+  if (contextNodes.length) {
+    const context = element("section", "answer-context");
+    context.append(element("strong", "", "\u6570\u636e\u8303\u56f4\u4e0e\u9650\u5236"));
+    contextNodes.forEach((node) => context.append(node));
+    container.append(context);
+  }
 }
 
 function renderTable(table) {
@@ -125,28 +179,244 @@ function renderChart(chart) {
   return wrap;
 }
 
+function citationPathParts(citation) {
+  const filename = String(citation.filename || "").trim();
+  const rawLocation = String(citation.location || filename).replaceAll("\\", "/");
+  const filenameIndex = filename ? rawLocation.lastIndexOf(filename) : -1;
+  const cleanLocation = filenameIndex >= 0
+    ? rawLocation.slice(0, filenameIndex + filename.length)
+    : rawLocation;
+  const parts = cleanLocation.split("/").map((part) => part.trim()).filter(Boolean);
+  if (!parts.length || parts.at(-1) !== filename) parts.push(filename);
+  return ["当前项目", ...parts];
+}
+
+function renderEvidencePath(citations) {
+  const details = element("details", "evidence-path");
+  details.append(element("summary", "", "查看检索路径"));
+  const unique = new Map();
+  citations.forEach((citation) => {
+    unique.set(`${citation.filename}|${citation.location || ""}`, citation);
+  });
+  unique.forEach((citation) => {
+    const row = element("div", "evidence-path-row");
+    citationPathParts(citation).forEach((part, index, parts) => {
+      row.append(element("span", index === parts.length - 1 ? "is-file" : "", part));
+      if (index < parts.length - 1) row.append(element("i", "", "→"));
+    });
+    details.append(row);
+  });
+  return details;
+}
+
+function renderCitationCard(citation) {
+  const card = element("article", "citation-card");
+  const top = element("div", "citation-top");
+  const identity = element("div", "citation-identity");
+  identity.append(element("strong", "", citation.filename));
+  if (citation.source_status) {
+    const statusClass = citation.source_status === "已废止" ? "is-superseded" : "";
+    identity.append(element("span", `source-status ${statusClass}`, citation.source_status));
+  }
+  top.append(identity);
+  card.append(top);
+  if (citation.source_role) card.append(element("small", "source-role", citation.source_role));
+  card.append(element("p", "citation-excerpt", citation.excerpt));
+  return card;
+}
+
+function openEvidenceWorkbench(citations) {
+  if (!evidenceWorkbench || !evidenceWorkbenchContent) return;
+  evidenceWorkbenchContent.replaceChildren(renderEvidencePath(citations));
+  citations.forEach((citation) => {
+    evidenceWorkbenchContent.append(renderCitationCard(citation));
+  });
+  evidenceWorkbench.hidden = false;
+  directionShell.classList.add("panel-open");
+}
+
 function renderCitations(citations) {
   if (!citations.length) return null;
-  const wrap = element("section", "citations");
-  wrap.append(element("h4", "", "参考依据"));
+  const filenames = [...new Set(citations.map((citation) => citation.filename))];
+  const visibleFilenames = filenames.slice(0, 2);
+  const citationLabel = filenames.length > 2
+    ? `参考资料：${visibleFilenames.join(" · ")} 等 ${filenames.length} 个`
+    : `参考资料：${visibleFilenames.join(" · ")}`;
+  if (architecture === "evidence") {
+    const trigger = element(
+      "button",
+      "evidence-panel-trigger",
+      citationLabel,
+    );
+    trigger.type = "button";
+    trigger.addEventListener("click", () => openEvidenceWorkbench(citations));
+    return trigger;
+  }
+  const wrap = element("details", "citations");
+  wrap.append(element("summary", "", citationLabel));
+  wrap.append(renderEvidencePath(citations));
   citations.forEach((citation) => {
-    const card = element("article", "citation-card");
-    const top = element("div", "citation-top");
-    const identity = element("div", "citation-identity");
-    identity.append(element("strong", "", citation.filename));
-    if (citation.source_status) {
-      const statusClass = citation.source_status === "已废止" ? "is-superseded" : "";
-      identity.append(element("span", `source-status ${statusClass}`, citation.source_status));
-    }
-    top.append(identity);
-    top.append(element("span", "", `本次引用占比 ${citation.support_share_pct}%`));
-    card.append(top);
-    if (citation.source_role) card.append(element("small", "source-role", citation.source_role));
-    card.append(element("p", "citation-excerpt", citation.excerpt));
-    card.append(element("small", "", citation.location));
-    wrap.append(card);
+    wrap.append(renderCitationCard(citation));
   });
   return wrap;
+}
+
+evidenceWorkbenchClose?.addEventListener("click", () => {
+  evidenceWorkbench.hidden = true;
+  directionShell.classList.remove("panel-open");
+});
+
+function renderCanvasSummary(markdown) {
+  const summary = element("p", "canvas-chat-summary");
+  const fragment = safeMarkdownFragment(markdown);
+  const first = fragment.querySelector("p, li");
+  if (!first) {
+    summary.textContent = "已生成工程分析。";
+    return summary;
+  }
+  while (first.firstChild) summary.append(first.firstChild);
+  return summary;
+}
+
+function shouldAutoOpenArtifact(payload) {
+  return window.matchMedia("(min-width: 801px)").matches
+    && (payload.tables.length > 0 || payload.charts.length > 0 || payload.answer_markdown.length > 800);
+}
+
+function renderArtifactCanvas(payload) {
+  if (!artifactCanvas || !artifactCanvasContent) return;
+  artifactCanvasContent.replaceChildren();
+  const answer = element("section", "artifact-answer");
+  renderMarkdown(answer, payload.answer_markdown, payload.tables.length > 0);
+  artifactCanvasContent.append(answer);
+  payload.tables.forEach((table) => artifactCanvasContent.append(renderTable(table)));
+  payload.charts.forEach((chart) => artifactCanvasContent.append(renderChart(chart)));
+  const citations = renderCitations(payload.citations);
+  if (citations) artifactCanvasContent.append(citations);
+  artifactCanvas.hidden = false;
+  directionShell.classList.add("panel-open");
+}
+
+artifactCanvasClose?.addEventListener("click", () => {
+  artifactCanvas.hidden = true;
+  directionShell.classList.remove("panel-open");
+});
+
+async function loadProjectGraph() {
+  const container = document.querySelector("#project-graph");
+  if (!container || !window.cytoscape) return;
+  try {
+    const response = await fetch("/api/direction/graph");
+    if (!response.ok) throw new Error("graph unavailable");
+    const payload = await response.json();
+    window.projectGraphSummarized = payload.summarized === true;
+    window.projectGraphNeedsRefresh = false;
+    window.projectGraph?.destroy();
+    window.projectGraph = window.cytoscape({
+      container,
+      elements: [
+        ...payload.nodes.map((node) => ({data: node})),
+        ...payload.edges.map((edge) => ({data: edge})),
+      ],
+      style: [
+        {
+          selector: "node",
+          style: {
+            "background-color": "#6b9b89",
+            label: "data(label)",
+            color: "#42534c",
+            "font-size": 10,
+            "text-wrap": "wrap",
+            "text-max-width": 150,
+            "text-valign": "center",
+            "text-halign": "center",
+            shape: "round-rectangle",
+            width: 132,
+            height: 32,
+          },
+        },
+        {selector: "node[kind = 'project']", style: {"background-color": "#173b34", color: "#ffffff", width: 150, height: 40, "font-size": 11, "font-weight": 800}},
+        {selector: "node[kind = 'folder']", style: {"background-color": "#d9eee6", color: "#235443", width: 112, "font-weight": 700}},
+        {selector: "node[kind = 'file']", style: {"background-color": "#f4f8f6", "border-color": "#8eb9a8", "border-width": 1, width: 168}},
+        {selector: "node[kind = 'file'][category = 'dataset']", style: {"background-color": "#eaf2fb", "border-color": "#7aa3d1"}},
+        {selector: "edge", style: {width: 1.2, "line-color": "#b9cbc3", "curve-style": "taxi", "taxi-direction": "rightward", "target-arrow-shape": "triangle", "target-arrow-color": "#b9cbc3", "arrow-scale": 0.7}},
+        {selector: ".is-path", style: {"background-color": "#35a878", "line-color": "#35a878", width: 3, "transition-property": "background-color, line-color, width", "transition-duration": "180ms"}},
+        {selector: ".is-cited", style: {"background-color": "#f6c86f", "border-color": "#e39a20", "border-width": 3}},
+      ],
+      layout: {
+        name: "breadthfirst",
+        directed: true,
+        roots: "#project",
+        circle: false,
+        animate: true,
+        animationDuration: 360,
+        fit: true,
+        padding: 28,
+        spacingFactor: 1.25,
+        avoidOverlap: true,
+      },
+      minZoom: 0.18,
+      maxZoom: 2.5,
+    });
+    if (window.latestProjectPath) highlightProjectPath(window.latestProjectPath);
+  } catch (error) {
+    container.textContent = "\u9879\u76ee\u5730\u56fe\u6682\u65f6\u4e0d\u53ef\u7528";
+  }
+}
+
+function highlightProjectPath(payload) {
+  window.latestProjectPath = payload;
+  const graph = window.projectGraph;
+  if (!graph) return;
+  graph.elements(".ephemeral").remove();
+  graph.elements().removeClass("is-path is-cited");
+  graph.$("#project").addClass("is-path");
+  const tools = new Set((payload.activities || []).map((activity) => activity.tool));
+  const usesData = [...tools].some((tool) => tool !== "search_project_knowledge" && tool !== "ask_for_clarification");
+  if (usesData) graph.nodes("[kind = 'file'][category = 'dataset']").addClass("is-path");
+  let addedCitationNode = false;
+  (payload.citations || []).forEach((citation, index) => {
+    const citationLocation = String(citation.location || "").replaceAll("\\", "/");
+    const exists = graph.nodes("[kind = 'file']").some((node) => {
+      const nodeLocation = String(node.data("location") || "");
+      return nodeLocation && citationLocation.startsWith(nodeLocation);
+    });
+    if (exists || !window.projectGraphSummarized) return;
+    const role = String(citation.source_role || "background");
+    const category = ["background", "configuration", "meeting", "decision", "SOP", "dataset"].includes(role)
+      ? role
+      : String(citation.filename).toLowerCase().endsWith(".csv") ? "dataset" : "background";
+    const categoryNode = graph.$("#project");
+    const nodeId = `query-file-${index}`;
+    graph.add([
+      {group: "nodes", data: {id: nodeId, label: citation.filename, kind: "file", category}, classes: "ephemeral"},
+      {group: "edges", data: {id: `query-edge-${index}`, source: categoryNode.id(), target: nodeId}, classes: "ephemeral"},
+    ]);
+    addedCitationNode = true;
+  });
+  if (addedCitationNode) {
+    graph.layout({
+      name: "breadthfirst",
+      directed: true,
+      roots: "#project",
+      circle: false,
+      animate: true,
+      animationDuration: 260,
+      fit: true,
+      padding: 28,
+      spacingFactor: 1.25,
+      avoidOverlap: true,
+    }).run();
+  }
+  const citedLocations = (payload.citations || []).map((citation) =>
+    String(citation.location || "").replaceAll("\\", "/"),
+  );
+  graph.nodes("[kind = 'file']").forEach((node) => {
+    const location = String(node.data("location") || "");
+    if (!citedLocations.some((cited) => location && cited.startsWith(location))) return;
+    node.addClass("is-cited");
+    node.predecessors().addClass("is-path");
+  });
 }
 
 function appendUserMessage(question) {
@@ -168,15 +438,28 @@ function appendAssistantMessage(payload) {
   };
   const state = states[payload.grounding_status] || states.failed;
   body.append(element("span", `answer-state ${state[1]}`, state[0]));
-  renderMarkdown(body, payload.answer_markdown, payload.tables.length > 0);
-  payload.tables.forEach((table) => body.append(renderTable(table)));
-  payload.charts.forEach((chart) => body.append(renderChart(chart)));
-  const citations = renderCitations(payload.citations);
-  if (citations) body.append(citations);
+  if (architecture === "canvas") {
+    body.append(renderCanvasSummary(payload.answer_markdown));
+    const openCanvas = element("button", "canvas-open-button", "打开工程成果");
+    openCanvas.type = "button";
+    openCanvas.addEventListener("click", () => renderArtifactCanvas(payload));
+    body.append(openCanvas);
+    if (shouldAutoOpenArtifact(payload)) renderArtifactCanvas(payload);
+  } else {
+    renderMarkdown(body, payload.answer_markdown, payload.tables.length > 0);
+    payload.tables.forEach((table) => body.append(renderTable(table)));
+    payload.charts.forEach((chart) => body.append(renderChart(chart)));
+    const citations = renderCitations(payload.citations);
+    if (citations) body.append(citations);
+  }
   if (payload.activities?.length) {
     const labels = {
       search_project_knowledge: "已核对项目资料",
       query_hvac_database: "已计算运行数据",
+      inspect_hvac_snapshot: "已计算运行数据",
+      inspect_configuration_change_effect: "已计算运行数据",
+      inspect_metric_extreme: "已计算运行数据",
+      inspect_configuration_history: "已核对配置历史",
       ask_for_clarification: "需要补充分析口径",
     };
     const trace = element("p", "human-trace");
@@ -189,13 +472,62 @@ function appendAssistantMessage(payload) {
   }
   article.append(body);
   messages.append(article);
+  scrollConversationToMessage(article);
+}
+
+function scrollConversationToBottom() {
+  if (!conversation) return;
+  conversation.scrollTo({top: conversation.scrollHeight, behavior: "smooth"});
+}
+
+function scrollConversationToMessage(message) {
+  if (!conversation || !message) return;
+  messages.style.paddingBottom = `${Math.max(24, conversation.clientHeight - 96)}px`;
+  const conversationRect = conversation.getBoundingClientRect();
+  const messageRect = message.getBoundingClientRect();
+  const top = Math.max(
+    0,
+    conversation.scrollTop + messageRect.top - conversationRect.top - 12,
+  );
+  const previousBehavior = conversation.style.scrollBehavior;
+  conversation.style.scrollBehavior = "auto";
+  conversation.scrollTop = top;
+  conversation.style.scrollBehavior = previousBehavior;
+}
+
+function renderPromptQueue() {
+  if (!promptQueue || !promptQueueItems) return;
+  promptQueueItems.replaceChildren();
+  queuedPrompts.forEach((question, index) => {
+    const item = element("div", "queued-prompt");
+    item.append(element("span", "", question));
+    const remove = element("button", "", "移除");
+    remove.type = "button";
+    remove.addEventListener("click", () => {
+      queuedPrompts.splice(index, 1);
+      renderPromptQueue();
+    });
+    item.append(remove);
+    promptQueueItems.append(item);
+  });
+  promptQueue.hidden = queuedPrompts.length === 0;
+}
+
+function submitQuestion(question) {
+  if (requestInFlight) {
+    queuedPrompts.push(question);
+    if (architecture === "conversation") renderPromptQueue();
+    return;
+  }
+  ask(question);
 }
 
 async function ask(question) {
+  requestInFlight = true;
   appendUserMessage(question);
   const pending = element("p", "pending", "正在核对文档和数据……");
   messages.append(pending);
-  form.querySelector("button").disabled = true;
+  if (architecture !== "conversation") form.querySelector("button").disabled = true;
   try {
     const response = await fetch("/api/direction/query", {
       method: "POST",
@@ -220,8 +552,13 @@ async function ask(question) {
     });
   } finally {
     pending.remove();
+    requestInFlight = false;
     form.querySelector("button").disabled = false;
-    messages.lastElementChild?.scrollIntoView({behavior: "smooth", block: "end"});
+    if (queuedPrompts.length) {
+      const nextQuestion = queuedPrompts.shift();
+      if (architecture === "conversation") renderPromptQueue();
+      ask(nextQuestion);
+    }
   }
 }
 
@@ -230,9 +567,66 @@ form.addEventListener("submit", (event) => {
   const question = questionInput.value.trim();
   if (!question) return;
   questionInput.value = "";
-  ask(question);
+  submitQuestion(question);
 });
 
 document.querySelectorAll("[data-question]").forEach((button) => {
-  button.addEventListener("click", () => ask(button.dataset.question));
+  button.addEventListener("click", () => submitQuestion(button.dataset.question));
 });
+
+if (fileInput) {
+  fileInput.addEventListener("change", async () => {
+    if (!fileInput.files.length) return;
+    const data = new FormData();
+    [...fileInput.files].forEach((file) => data.append("files", file, file.name));
+    uploadButton?.classList.add("is-busy");
+    uploadStatus.textContent = `\u6b63\u5728\u5904\u7406 ${fileInput.files.length} \u4e2a\u6587\u4ef6\u2026`;
+    try {
+      const response = await fetch("/api/direction/sources", {
+        method: "POST",
+        headers: {"X-Project-Copilot": "1"},
+        body: data,
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || "upload failed");
+      const failed = payload.files.filter((file) => file.status !== "indexed");
+      if (failed.length) {
+        const failedNames = failed.map((file) => file.filename).join("\u3001");
+        throw new Error(`\u672a\u5b8c\u6210\u89e3\u6790\uff1a${failedNames}`);
+      }
+      const filenames = payload.files.map((file) => file.filename).join("\u3001");
+      uploadStatus.textContent = `\u5df2\u5b8c\u6210\u5165\u5e93\uff1a${filenames}`;
+      window.projectGraphNeedsRefresh = true;
+      if (projectMap?.dataset.collapsed !== "true") await loadProjectGraph();
+    } catch (error) {
+      uploadStatus.textContent = `\u6587\u4ef6\u5904\u7406\u5931\u8d25\uff1a${error.message}`;
+    } finally {
+      uploadButton?.classList.remove("is-busy");
+      fileInput.value = "";
+    }
+  });
+}
+
+function setProjectMapCollapsed(collapsed) {
+  if (!projectMap || !projectMapToggle) return;
+  projectMap.dataset.collapsed = String(collapsed);
+  projectMapToggle.setAttribute("aria-expanded", String(!collapsed));
+  projectMapToggle.setAttribute(
+    "aria-label",
+    collapsed ? "\u5c55\u5f00\u9879\u76ee\u5730\u56fe" : "\u6536\u8d77\u9879\u76ee\u5730\u56fe",
+  );
+  projectMapToggle.textContent = collapsed ? "\u9879\u76ee\u5730\u56fe" : "\u6536\u8d77";
+}
+
+projectMapToggle?.addEventListener("click", async () => {
+  const collapsed = projectMap.dataset.collapsed !== "true";
+  setProjectMapCollapsed(collapsed);
+  if (!collapsed && (!window.projectGraph || window.projectGraphNeedsRefresh)) {
+    await loadProjectGraph();
+  } else if (!collapsed) {
+    window.projectGraph.resize();
+    window.projectGraph.fit(undefined, 28);
+  }
+});
+
+setProjectMapCollapsed(true);

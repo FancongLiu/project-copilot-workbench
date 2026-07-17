@@ -16,6 +16,11 @@ class Finding:
 
 RUNTIME_DATABASE_SUFFIXES = {".duckdb", ".sqlite", ".sqlite3"}
 FORBIDDEN_NAMES = {".env", "credentials.json", "secrets.yaml", "secrets.yml"}
+PRIVATE_PATH_PARTS = {".codex", "project.local", "private-runtime", "private_runtime"}
+SENSITIVE_NAME_PATTERN = re.compile(
+    r"(?:^|[-_.])(credential|credentials|secret|secrets|token|tokens)(?:[-_.]|$)",
+    re.IGNORECASE,
+)
 MAX_PUBLIC_FILE_BYTES = 2_000_000
 MAX_APPROVED_SYNTHETIC_DATABASE_BYTES = 10_000_000
 APPROVED_SYNTHETIC_DATABASES = {
@@ -38,6 +43,18 @@ CONTENT_RULES = {
     "private-key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "windows-user-path": re.compile(r"\bC:\\Users\\[^\\\s]+\\", re.IGNORECASE),
 }
+
+
+def is_forbidden_private_path(relative: str) -> bool:
+    parts = [part.casefold() for part in relative.replace("\\", "/").split("/")]
+    if any(part in PRIVATE_PATH_PARTS for part in parts):
+        return True
+    name = parts[-1]
+    return (
+        name.startswith(".env")
+        or name in FORBIDDEN_NAMES
+        or SENSITIVE_NAME_PATTERN.search(name) is not None
+    )
 
 
 def _git_candidate_files(public_root: Path) -> list[Path] | None:
@@ -127,8 +144,9 @@ def scan_public_tree(root: str | Path) -> list[Finding]:
             continue
 
         relative = path.relative_to(public_root).as_posix()
-        if path.name.casefold() in FORBIDDEN_NAMES:
-            findings.append(Finding(relative, "forbidden-config-file"))
+        if is_forbidden_private_path(relative):
+            findings.append(Finding(relative, "forbidden-private-path"))
+            continue
         approved_synthetic_database = _is_approved_synthetic_database(
             public_root,
             path,

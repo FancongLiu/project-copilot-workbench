@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from haystack.components.generators.chat import (
@@ -179,7 +180,7 @@ def _build_chat_generator():  # type: ignore[no-untyped-def]
                 api_key=Secret.from_token(settings.api_key),
                 model=settings.model,
                 api_base_url=settings.base_url,
-                timeout=90,
+                timeout=150,
                 max_retries=0,
                 generation_kwargs={
                     "store": False,
@@ -276,10 +277,6 @@ def create_app(
     selected_runtime.mkdir(parents=True, exist_ok=True)
 
     legacy_knowledge, knowledge_provider_name = resolve_knowledge_provider(package)
-    knowledge_provider_display = {
-        "haystack-local": "Haystack BM25",
-        "anythingllm-query": "AnythingLLM query",
-    }[knowledge_provider_name]
     manager = WorkspaceManager(selected_runtime)
     embedding_backend = _build_embedding_backend()
     indexer = ProjectIndexer(
@@ -389,8 +386,117 @@ def create_app(
         if source_direction_corpus.is_dir()
         else bundled_direction_corpus
     )
+
+    def search_active_workspace(query: str) -> list[dict[str, object]]:
+        active = manager.active_workspace()
+        normalized_query = query.casefold().replace("\\", "/")
+        source_records = indexer.list_sources(active.project_id)
+
+        def mentions_source_location(location: str) -> bool:
+            normalized_location = location.casefold().replace("\\", "/")
+            return (
+                re.search(
+                    rf"(?<![A-Za-z0-9_./-]){re.escape(normalized_location)}(?![A-Za-z0-9_./-])",
+                    normalized_query,
+                )
+                is not None
+            )
+
+        path_matches = [
+            source
+            for source in source_records
+            if source.source_location
+            and mentions_source_location(source.source_location)
+        ]
+        basename_matches = [
+            source
+            for source in source_records
+            if (source.original_filename or source.filename).casefold()
+            in normalized_query
+        ]
+        exact_sources = path_matches or basename_matches
+        if not path_matches and len(basename_matches) > 1:
+            basename = (
+                basename_matches[0].original_filename or basename_matches[0].filename
+            )
+            locations = sorted(
+                source.source_location or source.original_filename or source.filename
+                for source in basename_matches
+            )
+            return [
+                {
+                    "_clarification_message": (
+                        f"找到多个名为 {basename} 的文件，请在问题中写明相对路径："
+                        + "、".join(locations)
+                    )
+                }
+            ]
+        if exact_sources:
+            exact_citations: list[dict[str, object]] = []
+            for source in exact_sources:
+                filtered = indexer.search(
+                    active.project_id,
+                    query,
+                    source_ids={source.source_id},
+                    top_k=3,
+                )
+                if filtered.refused or not filtered.citations:
+                    location = (
+                        source.source_location
+                        or source.original_filename
+                        or source.filename
+                    )
+                    return [
+                        {
+                            "_clarification_message": (
+                                f"指定文件 {location} 已入库，但没有检索到足以回答该问题的内容。"
+                            )
+                        }
+                    ]
+                for citation in filtered.citations:
+                    exact_citations.append(
+                        {
+                            "filename": citation.source,
+                            "excerpt": citation.excerpt[:4_000],
+                            "location": citation.source_location
+                            or source.source_location
+                            or citation.source,
+                            "source_status": "\u5df2\u5165\u5e93",
+                            "source_role": citation.category,
+                            "support_weight": max(float(citation.score), 0.1),
+                            "_exact_filename": True,
+                        }
+                    )
+            return exact_citations
+
+        citations: list[dict[str, object]] = []
+        result = indexer.search(active.project_id, query, top_k=5)
+        for citation in result.citations:
+            location_parts = [citation.source_location or citation.source]
+            if citation.page is not None:
+                location_parts.append(f"page {citation.page}")
+            elif citation.section:
+                location_parts.append(citation.section)
+            citations.append(
+                {
+                    "filename": citation.source,
+                    "excerpt": citation.excerpt[:500],
+                    "location": " · ".join(location_parts),
+                    "source_status": "\u5df2\u5165\u5e93",
+                    "source_role": citation.category,
+                    "support_weight": max(float(citation.score), 0.1),
+                }
+            )
+        return citations
+
     app.state.direction_demo = (
-        DirectionAgent(DirectionToolbox(direction_corpus), chat_generator)
+        DirectionAgent(
+            DirectionToolbox(
+                direction_corpus,
+                workspace_search=search_active_workspace,
+            ),
+            chat_generator,
+        )
         if model_backed
         else DirectionDemo(direction_corpus)
     )
@@ -581,52 +687,35 @@ def create_app(
         )
         return response
 
-    def workbench_response(request: Request):  # type: ignore[no-untyped-def]
+    architectures = {
+        "baseline": {
+            "name": "基线：简洁证据 Chat",
+            "description": "当前版本，连续问答与按需原始文件名证据。",
+        },
+        "conversation": {
+            "name": "V1：连续对话台",
+            "description": "生成中继续追加问题，按队列保持连续工作。",
+        },
+        "evidence": {
+            "name": "V2：答案与证据工作台",
+            "description": "完整答案居中，原文与检索路径在按需证据面板核查。",
+        },
+        "canvas": {
+            "name": "V3：工程成果画布",
+            "description": "聊天保持简短，长报告、表格和图表进入稳定成果区。",
+        },
+    }
+
+    def direction_response(
+        request: Request,
+        architecture: str,
+        *,
+        show_version_nav: bool,
+    ):  # type: ignore[no-untyped-def]
+        if architecture not in architectures:
+            raise HTTPException(status_code=404, detail="Unknown architecture version")
         active = manager.active_workspace()
-        model_mode_display = (
-            "Demonstration test mode - not for field decisions"
-            if model_mode == "deterministic-test-double"
-            else model_mode
-        )
-        return templates.TemplateResponse(
-            request=request,
-            name="index.html",
-            context={
-                "package": package,
-                "active_workspace": active,
-                "workspaces": [
-                    workspace_payload(item.project_id)
-                    for item in manager.list_workspaces()
-                ],
-                "sources": indexer.list_sources(active.project_id),
-                "metrics": analytics_summary_payload(active.project_id),
-                "knowledge_provider_display": knowledge_provider_display,
-                "model_mode": model_mode_display,
-                "egress_display": egress_display,
-                "downstream_approval_acknowledged": downstream_approval_acknowledged,
-            },
-        )
-
-    @app.get("/", response_class=HTMLResponse)
-    def dashboard(request: Request):  # type: ignore[no-untyped-def]
-        if model_backed:
-            return templates.TemplateResponse(
-                request=request,
-                name="direction.html",
-                context={
-                    "model_backed": True,
-                    "model_name": getattr(chat_generator, "model", "公司模型"),
-                    "egress_display": egress_display,
-                },
-            )
-        return workbench_response(request)
-
-    @app.get("/workbench", response_class=HTMLResponse)
-    def workbench(request: Request):  # type: ignore[no-untyped-def]
-        return workbench_response(request)
-
-    @app.get("/direction", response_class=HTMLResponse)
-    def direction(request: Request):  # type: ignore[no-untyped-def]
+        architecture_info = architectures[architecture]
         return templates.TemplateResponse(
             request=request,
             name="direction.html",
@@ -634,8 +723,47 @@ def create_app(
                 "model_backed": model_backed,
                 "model_name": getattr(chat_generator, "model", "离线测试"),
                 "egress_display": egress_display,
+                "workspace_name": active.display_name,
+                "source_count": len(indexer.list_sources(active.project_id)),
+                "architecture": architecture,
+                "architecture_name": architecture_info["name"],
+                "architecture_description": architecture_info["description"],
+                "show_version_nav": show_version_nav,
             },
         )
+
+    @app.get("/", response_class=HTMLResponse)
+    def dashboard(request: Request):  # type: ignore[no-untyped-def]
+        return direction_response(request, "baseline", show_version_nav=False)
+
+    @app.get("/workbench")
+    def workbench(request: Request):  # type: ignore[no-untyped-def]
+        del request
+        return RedirectResponse(url="/", status_code=307)
+
+    @app.get("/direction", response_class=HTMLResponse)
+    def direction(request: Request):  # type: ignore[no-untyped-def]
+        return direction_response(request, "baseline", show_version_nav=False)
+
+    @app.get("/versions", response_class=HTMLResponse)
+    def version_overview(request: Request):  # type: ignore[no-untyped-def]
+        return templates.TemplateResponse(
+            request=request,
+            name="versions.html",
+            context={
+                "architectures": [
+                    {"id": architecture_id, **architecture_info}
+                    for architecture_id, architecture_info in architectures.items()
+                ]
+            },
+        )
+
+    @app.get("/versions/{architecture}", response_class=HTMLResponse)
+    def version_page(
+        request: Request,
+        architecture: str,
+    ):  # type: ignore[no-untyped-def]
+        return direction_response(request, architecture, show_version_nav=True)
 
     @app.post("/api/direction/query")
     async def query_direction(payload: DirectionQuestionRequest) -> dict[str, object]:
@@ -644,6 +772,129 @@ def create_app(
         if async_answer is not None:
             return await async_answer(payload.question, history=history)
         return app.state.direction_demo.answer(payload.question, history=history)
+
+    @app.post("/api/direction/sources", status_code=201)
+    async def upload_direction_sources(
+        files: list[UploadFile] = File(...),
+    ) -> dict[str, object]:
+        active = manager.active_workspace()
+        try:
+            if (
+                len(files) == 1
+                and Path(files[0].filename or "").suffix.casefold() == ".zip"
+            ):
+                payload = await files[0].read(ProjectIndexer.MAX_ARCHIVE_BYTES + 1)
+                imported = indexer.import_archive(
+                    active.project_id,
+                    files[0].filename or "project-package.zip",
+                    payload,
+                )
+            else:
+                if any(
+                    Path(upload.filename or "").suffix.casefold() == ".zip"
+                    for upload in files
+                ):
+                    raise IngestionError("Upload one Project Package ZIP by itself")
+                pending: list[ImportedFile] = []
+                for upload in files:
+                    filename = upload.filename or "unnamed"
+                    payload = await upload.read(ProjectIndexer.MAX_FILE_BYTES + 1)
+                    pending.append(
+                        ImportedFile(
+                            filename=filename,
+                            content=payload,
+                            category=_category_for_path(Path(filename)),
+                        )
+                    )
+                imported = indexer.import_files(active.project_id, pending)
+        except IngestionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "files": [
+                {
+                    "filename": item.original_filename or item.filename,
+                    "category": item.category,
+                    "status": item.status,
+                }
+                for item in imported
+            ]
+        }
+
+    @app.get("/api/direction/graph")
+    def direction_graph() -> dict[str, object]:
+        active = manager.active_workspace()
+        sources = indexer.list_sources(active.project_id)
+        nodes: list[dict[str, str]] = [
+            {"id": "project", "label": active.display_name, "kind": "project"}
+        ]
+        edges: list[dict[str, str]] = []
+        folder_ids: dict[str, str] = {}
+        for source in sorted(
+            sources,
+            key=lambda item: (item.source_location or item.filename).casefold(),
+        ):
+            display_filename = source.original_filename or source.filename
+            location = (source.source_location or display_filename).replace("\\", "/")
+            path_parts = [part for part in location.split("/") if part]
+            directories = path_parts[:-1]
+            parent_id = "project"
+            accumulated: list[str] = []
+            for directory in directories:
+                accumulated.append(directory)
+                directory_path = "/".join(accumulated)
+                folder_id = folder_ids.get(directory_path)
+                if folder_id is None:
+                    folder_id = (
+                        "folder-"
+                        + hashlib.sha256(directory_path.encode("utf-8")).hexdigest()[
+                            :12
+                        ]
+                    )
+                    folder_ids[directory_path] = folder_id
+                    nodes.append(
+                        {
+                            "id": folder_id,
+                            "label": directory,
+                            "kind": "folder",
+                            "location": directory_path,
+                        }
+                    )
+                    edges.append(
+                        {
+                            "id": f"{parent_id}-{folder_id}",
+                            "source": parent_id,
+                            "target": folder_id,
+                            "kind": "contains",
+                        }
+                    )
+                parent_id = folder_id
+            file_id = (
+                "file-"
+                + hashlib.sha256(source.source_id.encode("utf-8")).hexdigest()[:12]
+            )
+            nodes.append(
+                {
+                    "id": file_id,
+                    "label": display_filename,
+                    "kind": "file",
+                    "category": source.category,
+                    "location": location,
+                }
+            )
+            edges.append(
+                {
+                    "id": f"{parent_id}-{file_id}",
+                    "source": parent_id,
+                    "target": file_id,
+                    "kind": "contains",
+                }
+            )
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "summarized": False,
+            "layout": "directory-flow",
+        }
 
     @app.get("/api/health")
     def health() -> dict[str, object]:

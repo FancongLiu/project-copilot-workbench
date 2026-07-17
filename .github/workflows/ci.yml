@@ -53,6 +53,7 @@ jobs:
           licensecheck --license apache --zero --format json
           --file license-report.json
       - run: python -m build
+      - run: python scripts/verify_distribution_contents.py dist
       - run: python -m venv wheel-smoke
       - run: wheel-smoke/bin/python -m pip install --upgrade pip==26.1.2
       - run: wheel-smoke/bin/python -m pip install --require-hashes -r requirements.runtime.lock

@@ -18,11 +18,13 @@ class GuardedQuery:
 
 class SQLSelectGuard:
     _allowed_function_types = (
+        exp.Abs,
         exp.Avg,
         exp.And,
         exp.Case,
         exp.Cast,
         exp.Count,
+        exp.Extract,
         exp.If,
         exp.Max,
         exp.Min,

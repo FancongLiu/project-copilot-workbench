@@ -12,6 +12,22 @@ def test_sql_guard_allows_single_select_and_applies_row_limit() -> None:
     assert guarded.sql == "SELECT AVG(power_kw) AS avg_power FROM telemetry LIMIT 200"
 
 
+def test_sql_guard_allows_bounded_absolute_and_time_part_analysis() -> None:
+    guard = SQLSelectGuard(
+        allowed_tables={"telemetry"},
+        allowed_columns={"timestamp", "power_kw"},
+    )
+
+    guarded = guard.validate(
+        "SELECT EXTRACT(hour FROM timestamp) AS hour_of_day, "
+        "AVG(ABS(power_kw)) AS avg_absolute_power "
+        "FROM telemetry GROUP BY EXTRACT(hour FROM timestamp)"
+    )
+
+    assert "EXTRACT(HOUR FROM timestamp)" in guarded.sql
+    assert "AVG(ABS(power_kw))" in guarded.sql
+
+
 @pytest.mark.parametrize(
     "sql",
     [

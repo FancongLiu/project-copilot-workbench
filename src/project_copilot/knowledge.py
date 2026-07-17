@@ -53,7 +53,7 @@ class LocalKnowledgeIndex:
         self.document_store = InMemoryDocumentStore()
         if documents:
             self.document_store.write_documents(documents)
-        self.retriever = InMemoryBM25Retriever(self.document_store, top_k=3)
+        self.retriever = InMemoryBM25Retriever(self.document_store, top_k=4)
         self.min_score = min_score
 
     @classmethod

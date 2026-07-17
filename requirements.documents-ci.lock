@@ -1500,6 +1500,12 @@ python-pptx==1.0.2 \
     # via
     #   -c requirements.documents.lock
     #   docling-slim
+pytz==2026.2 \
+    --hash=sha256:04156e608bee23d3792fd45c94ae47fae1036688e75032eea2e3bf0323d1f126 \
+    --hash=sha256:0e60b47b29f21574376f218fe21abc009894a2321ea16c6754f3cad6eb7cdd6a
+    # via
+    #   -c requirements.documents.lock
+    #   project-copilot-workbench (pyproject.toml)
 pywin32==312 \
     --hash=sha256:02ebca0f0242b75292e218065004310d6a477407c09fa449bfe4f6022bc0c0fc \
     --hash=sha256:17948aeadbdb091f0ced6ef0841620794e68327b94ee415571c1203594b7215c \
