@@ -223,6 +223,10 @@ session receives the project timezone explicitly. Install from
 `requirements.runtime.lock`; do not omit it or historical-window queries can
 fail before otherwise valid SQL execution.
 
+Release evidence: GitHub Actions run `29617892095` passed the Windows and
+Ubuntu test/evaluation paths, package and wheel smoke, browser acceptance,
+offline document parsing and secret scanning with this dependency contract.
+
 ## 8. Known limitations that must remain visible
 
 1. The public direction page currently runs on the compact synthetic corpus.

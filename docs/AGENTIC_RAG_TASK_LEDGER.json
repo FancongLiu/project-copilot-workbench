@@ -4,8 +4,8 @@
   "status_authority": "this_file",
   "checkpoint_projection": "docs/AGENTIC_RAG_CHECKPOINT.md",
   "event_log": "docs/AGENTIC_RAG_TASK_EVENTS.jsonl",
-  "status": "active",
-  "revision": 14,
+  "status": "completed",
+  "revision": 15,
   "write_owner": "root",
   "objective": "Rapidly deliver and compare four local-private general project intelligence single-Chat architectures: the frozen current baseline plus three architecture-level variants. Commercial HVAC remains the first rigorous validation domain. Select by shared complex-question backtests and human engineer journeys, not visual-detail polish or theoretical optimality.",
   "product_contract": {
@@ -412,7 +412,7 @@
     {
       "id": "AR-10",
       "title": "New-direction human acceptance, handoff, verification, commit and push",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["AR-09", "AR-16"],
       "acceptance": [
         "Chairman can trial the corrected interface at the local URL",
@@ -421,7 +421,7 @@
         "private-data release guard, tests and packaging pass",
         "detailed company-PC handoff is committed and pushed without force"
       ],
-      "disposition": "The architecture implementation remains complete, but release closure is reopened because the first post-push GitHub Actions run exposed cross-platform timezone failures on Ubuntu and Windows. The remediation makes the project timezone explicit for snapshot inspection and ships the CPython-maintained tzdata package; completion requires a green replacement run. This is still not an intelligence-quality acceptance: the harder real-model benchmark remains at 1/14 automatic hard gates and 21.4/100 independent HVAC review.",
+      "disposition": "Architecture delivery and cross-platform release closure are complete. GitHub Actions run 29617892095 passed Ubuntu, Windows, package, browser, documents and secret-scanning jobs after the project-timezone/tzdata remediation. This is still not an intelligence-quality acceptance: the harder real-model benchmark remains at 1/14 automatic hard gates and 21.4/100 independent HVAC review, so no route is promoted over the frozen root and the next bounded objective must improve the shared backend against the unchanged questions.",
       "evidence": [
         "four current routes reachable under http://127.0.0.1:8788/versions",
         "current single-Chat desktop/mobile browser suite: 9 passed, one opt-in real-model case skipped",
@@ -430,14 +430,13 @@
         "Ruff, 391 collected Python tests, release guard, build, distribution contents, wheel install smoke, dependency audit and license check passed",
         "commit 3151a02 pushed without force to origin/codex/agentic-rag-bakeoff",
         "GitHub Actions run 29615856293 retained as failed cross-platform evidence; timezone remediation and a green replacement run remain",
-        "local remediation verification: full Python suite, deterministic 23/23 offline evaluation, browser acceptance, Ruff and release guard exit successfully; independent portability review Critical 0, Important 0, Minor 0"
+        "local remediation verification: full Python suite, deterministic 23/23 offline evaluation, browser acceptance, Ruff and release guard exit successfully; independent portability review Critical 0, Important 0, Minor 0",
+        "GitHub Actions run 29617892095 passed test (Ubuntu), test (Windows), package, browser, documents and secrets for commit b5eed1e"
       ]
     }
   ],
-  "current_blockers": [
-    "A replacement GitHub Actions run must pass Ubuntu, Windows, browser, package, documents and secret-scanning jobs after the timezone portability fix."
-  ],
-  "completion_disposition": "The frozen baseline plus three architecture variants are delivered and honestly measured. Release closure is temporarily reopened only for the cross-platform timezone CI defect; UI detail work remains stopped and the failed intelligence gate remains a separate future backend-quality objective.",
-  "next_slice_ids": ["AR-10"],
-  "updated_at": "2026-07-18T06:06:00+08:00"
+  "current_blockers": [],
+  "completion_disposition": "Delivered the frozen baseline plus three architecture variants, measured them honestly, fixed the cross-platform timezone release defect, and obtained a fully green GitHub Actions run. UI detail work remains stopped because the shared backend failed the harder engineering gate; that intelligence-quality work is a separate future bounded objective.",
+  "next_slice_ids": [],
+  "updated_at": "2026-07-18T06:31:01+08:00"
 }

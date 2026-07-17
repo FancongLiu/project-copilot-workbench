@@ -137,8 +137,10 @@ The authoritative status and acceptance contract are in
 - Focused snapshot/direction/release-lock tests, the full Python suite, Ruff,
   browser acceptance, release guard and the deterministic 23/23 offline
   evaluation pass locally. Independent portability review reports Critical 0,
-  Important 0 and Minor 0. AR-10 remains open until the replacement GitHub
-  Actions run is green; no failed CI result is being relabeled as complete.
+  Important 0 and Minor 0.
+- Replacement GitHub Actions run `29617892095` is green for Ubuntu, Windows,
+  package/SBOM, browser, offline documents and secret scanning. AR-10 is closed
+  on that evidence; failed run `29615856293` remains preserved in the ledger.
 
 ## Next bounded steps
 
@@ -162,9 +164,9 @@ same frozen 14 questions:
 6. Separately optimize catalog updates so one uploaded file does not rebuild the
    whole 198-file private catalog.
 
-The Goal tool could not replace the older unfinished Goal, so
-`docs/AGENTIC_RAG_TASK_LEDGER.json` revision 13 is authoritative for this
-four-version continuation.
+The Goal tool could not replace the older blocked Goal, so
+`docs/AGENTIC_RAG_TASK_LEDGER.json` revision 15 is authoritative for this
+completed four-version delivery and its separate future backend-quality work.
 
 ## Durable constraints
 

@@ -31,6 +31,8 @@ Runtime installation must use the pinned Python lock, including
 receive the manifest timezone explicitly. Browser Markdown is already vendored as Marked 18.0.6 and
 DOMPurify 3.4.12, so a company deployment does not need Node.js or internet
 access to render answers. Never replace the local scripts with CDN URLs.
+The same lock and installation path passed all jobs in GitHub Actions run
+`29617892095`, including Windows tests and offline document parsing.
 
 Acceptance must include:
 
