@@ -160,10 +160,14 @@ The detailed review is stored in
 
 The first three-case smoke run passed only one case. An explicit historical
 window failed because safe SQL functions `ABS` and `EXTRACT` were absent from
-the SQLGlot allowlist and DuckDB's time-zone result path lacked its current
-`pytz` runtime dependency. The fix retained the one-table, one-SELECT,
-allowlisted-column and row-limit boundaries, added only the two read-only
-functions, and pinned `pytz==2026.2` after PyPI and GitHub verification.
+the SQLGlot allowlist and DuckDB's time-zone result path lacked an explicit
+project timezone. The fix retained the one-table, one-SELECT,
+allowlisted-column and row-limit boundaries and added only the two read-only
+functions. A later Windows/Linux GitHub Actions run showed that `pytz` was not
+the correct direct dependency for Python `ZoneInfo`; current Python guidance
+and the maintained `python/tzdata` repository support shipping
+`tzdata==2026.3`, while each snapshot session now requires the manifest
+timezone instead of inheriting the host locale.
 
 After the correction, MX09 answered the supplied historical window directly
 in about 44 seconds, used the governed database plus typed alarm inspection,

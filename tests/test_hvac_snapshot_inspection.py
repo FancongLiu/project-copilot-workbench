@@ -19,6 +19,11 @@ DATABASE = (
     / "datasets"
     / "hvac_bakeoff.duckdb"
 )
+TIMEZONE = "Asia/Shanghai"
+
+
+def _inspector(database: Path = DATABASE) -> HVACSnapshotInspector:
+    return HVACSnapshotInspector(database, timezone_name=TIMEZONE)
 
 
 def _row(
@@ -32,7 +37,7 @@ def _row(
 
 
 def test_data_quality_inspection_finds_snapshot_wide_defects() -> None:
-    result = HVACSnapshotInspector(DATABASE).inspect("data_quality")
+    result = _inspector().inspect("data_quality")
 
     hp02_coverage = _row(result.rows, "coverage", "HP-02")
     duplicate = _row(result.rows, "duplicate_timestamp", "HP-03")
@@ -48,7 +53,7 @@ def test_data_quality_inspection_finds_snapshot_wide_defects() -> None:
 
 
 def test_control_event_inspection_segments_common_hvac_events() -> None:
-    result = HVACSnapshotInspector(DATABASE).inspect("control_events")
+    result = _inspector().inspect("control_events")
 
     compressor = _row(result.rows, "compressor_feedback_mismatch", "HP-02")
     compressor_observation = _row(
@@ -82,7 +87,7 @@ def test_control_event_inspection_segments_common_hvac_events() -> None:
 
 
 def test_alarm_inspection_links_alarm_code_and_observed_values() -> None:
-    result = HVACSnapshotInspector(DATABASE).inspect("alarm_events")
+    result = _inspector().inspect("alarm_events")
 
     discharge = next(row for row in result.rows if row["alarm_code"] == "A217")
     fan = next(row for row in result.rows if row["alarm_code"] == "A311")
@@ -96,7 +101,7 @@ def test_alarm_inspection_links_alarm_code_and_observed_values() -> None:
 
 
 def test_metric_extreme_finds_sustained_low_suction_window() -> None:
-    result = HVACSnapshotInspector(DATABASE).metric_extreme(
+    result = _inspector().metric_extreme(
         "suction_pressure_kpa_g",
         "minimum",
     )
@@ -121,12 +126,12 @@ def test_metric_extreme_finds_sustained_low_suction_window() -> None:
 
 def test_metric_extreme_rejects_unknown_metric() -> None:
     with pytest.raises(SnapshotInspectionError, match="metric is not allowlisted"):
-        HVACSnapshotInspector(DATABASE).metric_extreme("password", "minimum")
+        _inspector().metric_extreme("password", "minimum")
 
 
 def test_metric_extreme_splits_disjoint_minimum_windows() -> None:
     rows = (
-        HVACSnapshotInspector(DATABASE)
+        _inspector()
         .metric_extreme(
             "cop",
             "minimum",
@@ -186,7 +191,7 @@ def test_control_and_alarm_inspection_split_disjoint_windows(tmp_path: Path) -> 
     finally:
         connection.close()
 
-    inspector = HVACSnapshotInspector(database)
+    inspector = _inspector(database)
     compressor = [
         row
         for row in inspector.inspect("control_events").rows
@@ -239,7 +244,7 @@ def test_short_cycling_does_not_count_an_active_hour_boundary_as_a_start(
 
     short_cycling = [
         row
-        for row in HVACSnapshotInspector(database).inspect("control_events").rows
+        for row in _inspector(database).inspect("control_events").rows
         if row["event_type"] == "short_cycling" and row["asset_id"] == "HP-X"
     ]
 
@@ -248,4 +253,9 @@ def test_short_cycling_does_not_count_an_active_hour_boundary_as_a_start(
 
 def test_snapshot_inspection_rejects_unknown_operation() -> None:
     with pytest.raises(SnapshotInspectionError, match="allowlisted"):
-        HVACSnapshotInspector(DATABASE).inspect("raw_sql")
+        _inspector().inspect("raw_sql")
+
+
+def test_snapshot_inspector_requires_an_explicit_project_timezone() -> None:
+    with pytest.raises(TypeError, match="timezone_name"):
+        HVACSnapshotInspector(DATABASE)

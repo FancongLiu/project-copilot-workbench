@@ -87,7 +87,8 @@ The authoritative status and acceptance contract are in
   harder multi-part engineering questions.
 - The benchmark exposed and drove bounded fixes without weakening policy:
   SQLGlot now admits only the additional read-only `ABS` and `EXTRACT`
-  functions; `pytz==2026.2` is hash-locked for DuckDB timezone results;
+  functions; the project timezone is explicit and the CPython-maintained
+  `tzdata==2026.3` package is hash-locked for Windows/Linux portability;
   percentage-point claims no longer double-parse as event counts; short
   documents retain passage-level evidence while long files use word chunks;
   mixed analysis-plus-write requests answer only the safe part and refuse the
@@ -119,6 +120,25 @@ The authoritative status and acceptance contract are in
   force to `origin/codex/agentic-rag-bakeoff`. This delivery ledger is closed:
   the four-version architecture experiment is complete, while the failed
   intelligence gate becomes a separate future backend-quality objective.
+
+## Cross-platform release remediation
+
+- GitHub Actions run `29615856293` preserved an important release failure:
+  Ubuntu formatted standalone snapshot timestamps in UTC because the inspector
+  inherited the runner timezone, while Windows could not construct
+  `ZoneInfo("Asia/Shanghai")` without an IANA database.
+- TDD now requires every snapshot inspector to receive the project timezone
+  explicitly. DuckDB sessions therefore return the same `+08:00` historical
+  windows on developer machines and CI instead of depending on host locale.
+- Current Python documentation recommends the first-party `tzdata` package for
+  systems without system IANA data. `tzdata==2026.3` replaces the earlier
+  direct `pytz` dependency in every runtime/dev/document lock chain; an empty
+  system TZ path still resolves `Asia/Shanghai` from the packaged database.
+- Focused snapshot/direction/release-lock tests, the full Python suite, Ruff,
+  browser acceptance, release guard and the deterministic 23/23 offline
+  evaluation pass locally. Independent portability review reports Critical 0,
+  Important 0 and Minor 0. AR-10 remains open until the replacement GitHub
+  Actions run is green; no failed CI result is being relabeled as complete.
 
 ## Next bounded steps
 

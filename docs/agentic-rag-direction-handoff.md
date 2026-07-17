@@ -217,10 +217,11 @@ event interpretations to deterministic contracts.
 
 The browser ships pinned local Marked and DOMPurify assets. Node.js is not
 required on the company PC at runtime; the vendored files are included in the
-Python package. `pytz==2026.2` is a required runtime dependency because DuckDB
-uses it when returning timezone-aware analytical results. Install from
+Python package. `tzdata==2026.3` is a required runtime dependency because
+Python `ZoneInfo` needs packaged IANA data on Windows, and each DuckDB snapshot
+session receives the project timezone explicitly. Install from
 `requirements.runtime.lock`; do not omit it or historical-window queries can
-fail after otherwise valid SQL execution.
+fail before otherwise valid SQL execution.
 
 ## 8. Known limitations that must remain visible
 

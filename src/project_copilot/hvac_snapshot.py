@@ -41,11 +41,13 @@ class HVACSnapshotInspector:
         self,
         database_path: str | Path,
         *,
-        timezone_name: str | None = None,
+        timezone_name: str,
         sample_seconds: int = 10,
     ) -> None:
         self.database_path = Path(database_path).resolve()
-        self.timezone_name = timezone_name
+        self.timezone_name = timezone_name.strip()
+        if not self.timezone_name:
+            raise SnapshotInspectionError("timezone_name must not be empty")
         if sample_seconds <= 0:
             raise SnapshotInspectionError("sample_seconds must be positive")
         self.sample_seconds = int(sample_seconds)
@@ -78,8 +80,7 @@ class HVACSnapshotInspector:
             read_only=True,
             config=config,
         )
-        if self.timezone_name:
-            connection.execute("SET TimeZone = ?", [self.timezone_name])
+        connection.execute("SET TimeZone = ?", [self.timezone_name])
         return connection
 
     @staticmethod

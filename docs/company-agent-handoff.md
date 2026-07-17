@@ -27,7 +27,8 @@ company localization. A prettier V2/V3 page does not convert a failed answer
 into a pass.
 
 Runtime installation must use the pinned Python lock, including
-`pytz==2026.2`. Browser Markdown is already vendored as Marked 18.0.6 and
+`tzdata==2026.3`. It supplies `ZoneInfo` data on Windows while snapshot queries
+receive the manifest timezone explicitly. Browser Markdown is already vendored as Marked 18.0.6 and
 DOMPurify 3.4.12, so a company deployment does not need Node.js or internet
 access to render answers. Never replace the local scripts with CDN URLs.
 

@@ -23,12 +23,14 @@ def test_wheel_declares_complete_license_files() -> None:
     assert "Permission to use, copy, modify" in notices
 
 
-def test_runtime_declares_duckdb_timezone_dependency() -> None:
+def test_runtime_declares_cross_platform_zoneinfo_data() -> None:
     pyproject = tomllib.loads(
         (REPOSITORY_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     )
+    dependencies = pyproject["project"]["dependencies"]
 
-    assert "pytz==2026.2" in pyproject["project"]["dependencies"]
+    assert "tzdata==2026.3" in dependencies
+    assert not any(dependency.startswith("pytz==") for dependency in dependencies)
 
 
 def test_wheel_includes_compact_agentic_hvac_direction_corpus() -> None:
