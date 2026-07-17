@@ -1,6 +1,6 @@
 # Project Copilot local-private Chat checkpoint
 
-Last updated: 2026-07-18 04:56 (Asia/Shanghai)
+Last updated: 2026-07-18 05:45 (Asia/Shanghai)
 
 The authoritative status and acceptance contract are in
 `docs/AGENTIC_RAG_TASK_LEDGER.json`; append-only changes are in
@@ -114,7 +114,11 @@ The authoritative status and acceptance contract are in
 - `pip-audit --strict` found no known vulnerabilities in
   `requirements.runtime.lock`; LicenseCheck reported all runtime packages
   compatible with the Apache-2.0 project policy. Independent final code review
-  is the remaining pre-commit gate.
+  reported Critical 0 and Important 0.
+- Implementation and detailed handoff commit `3151a02` was pushed without
+  force to `origin/codex/agentic-rag-bakeoff`. This delivery ledger is closed:
+  the four-version architecture experiment is complete, while the failed
+  intelligence gate becomes a separate future backend-quality objective.
 
 ## Next bounded steps
 

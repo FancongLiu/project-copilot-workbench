@@ -4,7 +4,7 @@
   "status_authority": "this_file",
   "checkpoint_projection": "docs/AGENTIC_RAG_CHECKPOINT.md",
   "event_log": "docs/AGENTIC_RAG_TASK_EVENTS.jsonl",
-  "status": "active",
+  "status": "completed",
   "revision": 13,
   "write_owner": "root",
   "objective": "Rapidly deliver and compare four local-private general project intelligence single-Chat architectures: the frozen current baseline plus three architecture-level variants. Commercial HVAC remains the first rigorous validation domain. Select by shared complex-question backtests and human engineer journeys, not visual-detail polish or theoretical optimality.",
@@ -259,13 +259,19 @@
     {
       "id": "AR-06",
       "title": "Chairman trial handoff, deployment documentation, commit and push",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["AR-05"],
       "acceptance": [
         "local trial URL",
         "directional limitations stated",
         "company-PC handoff updated",
         "non-force commit and push"
+      ],
+      "evidence": [
+        "http://127.0.0.1:8788/versions",
+        "docs/agentic-rag-direction-handoff.md",
+        "docs/company-agent-handoff.md",
+        "implementation and handoff commit 3151a02 pushed without force to origin/codex/agentic-rag-bakeoff"
       ]
     },
     {
@@ -406,7 +412,7 @@
     {
       "id": "AR-10",
       "title": "New-direction human acceptance, handoff, verification, commit and push",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": ["AR-09", "AR-16"],
       "acceptance": [
         "Chairman can trial the corrected interface at the local URL",
@@ -414,10 +420,20 @@
         "independent review has no Critical or Important findings",
         "private-data release guard, tests and packaging pass",
         "detailed company-PC handoff is committed and pushed without force"
+      ],
+      "disposition": "Architecture delivery is complete. This is not an intelligence-quality acceptance: the harder real-model benchmark remains at 1/14 automatic hard gates and 21.4/100 independent HVAC review, so no route is promoted over the frozen root and the next worker must improve the shared backend against the unchanged questions.",
+      "evidence": [
+        "four current routes reachable under http://127.0.0.1:8788/versions",
+        "current single-Chat desktop/mobile browser suite: 9 passed, one opt-in real-model case skipped",
+        "opt-in approved-provider browser query retained as a numeric-grounding failure",
+        "independent final staged review: Critical 0, Important 0",
+        "Ruff, 391 collected Python tests, release guard, build, distribution contents, wheel install smoke, dependency audit and license check passed",
+        "commit 3151a02 pushed without force to origin/codex/agentic-rag-bakeoff"
       ]
     }
   ],
   "current_blockers": [],
-  "next_slice_ids": ["AR-10"],
-  "updated_at": "2026-07-18T04:56:00+08:00"
+  "completion_disposition": "Delivered the frozen baseline plus three architecture variants, measured them honestly, and stopped UI detail work because the shared backend failed the harder engineering gate. Future work is a new bounded backend-quality objective, not unfinished work in this delivery ledger.",
+  "next_slice_ids": [],
+  "updated_at": "2026-07-18T05:45:00+08:00"
 }
