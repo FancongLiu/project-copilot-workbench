@@ -4,8 +4,8 @@
   "status_authority": "this_file",
   "checkpoint_projection": "docs/CODEX_RUNTIME_CHECKPOINT.md",
   "event_log": "docs/CODEX_RUNTIME_TASK_EVENTS.jsonl",
-  "status": "in_progress",
-  "revision": 10,
+  "status": "completed",
+  "revision": 11,
   "write_owner": "root",
   "objective": "Deliver a company-private ultra-thin engineer Web client backed by the official Codex Python SDK and Codex agent runtime, preserve the existing Haystack/DuckDB site and synthetic HVAC corpus as comparison assets, and verify the new path with governed read-only tools, reproducible tests, browser acceptance, independent review and deployment handoff.",
   "latest_direct_correction": {
@@ -112,6 +112,12 @@
       "claim": "Independent review findings for document/data evidence binding, question-number grounding, Shell containment, strict configuration, citation-metadata redaction, exact graph highlighting and MCP schema usability were remediated with adversarial tests.",
       "evidence": "tests/test_codex_runtime.py and tests/test_browser_acceptance.py",
       "result": "final independent rereview Ready: Yes with no Critical or Important finding; one minor descendant-timeout-cleanup risk remains documented"
+    },
+    {
+      "id": "CR-E011",
+      "claim": "The bounded Codex SDK and Obsidian-style evidence-graph delivery was committed and pushed without force.",
+      "evidence": "commit cfa8dc8 on branch codex/agentic-rag-bakeoff",
+      "result": "origin/codex/agentic-rag-bakeoff advanced from 74ad158 to cfa8dc8"
     }
   ],
   "safety_boundaries": [
@@ -154,7 +160,7 @@
     {
       "id": "CR-05",
       "title": "Deployment handoff, independent review, final verification, commit and push",
-      "status": "in_progress"
+      "status": "completed"
     }
   ],
   "current_blocker": "No commercial-license blocker was found for the Codex SDK plus company API/Azure route. The remaining production blocker is native Windows host-read isolation. The SDK/App Server/MCP synthetic contract and UI are runnable; company-file real-model deployment remains fail-closed until the validated WSL2/Landlock boundary is integrated and re-accepted."

@@ -27,6 +27,7 @@
     "raw_path_leaks": 2
   },
   "codex_sdk_contract": {
+    "implementation_commit": "cfa8dc8",
     "sdk_version": "0.144.4",
     "sdk_release_status": "beta",
     "runtime_test_file": "tests/test_codex_runtime.py",

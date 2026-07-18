@@ -101,10 +101,12 @@ been migrated to it.
 
 ## Remaining bounded work
 
-1. Refresh deployment/handoff documentation and record the frozen comparison
-   contract without inventing an SDK score.
-2. Re-run focused tests, browser acceptance and static checks.
-3. Stage only the intended files, create a new commit and push without force.
+None for this bounded delivery. Commit `cfa8dc8` was pushed to
+`origin/codex/agentic-rag-bakeoff` without force.
+
+The next production-isolation effort is a separate goal: integrate the already
+validated WSL2/Landlock boundary, then rerun the real-model nine-case campaign.
+It must not be represented as completed by this synthetic SDK contract.
 
 Do not restart the old workspace-write 8790 proof as a company-data service. It
 is architecture evidence only.

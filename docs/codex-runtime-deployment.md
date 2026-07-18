@@ -229,6 +229,8 @@ $env:PROJECT_COPILOT_BROWSER_URL = "http://127.0.0.1:8790"
 
 Current verified counts after independent-review remediation:
 
+Delivery commit: `cfa8dc8` on `codex/agentic-rag-bakeoff`, pushed without force.
+
 - Codex runtime/MCP: 44 passed;
 - runtime + direction + Web: 80 passed;
 - frozen complex-question/evaluator contract: 10 passed;
