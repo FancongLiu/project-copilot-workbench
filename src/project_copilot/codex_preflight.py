@@ -44,6 +44,7 @@ def main() -> int:
             reasoning_effort=os.environ.get(
                 "PROJECT_COPILOT_CODEX_REASONING_EFFORT", "high"
             ),
+            enforce_windows_acl=True,
         )
         marker = verify_elevated_sandbox_preflight(
             settings,

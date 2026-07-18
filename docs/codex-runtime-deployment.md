@@ -4,6 +4,13 @@ This profile proves the product direction **thin Web UI + official Codex agent +
 governed data tools**. It is intentionally limited to the committed synthetic
 HVAC bakeoff. It is not yet an active-workspace or company-data deployment.
 
+> **Current Windows result (2026-07-18): blocked.** The authorized elevated
+> setup completed, but the sandbox account could still read application/root
+> repository files on an ordinarily readable host drive. The startup preflight
+> now tests that path and refuses to start. Do not bypass it. WSL2 Landlock
+> passed the equivalent no-model negative read probe and is the pending
+> production-backend replacement.
+
 ## What this profile does
 
 ```text
@@ -216,7 +223,7 @@ Codex session directory into the Haystack runtime or vice versa.
 
 On 2026-07-18 the official MCP server was started through the official Python
 client over STDIO; it exposed exactly the three tools above and returned
-`HP-03 / 4.001643` for `cop_ranking`. Nineteen Codex-runtime tests, fifty-five focused
+`HP-03 / 4.001643` for `cop_ranking`. Twenty-three Codex-runtime tests, fifty-five focused
 Web regressions, the targeted browser acceptance, and Ruff passed.
 
 Earlier synthetic-only probing with the company endpoint proved that the full
@@ -224,7 +231,10 @@ Codex agent can answer the complex multi-document plus data-quality/COP case,
 where the previous backend refused the equivalent MX01 result. That probe used
 the weaker workspace sandbox and is retained only as architecture evidence.
 
-The current PC has not completed the elevated Windows sandbox setup: the setup
-helper requires an administrator approval prompt. Therefore secure real-model
-end-to-end acceptance remains blocked until the Chairman/company IT explicitly
-authorizes that one-time operating-system change.
+The Chairman authorized the elevated setup and UAC provisioning completed.
+Real negative testing then showed that the sandbox account could still open
+application/root-repository files on the ordinarily readable E: drive. Marker
+schema version 2 now requires that outside-source read to be denied and rejects
+all earlier two-probe markers, so the Windows wrapper remains blocked. WSL2
+Landlock passed the equivalent no-model workspace/private/root probe and is the
+pending replacement backend; secure real-model acceptance has not run.

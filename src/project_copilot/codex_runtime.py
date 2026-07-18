@@ -19,7 +19,7 @@ REPOSITORY_ROOT = PACKAGE_DIR.parents[1]
 ASSET_DIR = PACKAGE_DIR / "codex_assets"
 MCP_SERVER_NAME = "hvac"
 PREFLIGHT_MARKER_NAME = "elevated-sandbox-preflight.json"
-PREFLIGHT_SCHEMA_VERSION = 1
+PREFLIGHT_SCHEMA_VERSION = 2
 PERMISSIONS_PROFILE_VERSION = 1
 DENIED_READ_EXIT_CODE = 73
 MCP_TOOLS = {
@@ -43,6 +43,7 @@ class CodexRuntimeSettings:
     python_executable: Path = field(default_factory=lambda: Path(sys.executable))
     reasoning_effort: str = "high"
     timeout_seconds: int = 240
+    enforce_windows_acl: bool = False
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,55 @@ def _path_is_within(path: Path, parent: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _codex_sandbox_group_sid() -> str:
+    if os.name != "nt":
+        raise CodexRuntimeError(
+            "Private runtime ACL enforcement requires native Windows"
+        )
+    try:
+        import win32security
+
+        sid, _, _ = win32security.LookupAccountName(None, "CodexSandboxUsers")
+        return str(win32security.ConvertSidToStringSid(sid))
+    except Exception as exc:
+        raise CodexRuntimeError(
+            "Codex elevated sandbox group is unavailable"
+        ) from exc
+
+
+def protect_private_runtime_paths(
+    paths: list[Path],
+    *,
+    runner: Any = subprocess.run,
+    sid_lookup: Any = _codex_sandbox_group_sid,
+) -> None:
+    sid = str(sid_lookup()).strip()
+    if not sid:
+        raise CodexRuntimeError("Codex elevated sandbox group is unavailable")
+    for path in paths:
+        resolved = path.resolve()
+        if not resolved.exists():
+            raise CodexRuntimeError("Private runtime ACL target is unavailable")
+        completed = runner(
+            [
+                "icacls.exe",
+                str(resolved),
+                "/deny",
+                f"*{sid}:(OI)(CI)(R)",
+                "/T",
+                "/Q",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise CodexRuntimeError("Could not enforce private runtime ACL")
 
 
 class CodexWorkspaceBuilder:
@@ -161,6 +211,8 @@ class CodexWorkspaceBuilder:
             self._config_text(workspace, database_path, codex_home),
             encoding="utf-8",
         )
+        if self.settings.enforce_windows_acl:
+            protect_private_runtime_paths([evidence_root])
         return PreparedCodexWorkspace(
             session_root=session_root,
             workspace_root=workspace,
@@ -311,6 +363,22 @@ def _sandbox_probe_command(
     ]
 
 
+def _denied_read_probe_script(path: Path) -> str:
+    return (
+        "$ErrorActionPreference = 'Stop'; "
+        "try { "
+        f"$stream = [System.IO.File]::OpenRead({_powershell_literal(path)}); "
+        "$null = $stream.ReadByte(); $stream.Dispose(); exit 0 "
+        "} catch { "
+        "$errorType = $_.Exception.GetType().FullName; "
+        "$innerType = if ($_.Exception.InnerException) { "
+        "$_.Exception.InnerException.GetType().FullName } else { '' }; "
+        "if ($errorType -match 'UnauthorizedAccess|SecurityException' -or "
+        "$innerType -match 'UnauthorizedAccess|SecurityException') { "
+        f"exit {DENIED_READ_EXIT_CODE} }}; exit 74 }}"
+    )
+
+
 def verify_elevated_sandbox_preflight(
     settings: CodexRuntimeSettings,
     corpus_root: str | Path,
@@ -327,19 +395,9 @@ def verify_elevated_sandbox_preflight(
         "-TotalCount 1 | Out-Null"
     )
     denied_path = prepared.database_path
-    denied_script = (
-        "$ErrorActionPreference = 'Stop'; "
-        "try { "
-        f"$stream = [System.IO.File]::OpenRead({_powershell_literal(denied_path)}); "
-        "$null = $stream.ReadByte(); $stream.Dispose(); exit 0 "
-        "} catch { "
-        "$errorType = $_.Exception.GetType().FullName; "
-        "$innerType = if ($_.Exception.InnerException) { "
-        "$_.Exception.InnerException.GetType().FullName } else { '' }; "
-        "if ($errorType -match 'UnauthorizedAccess|SecurityException' -or "
-        "$innerType -match 'UnauthorizedAccess|SecurityException') { "
-        f"exit {DENIED_READ_EXIT_CODE} }}; exit 74 }}"
-    )
+    denied_script = _denied_read_probe_script(denied_path)
+    application_source = PACKAGE_DIR / "web.py"
+    application_source_script = _denied_read_probe_script(application_source)
     env = _controlled_environment()
     env["CODEX_HOME"] = str(prepared.codex_home)
     run_kwargs = {
@@ -349,7 +407,7 @@ def verify_elevated_sandbox_preflight(
         "text": True,
         "encoding": "utf-8",
         "errors": "replace",
-        "timeout": 30,
+        "timeout": 120,
         "check": False,
     }
     try:
@@ -365,6 +423,14 @@ def verify_elevated_sandbox_preflight(
             _sandbox_probe_command(settings, prepared, denied_script),
             **run_kwargs,
         )
+        source_denied = runner(
+            _sandbox_probe_command(
+                settings,
+                prepared,
+                application_source_script,
+            ),
+            **run_kwargs,
+        )
     except subprocess.TimeoutExpired as exc:
         raise CodexRuntimeError("Codex elevated sandbox preflight timed out") from exc
     if denied.returncode == 0:
@@ -374,6 +440,14 @@ def verify_elevated_sandbox_preflight(
     if denied.returncode != DENIED_READ_EXIT_CODE:
         raise CodexRuntimeError(
             "Codex elevated sandbox preflight could not verify private database denial"
+        )
+    if source_denied.returncode == 0:
+        raise CodexRuntimeError(
+            "Codex elevated sandbox preflight failed to isolate application source"
+        )
+    if source_denied.returncode != DENIED_READ_EXIT_CODE:
+        raise CodexRuntimeError(
+            "Codex elevated sandbox preflight could not verify application source denial"
         )
 
     marker.parent.mkdir(parents=True, exist_ok=True)
@@ -657,6 +731,7 @@ class CodexRuntime:
             timeout_seconds=int(
                 os.environ.get("PROJECT_COPILOT_CODEX_TIMEOUT_SECONDS", "240")
             ),
+            enforce_windows_acl=True,
         )
         validate_elevated_sandbox_preflight(settings)
         return cls(settings, corpus_root)

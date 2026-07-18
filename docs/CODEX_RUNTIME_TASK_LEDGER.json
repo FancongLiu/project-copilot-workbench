@@ -5,7 +5,7 @@
   "checkpoint_projection": "docs/CODEX_RUNTIME_CHECKPOINT.md",
   "event_log": "docs/CODEX_RUNTIME_TASK_EVENTS.jsonl",
   "status": "blocked",
-  "revision": 4,
+  "revision": 6,
   "write_owner": "root",
   "objective": "Deliver a company-private thin Web mode backed by the official Codex agent runtime, then compare it fairly with the existing Haystack/DuckDB backend on the same synthetic HVAC corpus, model endpoint and complex questions.",
   "product_contract": {
@@ -32,7 +32,7 @@
     "sdk_status": "The official TypeScript SDK was verified, but its current Windows child-process finalizer and the nested Codex Desktop job boundary made result capture unreliable in this environment. The SDK wraps the same CLI, so the prototype uses the official CLI transport directly.",
     "provider": "custom OpenAI-compatible Responses provider with supports_websockets=false",
     "data_tool": "official MCP Python SDK 1.28.1 plus DuckDB 1.5.4 with three fixed read-only operations and no model-supplied SQL or path",
-    "policy": "Codex 0.144.5 custom Permission Profile plus required MCP tools; elevated Windows sandbox is mandatory",
+    "policy": "Windows elevated setup is installed but failed the host-source negative read; WSL2 Landlock with Codex 0.144.5 is the validated replacement candidate and is not yet integrated",
     "ui": "reuse the current single-Chat page; no fifth visual architecture"
   },
   "measured_evidence": [
@@ -64,7 +64,7 @@
       "id": "CR-E005",
       "claim": "The remediated adapter creates a fresh session per request, keeps DuckDB outside command read permissions, validates structured citations, and removes raw thread IDs.",
       "evidence": "tests/test_codex_runtime.py",
-      "result": "19 passed"
+      "result": "23 passed"
     },
     {
       "id": "CR-E006",
@@ -74,21 +74,35 @@
     },
     {
       "id": "CR-E007",
+      "status": "superseded_by_CR-E010",
       "claim": "Secure real-model acceptance cannot run on this PC until the elevated Windows sandbox setup receives administrator approval.",
       "evidence": "official codex sandbox permission-profile smoke",
       "result": "unelevated rejected restricted reads; elevated helper requested an administrator setup prompt"
     },
     {
       "id": "CR-E008",
-      "claim": "The Web service now fails closed until an operator probe proves that the generated permission profile reads the copied workspace and denies the private DuckDB file.",
+      "claim": "The Web service now fails closed until an operator probe proves that the generated permission profile reads the copied workspace and denies both the private DuckDB file and application source outside the workspace.",
       "evidence": "tests/test_codex_runtime.py and scripts/run-codex.ps1",
-      "result": "preflight marker is written only after allow=0 and denied-read=73; marker is bound to the selected Codex executable"
+      "result": "schema-v2 marker is written only after allow=0, private-deny=73 and application-source-deny=73; every schema-v1 marker is rejected"
     },
     {
       "id": "CR-E009",
+      "status": "superseded_by_post_UAC_rereview",
       "claim": "Final independent code rereview found no remaining Critical or Important implementation findings.",
       "evidence": "bounded secure_codex_rereview on the 2026-07-18 working tree",
       "result": "Critical=0; Important=0; not merge-ready only because secure real-model/UAC acceptance is still blocked"
+    },
+    {
+      "id": "CR-E010",
+      "claim": "The authorized elevated Windows setup completed, but the sandbox account could still open application/root-repository files outside the copied workspace.",
+      "evidence": "local OS probes on 2026-07-18 after codex sandbox setup --elevated --current-user",
+      "result": "setup exit=0; private DuckDB with explicit ACL exit=73; root repository read exit=0; Windows production startup remains blocked"
+    },
+    {
+      "id": "CR-E011",
+      "claim": "The existing WSL2 environment enforces the intended allow-only read boundary with the official Codex 0.144.5 Linux binary.",
+      "evidence": "local WSL2 Landlock probe using a custom Permission Profile",
+      "result": "workspace allowed exit=0; outside private file exit=1; mounted Windows root repository exit=1"
     }
   ],
   "safety_boundaries": [
@@ -128,7 +142,7 @@
       "id": "CR-04",
       "title": "Frozen complex benchmark, browser acceptance and human review",
       "status": "blocked",
-      "blocker": "Secure real-model rerun requires the one-time elevated Windows sandbox setup and administrator approval."
+      "blocker": "Windows elevated sandbox failed the outside-source negative read. WSL2/Landlock passed the prototype boundary but still needs production integration."
     },
     {
       "id": "CR-05",
@@ -136,5 +150,5 @@
       "status": "in_progress"
     }
   ],
-  "current_blocker": "The official elevated Windows sandbox is not installed on this PC. Enabling it changes local users, ACLs, firewall rules and policy, so it requires explicit Chairman/company-IT approval before secure real-model acceptance."
+  "current_blocker": "The authorized Windows elevated sandbox is installed but cannot isolate readable host drives on this PC. Secure real-model acceptance now requires explicit approval and implementation of the validated WSL2/Landlock backend."
 }

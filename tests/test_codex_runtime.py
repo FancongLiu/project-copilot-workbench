@@ -30,7 +30,11 @@ CORPUS_ROOT = REPOSITORY_ROOT / "examples" / "agentic_hvac_bakeoff"
 WEB_PROJECT_ROOT = REPOSITORY_ROOT / "examples" / "synthetic_hvac"
 
 
-def _settings(tmp_path: Path) -> CodexRuntimeSettings:
+def _settings(
+    tmp_path: Path,
+    *,
+    enforce_windows_acl: bool = False,
+) -> CodexRuntimeSettings:
     codex_bin = tmp_path / "codex.exe"
     codex_bin.write_bytes(b"codex")
     return CodexRuntimeSettings(
@@ -40,6 +44,7 @@ def _settings(tmp_path: Path) -> CodexRuntimeSettings:
         api_key="top-secret",
         model="gpt-test",
         python_executable=Path(sys.executable),
+        enforce_windows_acl=enforce_windows_acl,
     )
 
 
@@ -83,6 +88,73 @@ def test_workspace_builder_creates_fresh_least_privilege_session(
     assert first.output_schema.is_file()
 
 
+def test_workspace_builder_protects_private_runtime_when_acl_is_required(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    protected: list[Path] = []
+    monkeypatch.setattr(
+        codex_runtime,
+        "protect_private_runtime_paths",
+        lambda paths: protected.extend(paths),
+    )
+
+    prepared = CodexWorkspaceBuilder(
+        CORPUS_ROOT,
+        _settings(tmp_path, enforce_windows_acl=True),
+    ).prepare()
+
+    assert protected == [prepared.database_path.parent]
+
+
+def test_private_runtime_acl_denies_read_to_codex_sandbox_group(
+    tmp_path: Path,
+) -> None:
+    private = tmp_path / "private"
+    private.mkdir()
+    calls: list[list[str]] = []
+
+    def fake_runner(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    codex_runtime.protect_private_runtime_paths(
+        [private],
+        runner=fake_runner,
+        sid_lookup=lambda: "S-1-5-21-test-1004",
+    )
+
+    assert calls == [
+        [
+            "icacls.exe",
+            str(private),
+            "/deny",
+            "*S-1-5-21-test-1004:(OI)(CI)(R)",
+            "/T",
+            "/Q",
+        ]
+    ]
+
+
+def test_private_runtime_acl_fails_closed_when_icacls_fails(tmp_path: Path) -> None:
+    private = tmp_path / "private"
+    private.mkdir()
+
+    def failed_runner(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 5, stdout="", stderr="private detail")
+
+    with pytest.raises(CodexRuntimeError, match="private runtime ACL") as error:
+        codex_runtime.protect_private_runtime_paths(
+            [private],
+            runner=failed_runner,
+            sid_lookup=lambda: "S-1-5-21-test-1004",
+        )
+
+    assert "private detail" not in str(error.value)
+
+
 def test_codex_launch_is_ephemeral_and_keeps_secret_out_of_argv(
     tmp_path: Path,
 ) -> None:
@@ -109,9 +181,11 @@ def test_elevated_sandbox_preflight_proves_allowed_and_denied_reads(
 ) -> None:
     settings = _settings(tmp_path)
     calls: list[list[str]] = []
+    timeouts: list[object] = []
 
     def fake_runner(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         calls.append(argv)
+        timeouts.append(kwargs.get("timeout"))
         joined = " ".join(argv)
         return subprocess.CompletedProcess(
             argv,
@@ -129,10 +203,12 @@ def test_elevated_sandbox_preflight_proves_allowed_and_denied_reads(
     payload = json.loads(marker.read_text(encoding="utf-8"))
     assert payload["status"] == "passed"
     assert payload["codex_bin"] == str(settings.codex_bin.resolve())
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert calls[0][1:6] == ["sandbox", "-P", "project-copilot", "-C", calls[0][5]]
     assert "AGENTS.md" in " ".join(calls[0])
     assert "private-evidence" in " ".join(calls[1])
+    assert "web.py" in " ".join(calls[2])
+    assert timeouts == [120, 120, 120]
 
 
 def test_elevated_sandbox_preflight_rejects_readable_private_database(
@@ -150,6 +226,32 @@ def test_elevated_sandbox_preflight_rejects_readable_private_database(
             settings,
             CORPUS_ROOT,
             runner=readable_runner,
+        )
+
+    assert not codex_runtime.preflight_marker_path(settings).exists()
+
+
+def test_elevated_sandbox_preflight_rejects_readable_application_source(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+
+    def source_readable_runner(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        joined = " ".join(argv)
+        return subprocess.CompletedProcess(
+            argv,
+            73 if "private-evidence" in joined else 0,
+            stdout="",
+            stderr="",
+        )
+
+    with pytest.raises(CodexRuntimeError, match="failed to isolate application source"):
+        codex_runtime.verify_elevated_sandbox_preflight(
+            settings,
+            CORPUS_ROOT,
+            runner=source_readable_runner,
         )
 
     assert not codex_runtime.preflight_marker_path(settings).exists()
@@ -185,6 +287,23 @@ def test_runtime_refuses_start_without_matching_elevated_preflight(
         json.dumps(
             {
                 "schema_version": 1,
+                "permissions_profile_version": 1,
+                "status": "passed",
+                "codex_bin": str(settings.codex_bin.resolve()),
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(CodexRuntimeError, match="preflight is outdated"):
+        CodexRuntime.from_environment(
+            corpus_root=CORPUS_ROOT,
+            application_runtime=tmp_path / "application-runtime",
+        )
+
+    marker.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
                 "permissions_profile_version": 1,
                 "status": "passed",
                 "codex_bin": str(tmp_path / "different-codex.exe"),

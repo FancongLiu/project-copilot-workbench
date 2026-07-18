@@ -1,6 +1,6 @@
 # Codex runtime comparison checkpoint
 
-Last updated: 2026-07-18 16:10 (Asia/Shanghai)
+Last updated: 2026-07-18 18:30 (Asia/Shanghai)
 
 The authoritative scope and status are in `docs/CODEX_RUNTIME_TASK_LEDGER.json`.
 
@@ -23,6 +23,9 @@ stderr leakage and false health telemetry.
 - A custom Permission Profile grants minimal runtime reads, read-only access to
   that request's copied documents, temporary writes, and no command network.
 - The native Windows profile requires the official `elevated` sandbox.
+- Windows sessions add an explicit deny-read ACL for `CodexSandboxUsers` to
+  each private DuckDB directory. The startup probe also requires application
+  source outside the copied workspace to be unreadable.
 - DuckDB is outside the command sandbox. The official MCP Python SDK 1.28.1
   exposes only `schema`, `data_quality`, and `cop_ranking`.
 - Final output is schema-constrained JSON. Citations are accepted only when the
@@ -41,7 +44,7 @@ stderr leakage and false health telemetry.
 
 ## Verification evidence
 
-- `tests/test_codex_runtime.py`: 19 passed.
+- `tests/test_codex_runtime.py`: 23 passed.
 - Runtime + direction + Web focused regressions: 55 passed.
 - Targeted browser acceptance: passed.
 - Ruff on changed Python: passed.
@@ -49,29 +52,34 @@ stderr leakage and false health telemetry.
   `cop_ranking`; `cop_ranking` returned HP-03 at 4.001643.
 - Codex `mcp list` recognized the generated required server and redacted its
   environment values.
-- Final independent rereview found no Critical or Important code findings; it
-  remains not merge-ready only because real elevated-sandbox acceptance is an
-  external approval blocker.
+- A later post-UAC rereview invalidated the earlier clear verdict: legacy
+  two-probe readiness markers could bypass the new outside-source check. Marker
+  schema version 2 now rejects every older marker. No merge-ready claim remains.
 
 ## Blocker
 
-Secure real-model acceptance is blocked because this PC has not completed the
-official elevated Windows sandbox setup. Restricted-read Permission Profiles
-are rejected by the unelevated backend. The elevated setup helper requires an
-administrator prompt and changes dedicated sandbox users, ACLs, firewall rules,
-private-desktop behavior and local policy. It must not be enabled without
-explicit Chairman/company-IT approval.
+The Chairman authorized the official elevated Windows setup and the UAC install
+completed successfully. The real negative test then proved that
+`CodexSandboxOffline` still inherits ordinary `Users/Everyone` read access to
+the E: drive: it could open application/root-repository source outside the
+copied workspace. The private DuckDB becomes unreadable only after an explicit
+deny ACL. Therefore the Windows backend remains fail-closed and must not run a
+real model against company files.
+
+An existing Ubuntu WSL2 environment was probed with the official Codex 0.144.5
+Linux binary. Its Landlock profile produced `allowed=0`, `private=1`, and
+`root-repository=1`: the copied workspace was readable while both outside paths
+were denied. This validates WSL2 as the next isolation architecture, but it is
+not yet integrated with the Windows Web/MCP runtime.
 
 Do not restart the old workspace-write 8790 proof as a company-data service.
 It is architecture evidence only.
 
-## Next action after approval
+## Next action
 
-1. Run the official elevated sandbox setup after approval and accept the
-   one-time UAC change.
-2. Start with `scripts/run-codex.ps1`; its automatic allow/deny preflight must
-   pass before the Web process is launched.
-3. Run one secure real-model MX01 request.
-4. Obtain an independent final rereview.
-5. Commit and push only if the elevated profile fails closed on outside reads,
-   all tests remain green, and no Critical/Important review item remains.
+1. Obtain Chairman approval to replace the Windows execution backend with the
+   validated WSL2/Landlock backend.
+2. Keep the Windows Web adapter and governed MCP broker, but launch the official
+   Linux Codex binary inside WSL2 with translated read-only paths.
+3. Repeat workspace/private/root negative reads through the production wrapper.
+4. Only then run one secure real-model MX01 request and browser acceptance.
