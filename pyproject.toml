@@ -17,6 +17,7 @@ dependencies = [
   "httpx==0.28.1",
   "jieba==0.42.1",
   "jinja2==3.1.6",
+  "mcp==1.28.1",
   "openai==2.37.0",
   "pandera[polars]==0.31.1",
   "polars==1.42.1",
@@ -47,6 +48,7 @@ reranking = [
 
 [project.scripts]
 project-copilot = "project_copilot.cli:main"
+project-copilot-codex-preflight = "project_copilot.codex_preflight:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

@@ -36,6 +36,7 @@ def test_direction_layout_keeps_composer_fixed_and_deemphasizes_context(
                     'HP-03 在本次快照期内最节能。',
                     '1. HP-03：4.001643',
                     '2. HP-02：3.995067',
+                    'CR-017 自 **2026-01-16 12:00（+08:00）**生效。',
                     '依据[当前资产台账](background/asset-register.md)进行核对。',
                     '另一份依据为[控制规范](docs/spec(v2).md)。',
                     '裸路径 docs/raw/internal.md 和 C:\\private\\runtime\\secret.md 不应显示。',
@@ -86,6 +87,11 @@ def test_direction_layout_keeps_composer_fixed_and_deemphasizes_context(
         answer_top = last_answer.evaluate("node => node.getBoundingClientRect().top")
         assert conversation_top <= answer_top <= conversation_top + 40
         expect(last_answer.locator("ol li")).to_have_count(2)
+        expect(
+            last_answer.locator("strong").filter(
+                has_text="2026-01-16 12:00（+08:00）"
+            )
+        ).to_have_count(1)
         expect(last_answer.locator(".answer-context p")).to_have_count(2)
         citation_summary = last_answer.locator(".citations > summary")
         expect(citation_summary).to_contain_text("7月15日控制评审会议纪要.docx")

@@ -1,0 +1,140 @@
+{
+  "schema_version": "1",
+  "ledger_id": "project-copilot-codex-runtime-20260718",
+  "status_authority": "this_file",
+  "checkpoint_projection": "docs/CODEX_RUNTIME_CHECKPOINT.md",
+  "event_log": "docs/CODEX_RUNTIME_TASK_EVENTS.jsonl",
+  "status": "blocked",
+  "revision": 4,
+  "write_owner": "root",
+  "objective": "Deliver a company-private thin Web mode backed by the official Codex agent runtime, then compare it fairly with the existing Haystack/DuckDB backend on the same synthetic HVAC corpus, model endpoint and complex questions.",
+  "product_contract": {
+    "input": [
+      "one natural-language project question or a named high-frequency workflow",
+      "an isolated project copy containing approved documents and read-only datasets",
+      "a company-approved OpenAI-compatible Responses endpoint"
+    ],
+    "process": [
+      "Codex plans iterative evidence gathering inside an isolated workspace",
+      "immutable named tools expose bounded read-only database operations",
+      "a required local MCP server exposes only three fixed read-only database operations outside the command sandbox",
+      "the same existing Chat UI renders the final Markdown and original-filename citations"
+    ],
+    "output": [
+      "one engineer-readable Markdown answer",
+      "bounded tool activity without private chain-of-thought",
+      "exact human-readable source filenames",
+      "measured comparison evidence against the existing backend"
+    ]
+  },
+  "selection": {
+    "runtime": "official openai/codex CLI JSONL transport",
+    "sdk_status": "The official TypeScript SDK was verified, but its current Windows child-process finalizer and the nested Codex Desktop job boundary made result capture unreliable in this environment. The SDK wraps the same CLI, so the prototype uses the official CLI transport directly.",
+    "provider": "custom OpenAI-compatible Responses provider with supports_websockets=false",
+    "data_tool": "official MCP Python SDK 1.28.1 plus DuckDB 1.5.4 with three fixed read-only operations and no model-supplied SQL or path",
+    "policy": "Codex 0.144.5 custom Permission Profile plus required MCP tools; elevated Windows sandbox is mandatory",
+    "ui": "reuse the current single-Chat page; no fifth visual architecture"
+  },
+  "measured_evidence": [
+    {
+      "id": "CR-E001",
+      "claim": "The company Responses endpoint works with Codex when configured as a custom provider with supports_websockets=false.",
+      "evidence": "D:/project-copilot-codex-probe/probe-provider.stdout.jsonl",
+      "result": "turn.completed"
+    },
+    {
+      "id": "CR-E002",
+      "claim": "Codex completed the complex data-quality plus load-weighted-COP question using two immutable governed tools and targeted project documents.",
+      "evidence": "D:/project-copilot-codex-probe/probe-rules.stdout.jsonl",
+      "result": "turn.completed; HP-02 missing/frozen, HP-03 duplicates and highest COP, HP-04 out-of-order"
+    },
+    {
+      "id": "CR-E003",
+      "claim": "The existing backend failed the equivalent MX01 case after its tools succeeded because the final numeric grounding gate rejected the answer.",
+      "evidence": "evaluation/results/four-version-shared-backend-live.json",
+      "result": "hard_gate_pass=false; refused=true; no table or citations"
+    },
+    {
+      "id": "CR-E004",
+      "claim": "The official MCP Python SDK exposes only three fixed read-only HVAC tools and returns the frozen COP result.",
+      "evidence": "local official MCP STDIO smoke on 2026-07-18",
+      "result": "tools=schema,data_quality,cop_ranking; cop_ranking first row HP-03 4.001643"
+    },
+    {
+      "id": "CR-E005",
+      "claim": "The remediated adapter creates a fresh session per request, keeps DuckDB outside command read permissions, validates structured citations, and removes raw thread IDs.",
+      "evidence": "tests/test_codex_runtime.py",
+      "result": "19 passed"
+    },
+    {
+      "id": "CR-E006",
+      "claim": "Focused Web and existing-backend regressions remain green after the secure runtime refactor.",
+      "evidence": "D:/project-copilot-codex-probe/pytest-focused-secure.log",
+      "result": "55 passed"
+    },
+    {
+      "id": "CR-E007",
+      "claim": "Secure real-model acceptance cannot run on this PC until the elevated Windows sandbox setup receives administrator approval.",
+      "evidence": "official codex sandbox permission-profile smoke",
+      "result": "unelevated rejected restricted reads; elevated helper requested an administrator setup prompt"
+    },
+    {
+      "id": "CR-E008",
+      "claim": "The Web service now fails closed until an operator probe proves that the generated permission profile reads the copied workspace and denies the private DuckDB file.",
+      "evidence": "tests/test_codex_runtime.py and scripts/run-codex.ps1",
+      "result": "preflight marker is written only after allow=0 and denied-read=73; marker is bound to the selected Codex executable"
+    },
+    {
+      "id": "CR-E009",
+      "claim": "Final independent code rereview found no remaining Critical or Important implementation findings.",
+      "evidence": "bounded secure_codex_rereview on the 2026-07-18 working tree",
+      "result": "Critical=0; Important=0; not merge-ready only because secure real-model/UAC acceptance is still blocked"
+    }
+  ],
+  "safety_boundaries": [
+    "No company data, credentials, endpoint values, runtime indexes or model sessions enter Git.",
+    "The browser never receives an API key.",
+    "Each request receives a fresh ephemeral project copy; hidden benchmark truth and repository internals are excluded.",
+    "DuckDB remains outside the command sandbox and is reachable only through a required official MCP server with three fixed read-only operations.",
+    "A custom Permission Profile grants only minimal runtime reads, one copied document workspace, temporary writes, and no command network access.",
+    "Native Windows deployment requires the elevated sandbox and fails closed when that administrator-approved setup is unavailable.",
+    "Web search and direct network access are disabled inside project-analysis turns.",
+    "OnionQuant Cron, context_state, Inbox, Outbox and runtime state remain untouched.",
+    "Existing untracked evaluation results remain untouched."
+  ],
+  "slices": [
+    {
+      "id": "CR-01",
+      "title": "Current research and real runtime feasibility probe",
+      "status": "completed",
+      "evidence": [
+        "official Codex manual refreshed 2026-07-18",
+        "openai/codex GitHub current metadata",
+        "D:/project-copilot-codex-probe/probe-provider.stdout.jsonl",
+        "D:/project-copilot-codex-probe/probe-rules.stdout.jsonl"
+      ]
+    },
+    {
+      "id": "CR-02",
+      "title": "TDD implementation of isolated workspace, provider, JSONL runtime and governed tools",
+      "status": "completed"
+    },
+    {
+      "id": "CR-03",
+      "title": "Reuse existing Chat UI with runtime switch and named workflow buttons",
+      "status": "completed"
+    },
+    {
+      "id": "CR-04",
+      "title": "Frozen complex benchmark, browser acceptance and human review",
+      "status": "blocked",
+      "blocker": "Secure real-model rerun requires the one-time elevated Windows sandbox setup and administrator approval."
+    },
+    {
+      "id": "CR-05",
+      "title": "Deployment handoff, independent review, verification, commit and push",
+      "status": "in_progress"
+    }
+  ],
+  "current_blocker": "The official elevated Windows sandbox is not installed on this PC. Enabling it changes local users, ACLs, firewall rules and policy, so it requires explicit Chairman/company-IT approval before secure real-model acceptance."
+}

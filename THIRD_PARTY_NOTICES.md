@@ -11,6 +11,8 @@ The project depends on unmodified open-source packages installed through Python 
 | Pandera | Data contract validation | MIT | https://github.com/unionai-oss/pandera |
 | SQLGlot | SQL parsing and AST policy checks | MIT | https://github.com/tobymao/sqlglot |
 | FastAPI | Web API framework | MIT | https://github.com/fastapi/fastapi |
+| Model Context Protocol Python SDK 1.28.1 | Governed read-only Codex data tools | MIT | https://github.com/modelcontextprotocol/python-sdk |
+| OpenAI Codex CLI 0.144.5 | Optional external agent runtime installed by the evaluation bootstrap | Apache-2.0 | https://github.com/openai/codex |
 | python-multipart | Bounded Web file uploads | Apache-2.0 | https://github.com/Kludex/python-multipart |
 | Docling | Optional Office/PDF parser extra | MIT | https://github.com/docling-project/docling |
 | Docling Haystack integration | Structured Office/PDF chunks and citation metadata | Apache-2.0 | https://github.com/deepset-ai/haystack-core-integrations/tree/main/integrations/docling |

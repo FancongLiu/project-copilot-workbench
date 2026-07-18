@@ -30,7 +30,7 @@
       <div class="context-strip" aria-label="当前分析范围">
         <span data-testid="active-project">{{ workspace_name }}</span>
         <span data-testid="active-source-count">{{ source_count }} 个文件</span>
-        <span>本地私有索引</span>
+        <span>{{ scope_label }}</span>
         {% if show_version_nav %}<span>{{ architecture_name }}</span>{% endif %}
         {% if model_backed %}<span>已批准模型服务</span>{% endif %}
       </div>
@@ -42,9 +42,9 @@
             <div class="message-body">
               <p>我可以把知识依据和数据计算放在同一个回答里。先试试下面的问题：</p>
               <div class="suggestions" aria-label="示例问题">
-                <button type="button" data-question="这个项目当前的目标和未完成事项是什么？">查询项目目标</button>
-                <button type="button" data-question="最近有哪些配置、决定或变更？">核对配置与变更</button>
-                <button type="button" data-question="有哪些数据、回测或分析结果可以查询？">查看数据与回测</button>
+                <button type="button" data-workflow="project-overview" data-question="这个项目当前的目标和未完成事项是什么？">查询项目目标</button>
+                <button type="button" data-workflow="configuration-review" data-question="最近有哪些配置、决定或变更？">核对配置与变更</button>
+                <button type="button" data-workflow="data-quality-efficiency" data-question="检查当前数据质量，并说明哪些分析结果可信、哪些需要谨慎。">检查数据质量</button>
               </div>
             </div>
           </article>
@@ -81,11 +81,13 @@
       {% endif %}
 
       <form id="direction-form" class="composer">
+        {% if uploads_enabled %}
         <label class="upload-button" for="direction-files" title="&#19978;&#20256;&#25991;&#20214;" aria-label="&#19978;&#20256;&#25991;&#20214;">
           <span aria-hidden="true">+</span>
           <span class="upload-button-label">&#19978;&#20256;</span>
         </label>
         <input id="direction-files" class="sr-only" type="file" multiple accept=".md,.txt,.pdf,.docx,.pptx,.xlsx,.csv,.json,.html,.htm,.odt,.ods,.odp,.zip">
+        {% endif %}
         <label class="sr-only" for="direction-question">输入问题</label>
         <textarea id="direction-question" rows="2" maxlength="1000" required placeholder="输入你想查询的项目问题……"></textarea>
         <button type="submit">发送</button>

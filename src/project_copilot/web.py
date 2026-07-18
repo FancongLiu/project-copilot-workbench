@@ -28,6 +28,7 @@ from project_copilot.company_api import (
     CompanyAPISettings,
     load_codex_switch_settings,
 )
+from project_copilot.codex_runtime import CodexRuntime, CodexRuntimeError
 from project_copilot.contract import ProjectPackage, load_project_package
 from project_copilot.defrost_diagnostics import (
     DefrostAssetContext,
@@ -64,6 +65,12 @@ class DirectionTurn(BaseModel):
 class DirectionQuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=1_000)
     history: list[DirectionTurn] = Field(default_factory=list, max_length=6)
+    workflow_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+    )
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -275,14 +282,21 @@ def create_app(
         runtime_root or Path(tempfile.gettempdir()) / "project-copilot-workbench-v2"
     ).resolve()
     selected_runtime.mkdir(parents=True, exist_ok=True)
+    direction_runtime_mode = os.environ.get(
+        "PROJECT_COPILOT_AGENT_RUNTIME", "haystack"
+    ).casefold()
+    if direction_runtime_mode not in {"codex", "haystack"}:
+        raise RuntimeError(f"Unsupported Agent runtime: {direction_runtime_mode}")
 
     legacy_knowledge, knowledge_provider_name = resolve_knowledge_provider(package)
     manager = WorkspaceManager(selected_runtime)
-    embedding_backend = _build_embedding_backend()
+    embedding_backend = (
+        None if direction_runtime_mode == "codex" else _build_embedding_backend()
+    )
     indexer = ProjectIndexer(
         manager,
         embedding_backend=embedding_backend,
-        reranker=_build_reranker(),
+        reranker=None if direction_runtime_mode == "codex" else _build_reranker(),
     )
     _bootstrap_workspace(manager, indexer, package)
     if embedding_backend is not None:
@@ -489,17 +503,40 @@ def create_app(
             )
         return citations
 
-    app.state.direction_demo = (
-        DirectionAgent(
-            DirectionToolbox(
-                direction_corpus,
-                workspace_search=search_active_workspace,
-            ),
-            chat_generator,
+    if direction_runtime_mode == "codex":
+        app.state.direction_demo = CodexRuntime.from_environment(
+            corpus_root=direction_corpus,
+            application_runtime=selected_runtime,
         )
-        if model_backed
-        else DirectionDemo(direction_corpus)
-    )
+        model_backed = True
+        app.state.model_mode = "codex-agent-runtime"
+        codex_remote = bool(
+            getattr(app.state.direction_demo, "provider_is_remote", True)
+        )
+        egress_detail = {
+            "chat": "approved-remote" if codex_remote else "loopback",
+            "embedding": "disabled",
+            "knowledge": "local",
+        }
+        egress_channels = ["company-chat"] if codex_remote else []
+        downstream_approval_acknowledged = codex_remote
+        egress_mode = "approved-provider" if codex_remote else "loopback-only"
+        egress_display = (
+            "Approved company endpoint" if codex_remote else "Loopback only"
+        )
+    elif direction_runtime_mode == "haystack":
+        app.state.direction_demo = (
+            DirectionAgent(
+                DirectionToolbox(
+                    direction_corpus,
+                    workspace_search=search_active_workspace,
+                ),
+                chat_generator,
+            )
+            if model_backed
+            else DirectionDemo(direction_corpus)
+        )
+    app.state.direction_runtime_mode = direction_runtime_mode
     app.state.direction_model_backed = model_backed
     app.add_middleware(
         TrustedHostMiddleware,
@@ -716,15 +753,34 @@ def create_app(
             raise HTTPException(status_code=404, detail="Unknown architecture version")
         active = manager.active_workspace()
         architecture_info = architectures[architecture]
+        codex_mode = app.state.direction_runtime_mode == "codex"
+        workspace_name = (
+            app.state.direction_demo.workspace_name
+            if codex_mode
+            else active.display_name
+        )
+        source_count = (
+            app.state.direction_demo.source_count
+            if codex_mode
+            else len(indexer.list_sources(active.project_id))
+        )
         return templates.TemplateResponse(
             request=request,
             name="direction.html",
             context={
                 "model_backed": model_backed,
-                "model_name": getattr(chat_generator, "model", "离线测试"),
+                "model_name": (
+                    app.state.direction_demo.model
+                    if codex_mode
+                    else getattr(chat_generator, "model", "离线测试")
+                ),
                 "egress_display": egress_display,
-                "workspace_name": active.display_name,
-                "source_count": len(indexer.list_sources(active.project_id)),
+                "workspace_name": workspace_name,
+                "source_count": source_count,
+                "scope_label": (
+                    "固定合成测试资料" if codex_mode else "本地私有索引"
+                ),
+                "uploads_enabled": not codex_mode,
                 "architecture": architecture,
                 "architecture_name": architecture_info["name"],
                 "architecture_description": architecture_info["description"],
@@ -770,13 +826,30 @@ def create_app(
         history = [turn.model_dump() for turn in payload.history]
         async_answer = getattr(app.state.direction_demo, "answer_async", None)
         if async_answer is not None:
-            return await async_answer(payload.question, history=history)
+            try:
+                if app.state.direction_runtime_mode == "codex":
+                    return await async_answer(
+                        payload.question,
+                        history=history,
+                        workflow_id=payload.workflow_id,
+                    )
+                return await async_answer(payload.question, history=history)
+            except CodexRuntimeError as exc:
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
         return app.state.direction_demo.answer(payload.question, history=history)
 
     @app.post("/api/direction/sources", status_code=201)
     async def upload_direction_sources(
         files: list[UploadFile] = File(...),
     ) -> dict[str, object]:
+        if app.state.direction_runtime_mode == "codex":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Codex evaluation mode uses fixed synthetic evidence; "
+                    "uploads are disabled until active-workspace isolation is implemented."
+                ),
+            )
         active = manager.active_workspace()
         try:
             if (
@@ -902,6 +975,7 @@ def create_app(
         return {
             "status": "ok",
             "project_id": active.project_id,
+            "agent_runtime": app.state.direction_runtime_mode,
             "knowledge_provider": knowledge_provider_name,
             "network_allowed": bool(egress_channels),
             "nl2sql_allowed": package.security.allow_nl2sql,

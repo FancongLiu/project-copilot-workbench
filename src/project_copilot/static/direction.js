@@ -55,9 +55,13 @@ function safeMarkdownFragment(markdown) {
   if (!window.marked || !window.DOMPurify) {
     throw new Error("Markdown renderer unavailable");
   }
+  const normalizedMarkdown = String(markdown || "").replace(
+    /(\*\*[^*\n]+\*\*)(?=[\u3400-\u9fff])/gu,
+    "$1 ",
+  );
   const template = document.createElement("template");
   template.innerHTML = window.DOMPurify.sanitize(
-    window.marked.parse(String(markdown || ""), {gfm: true, breaks: true}),
+    window.marked.parse(normalizedMarkdown, {gfm: true, breaks: true}),
     {
       FORBID_TAGS: ["embed", "form", "iframe", "img", "object", "script", "style"],
       FORBID_ATTR: ["style"],
@@ -456,6 +460,9 @@ function appendAssistantMessage(payload) {
     const labels = {
       search_project_knowledge: "已核对项目资料",
       query_hvac_database: "已计算运行数据",
+      "data-quality": "已检查数据质量",
+      "cop-ranking": "已计算能效排名",
+      schema: "已核对数据字段",
       inspect_hvac_snapshot: "已计算运行数据",
       inspect_configuration_change_effect: "已计算运行数据",
       inspect_metric_extreme: "已计算运行数据",
@@ -498,9 +505,9 @@ function scrollConversationToMessage(message) {
 function renderPromptQueue() {
   if (!promptQueue || !promptQueueItems) return;
   promptQueueItems.replaceChildren();
-  queuedPrompts.forEach((question, index) => {
+  queuedPrompts.forEach((entry, index) => {
     const item = element("div", "queued-prompt");
-    item.append(element("span", "", question));
+    item.append(element("span", "", entry.question));
     const remove = element("button", "", "移除");
     remove.type = "button";
     remove.addEventListener("click", () => {
@@ -513,16 +520,16 @@ function renderPromptQueue() {
   promptQueue.hidden = queuedPrompts.length === 0;
 }
 
-function submitQuestion(question) {
+function submitQuestion(question, workflowId = null) {
   if (requestInFlight) {
-    queuedPrompts.push(question);
+    queuedPrompts.push({question, workflowId});
     if (architecture === "conversation") renderPromptQueue();
     return;
   }
-  ask(question);
+  ask(question, workflowId);
 }
 
-async function ask(question) {
+async function ask(question, workflowId = null) {
   requestInFlight = true;
   appendUserMessage(question);
   const pending = element("p", "pending", "正在核对文档和数据……");
@@ -532,7 +539,11 @@ async function ask(question) {
     const response = await fetch("/api/direction/query", {
       method: "POST",
       headers: {"Content-Type": "application/json", "X-Project-Copilot": "1"},
-      body: JSON.stringify({question, history: conversationHistory}),
+      body: JSON.stringify({
+        question,
+        history: conversationHistory,
+        workflow_id: workflowId,
+      }),
     });
     if (!response.ok) throw new Error("查询失败");
     const payload = await response.json();
@@ -555,9 +566,9 @@ async function ask(question) {
     requestInFlight = false;
     form.querySelector("button").disabled = false;
     if (queuedPrompts.length) {
-      const nextQuestion = queuedPrompts.shift();
+      const nextPrompt = queuedPrompts.shift();
       if (architecture === "conversation") renderPromptQueue();
-      ask(nextQuestion);
+      ask(nextPrompt.question, nextPrompt.workflowId);
     }
   }
 }
@@ -571,7 +582,10 @@ form.addEventListener("submit", (event) => {
 });
 
 document.querySelectorAll("[data-question]").forEach((button) => {
-  button.addEventListener("click", () => submitQuestion(button.dataset.question));
+  button.addEventListener("click", () => submitQuestion(
+    button.dataset.question,
+    button.dataset.workflow || null,
+  ));
 });
 
 if (fileInput) {

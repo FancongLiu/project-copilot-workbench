@@ -209,6 +209,7 @@ limitations.
 - [Acceptance checklist](docs/acceptance-checklist.md)
 - [Evaluation method and limitations](docs/evaluation.md)
 - [Agentic RAG direction-build and continuation handoff](docs/agentic-rag-direction-handoff.md)
+- [Codex runtime synthetic evaluation and Windows security prerequisite](docs/codex-runtime-deployment.md)
 - [Optional LightRAG direct-deploy profile](docs/light-rag-direct-deploy.md)
 
 The application binds only to `127.0.0.1`, `localhost`, or `::1`. It has no
