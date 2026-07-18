@@ -1,85 +1,110 @@
 # Codex runtime comparison checkpoint
 
-Last updated: 2026-07-18 18:30 (Asia/Shanghai)
+Last updated: 2026-07-19 (Asia/Shanghai)
 
 The authoritative scope and status are in `docs/CODEX_RUNTIME_TASK_LEDGER.json`.
 
 ## Outcome
 
-The direction is validated: the thin Web can use the full official Codex agent
-instead of recreating a weaker RAG loop. In the synthetic complex MX01-style
-case, Codex combined data-quality and COP operations with configuration,
-meeting, change and service evidence and returned the expected ranking and
-caveats. The previous shared backend refused its equivalent result.
+The current product direction is one engineer-facing Chat page backed by the
+official Codex Python SDK and Codex agent runtime. OpenCode remains a
+replaceable alternative, not the default merely because it uses the MIT
+license. Formal deployment must use a company API, Azure OpenAI, or an approved
+Business/Enterprise identity; shared personal logins and shared API keys are
+outside the design.
 
-The first implementation was not safe enough to merge. Independent review
-correctly found unrestricted reads, arbitrary DuckDB access, a shared writable
-workspace, raw thread IDs, false upload/workspace claims, weak JSONL grounding,
-stderr leakage and false health telemetry.
+The reference site supplied by the Chairman is an Obsidian Publish site. Its
+right-side miniature is a local graph and its expanded view is the full vault
+graph. Project Copilot now reuses its already-vendored Cytoscape 3.34.0 instead
+of adding a second graph renderer: the graph stays hidden during ordinary Chat,
+appears only after evidence is used, shows the current evidence path in compact
+mode, and expands to the complete project graph on demand.
 
 ## Current architecture
 
-- Each request creates a fresh session and runs Codex with `--ephemeral`.
-- A custom Permission Profile grants minimal runtime reads, read-only access to
-  that request's copied documents, temporary writes, and no command network.
-- The native Windows profile requires the official `elevated` sandbox.
-- Windows sessions add an explicit deny-read ACL for `CodexSandboxUsers` to
-  each private DuckDB directory. The startup probe also requires application
-  source outside the copied workspace to be unreadable.
-- DuckDB is outside the command sandbox. The official MCP Python SDK 1.28.1
-  exposes only `schema`, `data_quality`, and `cop_ranking`.
-- Final output is schema-constrained JSON. Citations are accepted only when the
-  filename exists and the excerpt is an exact substring of that source; the
-  virtual telemetry citation requires a non-empty result from `data_quality`
-  or `cop_ranking`. A schema lookup alone is not telemetry evidence.
-- Codex mode does not initialize the legacy embedding or reranking stack.
-- The Web service refuses to start until an operator preflight proves both that
-  the copied workspace is readable and the private DuckDB file is denied by the
-  elevated sandbox. The pass marker is bound to the selected Codex executable.
-- No Codex thread ID is returned to the browser. Conversation continuity uses
-  the compact last six UI turns.
-- Codex mode is explicitly the fixed `Agentic HVAC Bakeoff`, reports 11 evidence
-  files, hides upload, and returns HTTP 409 if upload is attempted.
-- Haystack remains the default runtime and is unchanged.
+- `openai-codex==0.144.4` is the primary transport. This official Python SDK is
+  explicitly marked **beta**, so the runtime seam remains replaceable. The
+  earlier CLI JSONL adapter is still available only through the explicit
+  `PROJECT_COPILOT_CODEX_TRANSPORT=cli-jsonl` switch; there is no silent
+  fallback.
+- The SDK worker starts the pinned bundled Codex App Server, denies approvals,
+  uses an ephemeral thread, constrains final output with a JSON schema, and
+  receives credentials only through a controlled process environment.
+- Each request creates a fresh evidence session. The command sandbox receives
+  copied documents but not the private DuckDB directory.
+- The required official MCP server exposes nine bounded read-only tools:
+  `schema`, `data_quality`, `cop_ranking`, `search_project_knowledge`, `query_hvac_database`,
+  `inspect_hvac_snapshot`, `inspect_configuration_history`,
+  `inspect_configuration_change_effect`, and `inspect_metric_extreme`.
+- `query_hvac_database` uses the existing SQL guard. It allows one bounded flat
+  `SELECT` only and rejects writes, file access, star projection, CTEs,
+  subqueries and unbounded result sets. The typed tools remain preferred.
+- Final output supports readable Markdown, bounded tables, bounded line/bar
+  charts, exact human-readable filenames and validated excerpts. Governed tool
+  results override unsupported model-authored table/chart values.
+- The browser never receives an API key, database path, SQL text, Codex thread
+  ID, private chain-of-thought or writable project path.
+- Codex mode does not initialize the legacy embedding/reranking stack. The old
+  Haystack/DuckDB site and the synthetic HVAC corpus remain comparison assets.
 
 ## Verification evidence
 
-- `tests/test_codex_runtime.py`: 23 passed.
-- Runtime + direction + Web focused regressions: 55 passed.
-- Targeted browser acceptance: passed.
-- Ruff on changed Python: passed.
-- Official MCP STDIO smoke: tools were exactly `schema`, `data_quality`, and
-  `cop_ranking`; `cop_ranking` returned HP-03 at 4.001643.
-- Codex `mcp list` recognized the generated required server and redacted its
-  environment values.
-- A later post-UAC rereview invalidated the earlier clear verdict: legacy
-  two-probe readiness markers could bypass the new outside-source check. Marker
-  schema version 2 now rejects every older marker. No merge-ready claim remains.
+- `tests/test_codex_runtime.py`: **44 passed**. This includes an actual SDK
+  process starting the bundled Codex App Server against a local mock Responses
+  stream, plus an official MCP STDIO lifecycle that discovers all nine tools
+  and executes a configuration-change query.
+- Runtime + direction + Web focused suite: **80 passed**; the frozen
+  complex-question/evaluator contract adds **10 passed**, for **90 focused
+  tests** in the final combined run.
+- Browser acceptance: **10 passed, 1 skipped**. The skipped case is the
+  intentionally gated real-model browser journey; it is not counted as model
+  quality evidence.
+- Frozen complex-question/evaluator contract tests: **9 passed**.
+- Browser checks prove the composer remains fixed, the graph is initially
+  hidden, evidence activates the compact local graph, full-screen expand and
+  restore work, and human filenames remain visible.
+- Ruff check and format check on changed Python: passed.
+- The hash-locked bootstrap completed and reported `codex-cli 0.144.4`; `pip
+  check` found no broken requirements. A clean wheel build completed and
+  contained the SDK worker, MCP server, graph JavaScript and Chat template.
+- Frozen old-backend nine-case subset: hard gate **1/9**, human review
+  **0 pass / 3 partial / 6 fail**. This remains the comparison baseline, not a
+  score for the SDK path.
 
-## Blocker
+Successive independent reviews found no Critical issue and drove all Important
+findings to closure; the final rereview returned **Ready: Yes**. The accepted
+fixes now bind document and virtual/data
+citations to the exact MCP result, never treat numbers from the user's question
+as proof, reject unsupported numeric
+claims and presentations, reject every Shell/file-change/Web-search event,
+force App Server `--strict-config`, redact internal paths before the API
+response (including citation metadata), share canonical graph/citation
+locations, highlight only the exactly cited dataset, and publish constrained
+MCP schemas with optional presentation parameters. A residual minor risk remains:
+the outer subprocess timeout kills the SDK worker but does not yet prove
+descendant cleanup on every supported OS.
 
-The Chairman authorized the official elevated Windows setup and the UAC install
-completed successfully. The real negative test then proved that
-`CodexSandboxOffline` still inherits ordinary `Users/Everyone` read access to
-the E: drive: it could open application/root-repository source outside the
-copied workspace. The private DuckDB becomes unreadable only after an explicit
-deny ACL. Therefore the Windows backend remains fail-closed and must not run a
-real model against company files.
+## Honest benchmark boundary
 
-An existing Ubuntu WSL2 environment was probed with the official Codex 0.144.5
-Linux binary. Its Landlock profile produced `allowed=0`, `private=1`, and
-`root-repository=1`: the copied workspace was readable while both outside paths
-were denied. This validates WSL2 as the next isolation architecture, but it is
-not yet integrated with the Windows Web/MCP runtime.
+The SDK/App Server/MCP contract is executable and verified locally, but a full
+nine-case real-model SDK benchmark is not claimed on native Windows. The
+authorized elevated Windows sandbox still inherits ordinary read permission
+to unrelated files on the E: drive. Running the model despite that result
+would violate the product boundary. Contract tests and the earlier weaker-
+sandbox architecture probe must not be presented as production isolation or
+as a real-model quality score.
 
-Do not restart the old workspace-write 8790 proof as a company-data service.
-It is architecture evidence only.
+An Ubuntu WSL2 Landlock probe denied both the private file and mounted root
+repository while allowing the copied workspace. That validates the next
+production-isolation architecture, but the Windows Web/MCP wrapper has not yet
+been migrated to it.
 
-## Next action
+## Remaining bounded work
 
-1. Obtain Chairman approval to replace the Windows execution backend with the
-   validated WSL2/Landlock backend.
-2. Keep the Windows Web adapter and governed MCP broker, but launch the official
-   Linux Codex binary inside WSL2 with translated read-only paths.
-3. Repeat workspace/private/root negative reads through the production wrapper.
-4. Only then run one secure real-model MX01 request and browser acceptance.
+1. Refresh deployment/handoff documentation and record the frozen comparison
+   contract without inventing an SDK score.
+2. Re-run focused tests, browser acceptance and static checks.
+3. Stage only the intended files, create a new commit and push without force.
+
+Do not restart the old workspace-write 8790 proof as a company-data service. It
+is architecture evidence only.

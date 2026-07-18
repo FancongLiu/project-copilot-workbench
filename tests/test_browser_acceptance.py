@@ -21,7 +21,7 @@ def test_direction_layout_keeps_composer_fixed_and_deemphasizes_context(
         page.goto(base_url, wait_until="networkidle")
 
         expect(page.get_by_test_id("direction-chat")).to_be_visible()
-        expect(page.get_by_test_id("project-map")).to_have_count(0)
+        expect(page.get_by_test_id("project-map")).to_be_hidden()
         expect(page.locator('a[href="/workbench"]')).to_have_count(0)
         initial_composer_bottom = page.locator("#direction-form").evaluate(
             "node => node.getBoundingClientRect().bottom"
@@ -81,6 +81,15 @@ def test_direction_layout_keeps_composer_fixed_and_deemphasizes_context(
 
         last_answer = page.locator("#messages .assistant-message").last
         page.wait_for_timeout(500)
+        project_map = page.get_by_test_id("project-map")
+        expect(project_map).to_be_visible()
+        project_map.locator("#project-map-expand").click()
+        expect(project_map).to_have_attribute("data-expanded", "true")
+        assert project_map.evaluate(
+            "node => node.getBoundingClientRect().width > window.innerWidth * 0.8"
+        )
+        project_map.locator("#project-map-expand").click()
+        expect(project_map).to_have_attribute("data-expanded", "false")
         conversation_top = page.locator("#conversation").evaluate(
             "node => node.getBoundingClientRect().top"
         )
@@ -88,9 +97,7 @@ def test_direction_layout_keeps_composer_fixed_and_deemphasizes_context(
         assert conversation_top <= answer_top <= conversation_top + 40
         expect(last_answer.locator("ol li")).to_have_count(2)
         expect(
-            last_answer.locator("strong").filter(
-                has_text="2026-01-16 12:00（+08:00）"
-            )
+            last_answer.locator("strong").filter(has_text="2026-01-16 12:00（+08:00）")
         ).to_have_count(1)
         expect(last_answer.locator(".answer-context p")).to_have_count(2)
         citation_summary = last_answer.locator(".citations > summary")
@@ -130,6 +137,110 @@ def test_direction_layout_keeps_composer_fixed_and_deemphasizes_context(
         )
         assert context_size < main_size
 
+        browser.close()
+
+
+@pytest.mark.skipif(
+    not os.getenv("PROJECT_COPILOT_BROWSER_URL"),
+    reason="browser acceptance server is not running",
+)
+def test_evidence_graph_highlights_only_the_cited_dataset() -> None:
+    base_url = os.environ["PROJECT_COPILOT_BROWSER_URL"].rstrip("/")
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page.route(
+            "**/api/direction/graph",
+            lambda route: route.fulfill(
+                json={
+                    "nodes": [
+                        {"id": "project", "label": "HVAC", "kind": "project"},
+                        {
+                            "id": "datasets",
+                            "label": "datasets",
+                            "kind": "folder",
+                            "location": "datasets",
+                        },
+                        {
+                            "id": "telemetry",
+                            "label": "telemetry.csv",
+                            "kind": "file",
+                            "category": "dataset",
+                            "location": "datasets/telemetry.csv",
+                        },
+                        {
+                            "id": "config-history",
+                            "label": "config_history.csv",
+                            "kind": "file",
+                            "category": "dataset",
+                            "location": "datasets/config_history.csv",
+                        },
+                    ],
+                    "edges": [
+                        {
+                            "id": "project-datasets",
+                            "source": "project",
+                            "target": "datasets",
+                            "kind": "contains",
+                        },
+                        {
+                            "id": "datasets-telemetry",
+                            "source": "datasets",
+                            "target": "telemetry",
+                            "kind": "contains",
+                        },
+                        {
+                            "id": "datasets-config-history",
+                            "source": "datasets",
+                            "target": "config-history",
+                            "kind": "contains",
+                        },
+                    ],
+                }
+            ),
+        )
+        page.route(
+            "**/api/direction/query",
+            lambda route: route.fulfill(
+                json={
+                    "mode": "data",
+                    "grounding_status": "grounded",
+                    "answer_markdown": "## Conclusion\n\nConfiguration history checked.",
+                    "tables": [],
+                    "charts": [],
+                    "citations": [
+                        {
+                            "filename": "config_history.csv",
+                            "excerpt": "Approved configuration history.",
+                            "location": "datasets/config_history.csv",
+                            "source_role": "dataset",
+                        }
+                    ],
+                    "activities": [
+                        {
+                            "tool": "inspect_configuration_history",
+                            "status": "completed",
+                        }
+                    ],
+                }
+            ),
+        )
+        page.goto(base_url, wait_until="networkidle")
+        page.locator("#direction-question").fill("Check the configuration history")
+        page.locator("#direction-form button[type='submit']").click()
+
+        expect(page.get_by_test_id("project-map")).to_be_visible()
+        page.wait_for_function("window.projectGraph !== undefined")
+        classes = page.evaluate(
+            """() => ({
+              config: window.projectGraph.$('#config-history').classes(),
+              telemetry: window.projectGraph.$('#telemetry').classes(),
+            })"""
+        )
+        assert "is-cited" in classes["config"]
+        assert "is-cited" not in classes["telemetry"]
+        assert "is-path" not in classes["telemetry"]
         browser.close()
 
 

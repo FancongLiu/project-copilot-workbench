@@ -16,12 +16,14 @@ const artifactCanvas = document.querySelector("#artifact-canvas");
 const artifactCanvasContent = document.querySelector("#artifact-canvas-content");
 const artifactCanvasClose = document.querySelector("#artifact-canvas-close");
 const projectMap = document.querySelector("[data-testid='project-map']");
-const projectMapToggle = document.querySelector("#project-map-toggle");
+const projectMapExpand = document.querySelector("#project-map-expand");
+const projectMapClose = document.querySelector("#project-map-close");
 const conversationHistory = [];
 const queuedPrompts = [];
 let requestInFlight = false;
 window.projectGraph = null;
 window.projectGraphSummarized = false;
+window.projectGraphLoading = null;
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -326,38 +328,38 @@ async function loadProjectGraph() {
         {
           selector: "node",
           style: {
-            "background-color": "#6b9b89",
+            "background-color": "#7f918a",
             label: "data(label)",
-            color: "#42534c",
-            "font-size": 10,
+            color: "#31443d",
+            "font-size": 9,
             "text-wrap": "wrap",
-            "text-max-width": 150,
-            "text-valign": "center",
+            "text-max-width": 120,
+            "text-valign": "bottom",
             "text-halign": "center",
-            shape: "round-rectangle",
-            width: 132,
-            height: 32,
+            "text-margin-y": 7,
+            shape: "ellipse",
+            width: 11,
+            height: 11,
           },
         },
-        {selector: "node[kind = 'project']", style: {"background-color": "#173b34", color: "#ffffff", width: 150, height: 40, "font-size": 11, "font-weight": 800}},
-        {selector: "node[kind = 'folder']", style: {"background-color": "#d9eee6", color: "#235443", width: 112, "font-weight": 700}},
-        {selector: "node[kind = 'file']", style: {"background-color": "#f4f8f6", "border-color": "#8eb9a8", "border-width": 1, width: 168}},
-        {selector: "node[kind = 'file'][category = 'dataset']", style: {"background-color": "#eaf2fb", "border-color": "#7aa3d1"}},
-        {selector: "edge", style: {width: 1.2, "line-color": "#b9cbc3", "curve-style": "taxi", "taxi-direction": "rightward", "target-arrow-shape": "triangle", "target-arrow-color": "#b9cbc3", "arrow-scale": 0.7}},
-        {selector: ".is-path", style: {"background-color": "#35a878", "line-color": "#35a878", width: 3, "transition-property": "background-color, line-color, width", "transition-duration": "180ms"}},
-        {selector: ".is-cited", style: {"background-color": "#f6c86f", "border-color": "#e39a20", "border-width": 3}},
+        {selector: "node[kind = 'project']", style: {"background-color": "#173b34", width: 22, height: 22, "font-size": 10, "font-weight": 800}},
+        {selector: "node[kind = 'folder']", style: {"background-color": "#83b6a2", width: 15, height: 15, "font-weight": 700}},
+        {selector: "node[kind = 'file']", style: {"background-color": "#9ba8a3", width: 10, height: 10}},
+        {selector: "node[kind = 'file'][category = 'dataset']", style: {"background-color": "#5b8ec7"}},
+        {selector: "edge", style: {width: 1, "line-color": "#c5d0cb", "curve-style": "bezier", opacity: 0.8}},
+        {selector: ".is-path", style: {"background-color": "#35a878", "line-color": "#35a878", opacity: 1, "transition-property": "background-color, line-color, opacity", "transition-duration": "180ms"}},
+        {selector: ".is-cited", style: {"background-color": "#f0aa3c", "border-color": "#d98513", "border-width": 3, width: 16, height: 16}},
+        {selector: ".is-hidden", style: {display: "none"}},
       ],
       layout: {
-        name: "breadthfirst",
-        directed: true,
-        roots: "#project",
-        circle: false,
+        name: "cose",
         animate: true,
-        animationDuration: 360,
+        animationDuration: 420,
         fit: true,
-        padding: 28,
-        spacingFactor: 1.25,
-        avoidOverlap: true,
+        padding: 22,
+        idealEdgeLength: 52,
+        nodeRepulsion: 6200,
+        gravity: 0.35,
       },
       minZoom: 0.18,
       maxZoom: 2.5,
@@ -373,19 +375,16 @@ function highlightProjectPath(payload) {
   const graph = window.projectGraph;
   if (!graph) return;
   graph.elements(".ephemeral").remove();
-  graph.elements().removeClass("is-path is-cited");
+  graph.elements().removeClass("is-path is-cited is-hidden");
   graph.$("#project").addClass("is-path");
-  const tools = new Set((payload.activities || []).map((activity) => activity.tool));
-  const usesData = [...tools].some((tool) => tool !== "search_project_knowledge" && tool !== "ask_for_clarification");
-  if (usesData) graph.nodes("[kind = 'file'][category = 'dataset']").addClass("is-path");
   let addedCitationNode = false;
   (payload.citations || []).forEach((citation, index) => {
     const citationLocation = String(citation.location || "").replaceAll("\\", "/");
     const exists = graph.nodes("[kind = 'file']").some((node) => {
       const nodeLocation = String(node.data("location") || "");
-      return nodeLocation && citationLocation.startsWith(nodeLocation);
+      return nodeLocation && citationLocation === nodeLocation;
     });
-    if (exists || !window.projectGraphSummarized) return;
+    if (exists) return;
     const role = String(citation.source_role || "background");
     const category = ["background", "configuration", "meeting", "decision", "SOP", "dataset"].includes(role)
       ? role
@@ -398,29 +397,58 @@ function highlightProjectPath(payload) {
     ]);
     addedCitationNode = true;
   });
-  if (addedCitationNode) {
-    graph.layout({
-      name: "breadthfirst",
-      directed: true,
-      roots: "#project",
-      circle: false,
-      animate: true,
-      animationDuration: 260,
-      fit: true,
-      padding: 28,
-      spacingFactor: 1.25,
-      avoidOverlap: true,
-    }).run();
-  }
   const citedLocations = (payload.citations || []).map((citation) =>
     String(citation.location || "").replaceAll("\\", "/"),
   );
   graph.nodes("[kind = 'file']").forEach((node) => {
     const location = String(node.data("location") || "");
-    if (!citedLocations.some((cited) => location && cited.startsWith(location))) return;
+    if (!citedLocations.some((cited) => location && cited === location)) return;
     node.addClass("is-cited");
     node.predecessors().addClass("is-path");
   });
+  if (addedCitationNode || citedLocations.length) applyProjectGraphMode();
+}
+
+function applyProjectGraphMode() {
+  const graph = window.projectGraph;
+  if (!graph || !projectMap) return;
+  graph.elements().removeClass("is-hidden");
+  const expanded = projectMap.dataset.expanded === "true";
+  if (!expanded) {
+    const focus = graph.elements(".is-path, .is-cited");
+    graph.elements().addClass("is-hidden");
+    focus.removeClass("is-hidden");
+    focus.connectedEdges().removeClass("is-hidden");
+  }
+  const visible = graph.elements().not(".is-hidden");
+  visible.layout({
+    name: "cose",
+    animate: true,
+    animationDuration: 320,
+    fit: true,
+    padding: expanded ? 42 : 22,
+    idealEdgeLength: expanded ? 64 : 48,
+    nodeRepulsion: expanded ? 7600 : 5200,
+    gravity: expanded ? 0.2 : 0.45,
+    randomize: false,
+  }).run();
+}
+
+async function showProjectMap(payload) {
+  if (!projectMap || !window.matchMedia("(min-width: 900px)").matches) return;
+  if (!(payload.citations || []).length && !(payload.activities || []).length) return;
+  projectMap.hidden = false;
+  window.latestProjectPath = payload;
+  if (!window.projectGraph || window.projectGraphNeedsRefresh) {
+    if (!window.projectGraphLoading) {
+      window.projectGraphLoading = loadProjectGraph().finally(() => {
+        window.projectGraphLoading = null;
+      });
+    }
+    await window.projectGraphLoading;
+  } else {
+    highlightProjectPath(payload);
+  }
 }
 
 function appendUserMessage(question) {
@@ -480,6 +508,7 @@ function appendAssistantMessage(payload) {
   article.append(body);
   messages.append(article);
   scrollConversationToMessage(article);
+  void showProjectMap(payload);
 }
 
 function scrollConversationToBottom() {
@@ -621,26 +650,20 @@ if (fileInput) {
   });
 }
 
-function setProjectMapCollapsed(collapsed) {
-  if (!projectMap || !projectMapToggle) return;
-  projectMap.dataset.collapsed = String(collapsed);
-  projectMapToggle.setAttribute("aria-expanded", String(!collapsed));
-  projectMapToggle.setAttribute(
-    "aria-label",
-    collapsed ? "\u5c55\u5f00\u9879\u76ee\u5730\u56fe" : "\u6536\u8d77\u9879\u76ee\u5730\u56fe",
-  );
-  projectMapToggle.textContent = collapsed ? "\u9879\u76ee\u5730\u56fe" : "\u6536\u8d77";
-}
-
-projectMapToggle?.addEventListener("click", async () => {
-  const collapsed = projectMap.dataset.collapsed !== "true";
-  setProjectMapCollapsed(collapsed);
-  if (!collapsed && (!window.projectGraph || window.projectGraphNeedsRefresh)) {
-    await loadProjectGraph();
-  } else if (!collapsed) {
-    window.projectGraph.resize();
-    window.projectGraph.fit(undefined, 28);
-  }
+projectMapExpand?.addEventListener("click", () => {
+  if (!projectMap || !window.projectGraph) return;
+  const expanded = projectMap.dataset.expanded !== "true";
+  projectMap.dataset.expanded = String(expanded);
+  projectMapExpand.setAttribute("aria-expanded", String(expanded));
+  projectMapExpand.textContent = expanded ? "还原" : "展开";
+  window.projectGraph.resize();
+  applyProjectGraphMode();
 });
 
-setProjectMapCollapsed(true);
+projectMapClose?.addEventListener("click", () => {
+  if (!projectMap) return;
+  projectMap.hidden = true;
+  projectMap.dataset.expanded = "false";
+  projectMapExpand?.setAttribute("aria-expanded", "false");
+  if (projectMapExpand) projectMapExpand.textContent = "展开";
+});

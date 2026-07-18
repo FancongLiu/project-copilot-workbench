@@ -28,7 +28,11 @@ from project_copilot.company_api import (
     CompanyAPISettings,
     load_codex_switch_settings,
 )
-from project_copilot.codex_runtime import CodexRuntime, CodexRuntimeError
+from project_copilot.codex_runtime import (
+    VIRTUAL_DATA_LOCATIONS,
+    CodexRuntime,
+    CodexRuntimeError,
+)
 from project_copilot.contract import ProjectPackage, load_project_package
 from project_copilot.defrost_diagnostics import (
     DefrostAssetContext,
@@ -71,6 +75,173 @@ class DirectionQuestionRequest(BaseModel):
         max_length=64,
         pattern=r"^[a-z0-9-]+$",
     )
+
+
+_MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+_WINDOWS_ABSOLUTE_PATH = re.compile(
+    r"(?<![A-Za-z0-9_])[A-Za-z]:[\\/][^\s<>\"'`()\[\]{}]+"
+)
+_POSIX_ABSOLUTE_PATH = re.compile(
+    r"(?<![A-Za-z0-9_])/(?:[^/\s<>\"'`()\[\]{}]+/)+[^\s<>\"'`()\[\]{}]+"
+)
+_INTERNAL_RELATIVE_PATH = re.compile(
+    r"(?<![A-Za-z0-9_./-])(?:background|company|configuration|datasets|docs|"
+    r"project\.local|runtime|src)[\\/][^\s<>\"'`()\[\]{}]+",
+    re.IGNORECASE,
+)
+
+
+def _looks_internal_path(value: str) -> bool:
+    return bool(
+        _WINDOWS_ABSOLUTE_PATH.search(value)
+        or _POSIX_ABSOLUTE_PATH.search(value)
+        or _INTERNAL_RELATIVE_PATH.search(value)
+    )
+
+
+def _sanitize_public_text(value: object) -> str:
+    text = str(value or "")
+    text = _MARKDOWN_LINK.sub(
+        lambda match: (
+            match.group(1) if _looks_internal_path(match.group(2)) else match.group(0)
+        ),
+        text,
+    )
+    for pattern in (
+        _WINDOWS_ABSOLUTE_PATH,
+        _POSIX_ABSOLUTE_PATH,
+        _INTERNAL_RELATIVE_PATH,
+    ):
+        text = pattern.sub("", text)
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
+_SAFE_CITATION_ROOTS = {
+    "background",
+    "configuration",
+    "controls",
+    "decisions",
+    "meeting",
+    "meetings",
+    "service",
+    "sop",
+    "sops",
+}
+
+
+def _public_filename(value: object) -> str:
+    filename = str(value or "source").replace("\\", "/").rsplit("/", 1)[-1]
+    filename = re.sub(r"[\x00-\x1f<>:\"|?*]", "", filename).strip(" .")
+    return filename or "source"
+
+
+def _public_citation_location(value: object, filename: str) -> str:
+    expected_virtual = VIRTUAL_DATA_LOCATIONS.get(filename)
+    if expected_virtual is not None:
+        return expected_virtual
+    location = str(value or "").replace("\\", "/").strip()
+    if location.startswith("docs/source/"):
+        location = location.removeprefix("docs/source/")
+    parts = [part for part in location.split("/") if part not in {"", "."}]
+    if (
+        not parts
+        or location.startswith("/")
+        or _WINDOWS_ABSOLUTE_PATH.search(location)
+        or ".." in parts
+        or parts[-1] != filename
+        or parts[0].casefold() not in _SAFE_CITATION_ROOTS
+    ):
+        return filename
+    return "/".join(parts)
+
+
+def _public_metadata_label(value: object, fallback: str) -> str:
+    raw = str(value or "")
+    if "/" in raw or "\\" in raw:
+        return fallback
+    return _sanitize_public_text(raw)[:80] or fallback
+
+
+def _sanitize_direction_payload(payload: dict[str, object]) -> dict[str, object]:
+    sanitized = dict(payload)
+    answer = _sanitize_public_text(payload.get("answer_markdown", ""))
+    if not answer:
+        raise CodexRuntimeError("Answer contained no public-safe content")
+    sanitized["answer_markdown"] = answer
+    tables: list[dict[str, object]] = []
+    for raw_table in payload.get("tables", []) or []:
+        if not isinstance(raw_table, dict):
+            continue
+        rows = [
+            [
+                _sanitize_public_text(cell) if isinstance(cell, str) else cell
+                for cell in row
+            ]
+            for row in raw_table.get("rows", []) or []
+            if isinstance(row, list)
+        ]
+        tables.append(
+            {
+                **raw_table,
+                "title": _sanitize_public_text(raw_table.get("title", "")) or "结果",
+                "columns": [
+                    _sanitize_public_text(column) or "字段"
+                    for column in raw_table.get("columns", []) or []
+                ],
+                "rows": rows,
+            }
+        )
+    sanitized["tables"] = tables
+    charts: list[dict[str, object]] = []
+    for raw_chart in payload.get("charts", []) or []:
+        if not isinstance(raw_chart, dict):
+            continue
+        points = []
+        for raw_point in raw_chart.get("points", []) or []:
+            if not isinstance(raw_point, dict):
+                continue
+            point = dict(raw_point)
+            point["label"] = _sanitize_public_text(raw_point.get("label", "")) or "—"
+            if "series" in point:
+                point["series"] = _sanitize_public_text(point.get("series", "")) or "—"
+            points.append(point)
+        charts.append(
+            {
+                **raw_chart,
+                "title": _sanitize_public_text(raw_chart.get("title", "")) or "图表",
+                "unit": _sanitize_public_text(raw_chart.get("unit", "")),
+                "points": points,
+            }
+        )
+    sanitized["charts"] = charts
+    citations: list[dict[str, object]] = []
+    for raw_citation in payload.get("citations", []) or []:
+        if not isinstance(raw_citation, dict):
+            continue
+        citation = dict(raw_citation)
+        filename = _public_filename(raw_citation.get("filename", "source"))
+        citation["filename"] = filename
+        citation["location"] = _public_citation_location(
+            raw_citation.get("location", ""), filename
+        )
+        citation["excerpt"] = _sanitize_public_text(raw_citation.get("excerpt", ""))
+        citation["source_role"] = _public_metadata_label(
+            raw_citation.get("source_role", ""), "evidence"
+        )
+        citation["source_status"] = _public_metadata_label(
+            raw_citation.get("source_status", ""), "read-only evidence"
+        )
+        citations.append(citation)
+    sanitized["citations"] = citations
+    activities: list[dict[str, object]] = []
+    for raw_activity in payload.get("activities", []) or []:
+        if not isinstance(raw_activity, dict):
+            continue
+        activity = dict(raw_activity)
+        activity["summary"] = _sanitize_public_text(raw_activity.get("summary", ""))
+        activities.append(activity)
+    sanitized["activities"] = activities
+    return sanitized
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -777,14 +948,13 @@ def create_app(
                 "egress_display": egress_display,
                 "workspace_name": workspace_name,
                 "source_count": source_count,
-                "scope_label": (
-                    "固定合成测试资料" if codex_mode else "本地私有索引"
-                ),
+                "scope_label": ("固定合成测试资料" if codex_mode else "本地私有索引"),
                 "uploads_enabled": not codex_mode,
                 "architecture": architecture,
                 "architecture_name": architecture_info["name"],
                 "architecture_description": architecture_info["description"],
                 "show_version_nav": show_version_nav,
+                "show_graph": not show_version_nav,
             },
         )
 
@@ -825,18 +995,24 @@ def create_app(
     async def query_direction(payload: DirectionQuestionRequest) -> dict[str, object]:
         history = [turn.model_dump() for turn in payload.history]
         async_answer = getattr(app.state.direction_demo, "answer_async", None)
-        if async_answer is not None:
-            try:
+        try:
+            if async_answer is not None:
                 if app.state.direction_runtime_mode == "codex":
-                    return await async_answer(
-                        payload.question,
-                        history=history,
-                        workflow_id=payload.workflow_id,
+                    return _sanitize_direction_payload(
+                        await async_answer(
+                            payload.question,
+                            history=history,
+                            workflow_id=payload.workflow_id,
+                        )
                     )
-                return await async_answer(payload.question, history=history)
-            except CodexRuntimeError as exc:
-                raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return app.state.direction_demo.answer(payload.question, history=history)
+                return _sanitize_direction_payload(
+                    await async_answer(payload.question, history=history)
+                )
+            return _sanitize_direction_payload(
+                app.state.direction_demo.answer(payload.question, history=history)
+            )
+        except CodexRuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     @app.post("/api/direction/sources", status_code=201)
     async def upload_direction_sources(
@@ -896,18 +1072,56 @@ def create_app(
     @app.get("/api/direction/graph")
     def direction_graph() -> dict[str, object]:
         active = manager.active_workspace()
-        sources = indexer.list_sources(active.project_id)
+        if app.state.direction_runtime_mode == "codex":
+            source_root = direction_corpus / "docs" / "source"
+            source_records = [
+                {
+                    "source_id": path.relative_to(source_root).as_posix(),
+                    "filename": path.name,
+                    "location": path.relative_to(source_root).as_posix(),
+                    "category": path.parent.name,
+                }
+                for path in sorted(source_root.rglob("*"))
+                if path.is_file()
+            ]
+            for filename, location in VIRTUAL_DATA_LOCATIONS.items():
+                source_records.append(
+                    {
+                        "source_id": location,
+                        "filename": filename,
+                        "location": location,
+                        "category": (
+                            "dataset"
+                            if location.startswith("datasets/")
+                            else "configuration"
+                        ),
+                    }
+                )
+            graph_name = app.state.direction_demo.workspace_name
+        else:
+            source_records = [
+                {
+                    "source_id": source.source_id,
+                    "filename": source.original_filename or source.filename,
+                    "location": source.source_location
+                    or source.original_filename
+                    or source.filename,
+                    "category": source.category,
+                }
+                for source in indexer.list_sources(active.project_id)
+            ]
+            graph_name = active.display_name
         nodes: list[dict[str, str]] = [
-            {"id": "project", "label": active.display_name, "kind": "project"}
+            {"id": "project", "label": graph_name, "kind": "project"}
         ]
         edges: list[dict[str, str]] = []
         folder_ids: dict[str, str] = {}
         for source in sorted(
-            sources,
-            key=lambda item: (item.source_location or item.filename).casefold(),
+            source_records,
+            key=lambda item: str(item["location"]).casefold(),
         ):
-            display_filename = source.original_filename or source.filename
-            location = (source.source_location or display_filename).replace("\\", "/")
+            display_filename = str(source["filename"])
+            location = str(source["location"]).replace("\\", "/")
             path_parts = [part for part in location.split("/") if part]
             directories = path_parts[:-1]
             parent_id = "project"
@@ -943,14 +1157,16 @@ def create_app(
                 parent_id = folder_id
             file_id = (
                 "file-"
-                + hashlib.sha256(source.source_id.encode("utf-8")).hexdigest()[:12]
+                + hashlib.sha256(str(source["source_id"]).encode("utf-8")).hexdigest()[
+                    :12
+                ]
             )
             nodes.append(
                 {
                     "id": file_id,
                     "label": display_filename,
                     "kind": "file",
-                    "category": source.category,
+                    "category": str(source["category"]),
                     "location": location,
                 }
             )

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1",
+  "run_id": "codex-sdk-contract-baseline-20260719",
+  "recorded_at": "2026-07-19T00:00:00+08:00",
+  "execution_mode": "sdk_contract_only",
+  "corpus": "examples/synthetic_hvac",
+  "frozen_case_ids": [
+    "MX01",
+    "MX02",
+    "MX03",
+    "MX04",
+    "MX08",
+    "MX10",
+    "MX11",
+    "MX12",
+    "MX13"
+  ],
+  "old_backend_baseline": {
+    "source_result": "evaluation/results/four-version-shared-backend-live.json",
+    "source_human_review": "evaluation/reviews/four-version-complex-benchmark-human-review-20260718.md",
+    "hard_gate_passed": 1,
+    "hard_gate_total": 9,
+    "human_pass": 0,
+    "human_partial": 3,
+    "human_fail": 6,
+    "refusals": 6,
+    "raw_path_leaks": 2
+  },
+  "codex_sdk_contract": {
+    "sdk_version": "0.144.4",
+    "sdk_release_status": "beta",
+    "runtime_test_file": "tests/test_codex_runtime.py",
+    "runtime_tests_passed": 44,
+    "focused_tests_passed": 90,
+    "browser_tests_passed": 10,
+    "browser_tests_skipped": 1,
+    "verified_capabilities": [
+      "bundled Codex App Server starts through the official Python SDK",
+      "controlled Responses SSE contract completes",
+      "official MCP STDIO initialization and constrained nine-tool discovery complete",
+      "typed configuration-change query returns governed structured evidence",
+      "knowledge evidence uses search_project_knowledge and arbitrary Shell is rejected",
+      "document citations require canonical knowledge-tool evidence and question numbers are not treated as proof",
+      "virtual citations and numeric presentations are bound to exact MCP evidence",
+      "App Server strict-config and server-side path redaction fail closed",
+      "bounded Markdown tables/charts/citations parse and render",
+      "compact evidence graph expands and restores while highlighting only exactly cited data sources"
+    ]
+  },
+  "codex_sdk_model_quality": {
+    "status": "not_run",
+    "score": null,
+    "reason": "Native Windows production isolation preflight still permits unrelated host reads. Running the real model would violate the declared company-data boundary. Contract tests and the earlier weaker-sandbox probe are not reported as model quality."
+  },
+  "future_acceptance_contract": {
+    "independent_runs_per_case": 3,
+    "case_pass_rule": "at least 2 of 3 runs",
+    "hard_gate_minimum": "8/9",
+    "mandatory_case": "MX13",
+    "human_minimum": "8 pass and 1 partial",
+    "three_of_three_cases": [
+      "MX04",
+      "MX11",
+      "MX13"
+    ],
+    "comparison_rule": "same corpus, questions, approved endpoint and evaluation code for both backends"
+  }
+}

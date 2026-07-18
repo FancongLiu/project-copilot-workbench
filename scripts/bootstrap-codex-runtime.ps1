@@ -1,35 +1,32 @@
-param(
-    [Parameter(Mandatory = $true)]
-    [ValidateNotNullOrEmpty()]
-    [string]$RuntimeRoot,
-    [string]$Npm = "npm"
-)
+param()
 
 $ErrorActionPreference = "Stop"
-$CodexPackage = "@openai/codex@0.144.5"
+$root = Split-Path -Parent $PSScriptRoot
+$pythonExe = Join-Path $root ".venv\Scripts\python.exe"
+$lockFile = Join-Path $root "requirements.codex.lock"
 
-if (-not (Get-Command $Npm -ErrorAction SilentlyContinue)) {
-    throw "Node.js 18+ and npm are required to install the official Codex runtime."
+if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) {
+    throw "Run scripts/bootstrap.ps1 first."
+}
+if (-not (Test-Path -LiteralPath $lockFile -PathType Leaf)) {
+    throw "The hash-locked Codex SDK requirements file is missing."
 }
 
-$resolvedRoot = [System.IO.Path]::GetFullPath($RuntimeRoot)
-New-Item -ItemType Directory -Force -Path $resolvedRoot | Out-Null
-
-& $Npm install --prefix $resolvedRoot --no-save $CodexPackage
+& $pythonExe -m pip install --require-hashes -r $lockFile
 if ($LASTEXITCODE -ne 0) {
-    throw "Official Codex package installation failed with exit code $LASTEXITCODE."
+    throw "Official Codex Python SDK installation failed with exit code $LASTEXITCODE."
 }
 
-$codexExe = Get-ChildItem -LiteralPath (Join-Path $resolvedRoot "node_modules") `
-    -Filter "codex.exe" -File -Recurse | Sort-Object FullName | Select-Object -First 1
-if (-not $codexExe) {
-    throw "The official package was installed but its native Windows codex.exe was not found."
+$codexPath = & $pythonExe -c "import codex_cli_bin; print(codex_cli_bin.bundled_codex_path())"
+if ($LASTEXITCODE -ne 0 -or -not $codexPath) {
+    throw "The official Python SDK was installed but its pinned codex.exe was not found."
 }
+$codexExe = Get-Item -LiteralPath $codexPath.Trim()
 & $codexExe.FullName --version
 if ($LASTEXITCODE -ne 0) {
     throw "Installed Codex runtime did not pass its version smoke test."
 }
 
-Write-Host "Codex runtime ready."
+Write-Host "Codex Python SDK runtime ready."
 Write-Host "PROJECT_COPILOT_CODEX_BIN=$($codexExe.FullName)"
 Write-Host "No API credential was created, copied, or printed."

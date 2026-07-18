@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>项目知识与数据助手</title>
     <link rel="stylesheet" href="/static/direction.css">
+    {% if show_graph %}<script src="/static/vendor/cytoscape-3.34.0.min.js" defer></script>{% endif %}
     <script src="/static/vendor/dompurify/purify.min.js" defer></script>
     <script src="/static/vendor/marked/marked.umd.js" defer></script>
     <script src="/static/direction.js" defer></script>
@@ -68,6 +69,20 @@
             <button id="artifact-canvas-close" type="button" aria-label="关闭工程成果">关闭</button>
           </header>
           <div id="artifact-canvas-content"></div>
+        </aside>
+        {% endif %}
+
+        {% if show_graph %}
+        <aside id="project-map" class="project-map" data-testid="project-map" data-expanded="false" hidden>
+          <header class="project-map-header">
+            <div><strong>资料关系</strong><small>本次回答涉及的文件与数据</small></div>
+            <div class="project-map-actions">
+              <button id="project-map-expand" type="button" aria-label="展开完整资料图谱" aria-expanded="false">展开</button>
+              <button id="project-map-close" type="button" aria-label="关闭资料图谱">关闭</button>
+            </div>
+          </header>
+          <div id="project-graph" class="project-graph" aria-label="交互式资料关系图"></div>
+          <div class="project-map-legend"><span><i class="legend-dot"></i>资料</span><span><i class="legend-dot is-data"></i>数据</span><span><i class="legend-dot is-cited"></i>本次引用</span></div>
         </aside>
         {% endif %}
 

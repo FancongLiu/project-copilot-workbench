@@ -4,10 +4,24 @@
   "status_authority": "this_file",
   "checkpoint_projection": "docs/CODEX_RUNTIME_CHECKPOINT.md",
   "event_log": "docs/CODEX_RUNTIME_TASK_EVENTS.jsonl",
-  "status": "blocked",
-  "revision": 6,
+  "status": "in_progress",
+  "revision": 10,
   "write_owner": "root",
-  "objective": "Deliver a company-private thin Web mode backed by the official Codex agent runtime, then compare it fairly with the existing Haystack/DuckDB backend on the same synthetic HVAC corpus, model endpoint and complex questions.",
+  "objective": "Deliver a company-private ultra-thin engineer Web client backed by the official Codex Python SDK and Codex agent runtime, preserve the existing Haystack/DuckDB site and synthetic HVAC corpus as comparison assets, and verify the new path with governed read-only tools, reproducible tests, browser acceptance, independent review and deployment handoff.",
+  "latest_direct_correction": {
+    "recorded_at": "2026-07-19",
+    "authority": "Chairman direct instruction",
+    "contract": [
+      "Codex SDK or Codex App Server is the primary intelligence backend behind one lightweight engineer-facing Web client",
+      "The Web client has one free-chat entry, a few high-frequency workflow buttons, readable Markdown, bounded tables/charts and original-filename citations",
+      "OpenCode is a replaceable alternative only if current commercial or provider evidence rejects Codex; it is not selected merely because it is MIT licensed",
+      "Formal deployment uses a company API, Azure OpenAI, or approved Business/Enterprise credentials and never shares a personal login or API key",
+      "The current synthetic HVAC corpus and old Web backend remain frozen comparison assets",
+      "The Obsidian-style graph is secondary evidence navigation: compact local graph after evidence use, full project graph only on demand",
+      "Acceptance includes harder multi-part questions, explicit honest benchmark boundaries, independent review, browser acceptance, documentation, commit and push; an architecture report alone is not completion"
+    ],
+    "commercial_evidence": "OpenAI Services Agreement effective 2026-01-01 permits API integration into Customer Applications and access by End Users; account sharing, account-access resale and API-key transfer remain prohibited. openai/codex is Apache-2.0."
+  },
   "product_contract": {
     "input": [
       "one natural-language project question or a named high-frequency workflow",
@@ -15,24 +29,27 @@
       "a company-approved OpenAI-compatible Responses endpoint"
     ],
     "process": [
-      "Codex plans iterative evidence gathering inside an isolated workspace",
-      "immutable named tools expose bounded read-only database operations",
-      "a required local MCP server exposes only three fixed read-only database operations outside the command sandbox",
-      "the same existing Chat UI renders the final Markdown and original-filename citations"
+      "the official Codex Python SDK starts the pinned Codex App Server in an ephemeral session",
+      "Codex performs iterative evidence gathering inside an isolated copied workspace",
+      "a required official MCP server exposes typed bounded read-only HVAC operations and one guarded flat SELECT escape hatch",
+      "structured output is validated and rendered by the existing Chat UI",
+      "the compact evidence graph appears only after a query uses sources and expands to the full project map only when requested"
     ],
     "output": [
       "one engineer-readable Markdown answer",
+      "optional bounded tables and line/bar charts backed by governed results",
       "bounded tool activity without private chain-of-thought",
-      "exact human-readable source filenames",
-      "measured comparison evidence against the existing backend"
+      "exact human-readable source filenames and validated excerpts",
+      "measured comparison evidence without fabricated or silently degraded results"
     ]
   },
   "selection": {
-    "runtime": "official openai/codex CLI JSONL transport",
-    "sdk_status": "The official TypeScript SDK was verified, but its current Windows child-process finalizer and the nested Codex Desktop job boundary made result capture unreliable in this environment. The SDK wraps the same CLI, so the prototype uses the official CLI transport directly.",
-    "provider": "custom OpenAI-compatible Responses provider with supports_websockets=false",
-    "data_tool": "official MCP Python SDK 1.28.1 plus DuckDB 1.5.4 with three fixed read-only operations and no model-supplied SQL or path",
-    "policy": "Windows elevated setup is installed but failed the host-source negative read; WSL2 Landlock with Codex 0.144.5 is the validated replacement candidate and is not yet integrated",
+    "runtime": "official openai-codex Python SDK 0.144.4 controlling its pinned bundled Codex App Server; the measured CLI JSONL transport remains an explicit comparison adapter only",
+    "sdk_status": "The official Python SDK 0.144.4 is published as beta. It supports async threads, streaming, structured output and explicit sandbox selection. The project pins it exactly, hash-locks the install, and never silently falls back to CLI.",
+    "provider": "custom company-approved OpenAI-compatible Responses provider with supports_websockets=false",
+    "data_tool": "official MCP Python SDK 1.28.1 plus DuckDB 1.5.4; nine bounded read-only knowledge/HVAC tools, typed operations preferred, guarded single flat SELECT only as an escape hatch; arbitrary Shell is rejected",
+    "graph": "reuse vendored Cytoscape 3.34.0 for an Obsidian-style local/full evidence graph; no second renderer or graph database added",
+    "policy": "Synthetic public-data SDK contract evaluation may run only in its explicit test profile. Company-data deployment remains fail-closed until the execution boundary denies application and unrelated host reads; WSL2 Landlock remains the validated production-isolation candidate.",
     "ui": "reuse the current single-Chat page; no fifth visual architecture"
   },
   "measured_evidence": [
@@ -44,111 +61,101 @@
     },
     {
       "id": "CR-E002",
-      "claim": "Codex completed the complex data-quality plus load-weighted-COP question using two immutable governed tools and targeted project documents.",
-      "evidence": "D:/project-copilot-codex-probe/probe-rules.stdout.jsonl",
-      "result": "turn.completed; HP-02 missing/frozen, HP-03 duplicates and highest COP, HP-04 out-of-order"
+      "claim": "The earlier architecture probe combined governed data-quality/COP operations with project documents where the old backend refused the equivalent MX01 result.",
+      "evidence": "D:/project-copilot-codex-probe/probe-rules.stdout.jsonl and evaluation/results/four-version-shared-backend-live.json",
+      "result": "Codex probe completed under the weaker sandbox; old backend hard_gate_pass=false and refused=true. Architecture evidence only."
     },
     {
       "id": "CR-E003",
-      "claim": "The existing backend failed the equivalent MX01 case after its tools succeeded because the final numeric grounding gate rejected the answer.",
-      "evidence": "evaluation/results/four-version-shared-backend-live.json",
-      "result": "hard_gate_pass=false; refused=true; no table or citations"
+      "claim": "The official Python SDK adapter starts the real bundled Codex App Server, preserves a controlled environment and parses actual SDK event types.",
+      "evidence": "tests/test_codex_runtime.py",
+      "result": "44 passed including local mock Responses integration, strict-config failure, document-tool provenance adversaries, double-negative question-number grounding rejection and raw-API citation-metadata redaction"
     },
     {
       "id": "CR-E004",
-      "claim": "The official MCP Python SDK exposes only three fixed read-only HVAC tools and returns the frozen COP result.",
-      "evidence": "local official MCP STDIO smoke on 2026-07-18",
-      "result": "tools=schema,data_quality,cop_ranking; cop_ranking first row HP-03 4.001643"
+      "claim": "The official MCP STDIO lifecycle exposes all nine governed knowledge/HVAC tools with constrained schemas and executes a typed configuration-change query.",
+      "evidence": "tests/test_codex_runtime.py",
+      "result": "tools discovered; configuration change returned approved 12.0 to 10.0 evidence"
     },
     {
       "id": "CR-E005",
-      "claim": "The remediated adapter creates a fresh session per request, keeps DuckDB outside command read permissions, validates structured citations, and removes raw thread IDs.",
-      "evidence": "tests/test_codex_runtime.py",
-      "result": "23 passed"
+      "claim": "Focused runtime, direction and Web regressions remain green after SDK, MCP, structured presentation and graph integration.",
+      "evidence": "tests/test_codex_runtime.py, tests/test_direction_demo.py, tests/test_web_v2.py",
+      "result": "80 runtime/direction/Web tests passed; the frozen complex-question/evaluator contract added 10 tests, for 90 focused tests total"
     },
     {
       "id": "CR-E006",
-      "claim": "Focused Web and existing-backend regressions remain green after the secure runtime refactor.",
-      "evidence": "D:/project-copilot-codex-probe/pytest-focused-secure.log",
-      "result": "55 passed"
+      "claim": "The engineer-facing evidence graph is unobtrusive and usable.",
+      "evidence": "tests/test_browser_acceptance.py",
+      "result": "10 passed, 1 intentionally gated real-model case skipped; compact local graph, expand/restore, exact cited-dataset highlighting and fixed composer verified"
     },
     {
       "id": "CR-E007",
-      "status": "superseded_by_CR-E010",
-      "claim": "Secure real-model acceptance cannot run on this PC until the elevated Windows sandbox setup receives administrator approval.",
-      "evidence": "official codex sandbox permission-profile smoke",
-      "result": "unelevated rejected restricted reads; elevated helper requested an administrator setup prompt"
+      "claim": "The frozen old-backend hard subset establishes a reproducible baseline.",
+      "evidence": "existing evaluation result and human-review artifacts",
+      "result": "hard gate 1/9; human 0 pass, 3 partial, 6 fail; this is not an SDK score"
     },
     {
       "id": "CR-E008",
-      "claim": "The Web service now fails closed until an operator probe proves that the generated permission profile reads the copied workspace and denies both the private DuckDB file and application source outside the workspace.",
-      "evidence": "tests/test_codex_runtime.py and scripts/run-codex.ps1",
-      "result": "schema-v2 marker is written only after allow=0, private-deny=73 and application-source-deny=73; every schema-v1 marker is rejected"
-    },
-    {
-      "id": "CR-E009",
-      "status": "superseded_by_post_UAC_rereview",
-      "claim": "Final independent code rereview found no remaining Critical or Important implementation findings.",
-      "evidence": "bounded secure_codex_rereview on the 2026-07-18 working tree",
-      "result": "Critical=0; Important=0; not merge-ready only because secure real-model/UAC acceptance is still blocked"
-    },
-    {
-      "id": "CR-E010",
       "claim": "The authorized elevated Windows setup completed, but the sandbox account could still open application/root-repository files outside the copied workspace.",
       "evidence": "local OS probes on 2026-07-18 after codex sandbox setup --elevated --current-user",
       "result": "setup exit=0; private DuckDB with explicit ACL exit=73; root repository read exit=0; Windows production startup remains blocked"
     },
     {
-      "id": "CR-E011",
-      "claim": "The existing WSL2 environment enforces the intended allow-only read boundary with the official Codex 0.144.5 Linux binary.",
+      "id": "CR-E009",
+      "claim": "The existing WSL2 environment enforces the intended allow-only read boundary with the official Codex Linux runtime.",
       "evidence": "local WSL2 Landlock probe using a custom Permission Profile",
       "result": "workspace allowed exit=0; outside private file exit=1; mounted Windows root repository exit=1"
+    },
+    {
+      "id": "CR-E010",
+      "claim": "Independent review findings for document/data evidence binding, question-number grounding, Shell containment, strict configuration, citation-metadata redaction, exact graph highlighting and MCP schema usability were remediated with adversarial tests.",
+      "evidence": "tests/test_codex_runtime.py and tests/test_browser_acceptance.py",
+      "result": "final independent rereview Ready: Yes with no Critical or Important finding; one minor descendant-timeout-cleanup risk remains documented"
     }
   ],
   "safety_boundaries": [
     "No company data, credentials, endpoint values, runtime indexes or model sessions enter Git.",
     "The browser never receives an API key.",
     "Each request receives a fresh ephemeral project copy; hidden benchmark truth and repository internals are excluded.",
-    "DuckDB remains outside the command sandbox and is reachable only through a required official MCP server with three fixed read-only operations.",
+    "DuckDB remains outside command read permissions and is reachable only through the required MCP server.",
+    "Typed MCP tools are preferred; the SQL tool permits one bounded flat read-only SELECT and denies file/system access, writes, star projection, CTEs and subqueries.",
+    "Every Shell, file-change and Web-search event is rejected; document inspection is available only through search_project_knowledge.",
+    "Physical document citations must come from search_project_knowledge, virtual data citations must be authorized by the exact MCP result, and model-authored numeric claims/tables/charts must match returned tool or cited evidence.",
+    "All public answer, table and chart strings receive server-side internal-path redaction before the API response.",
     "A custom Permission Profile grants only minimal runtime reads, one copied document workspace, temporary writes, and no command network access.",
-    "Native Windows deployment requires the elevated sandbox and fails closed when that administrator-approved setup is unavailable.",
+    "Native Windows deployment fails closed while unrelated host reads remain possible.",
     "Web search and direct network access are disabled inside project-analysis turns.",
     "OnionQuant Cron, context_state, Inbox, Outbox and runtime state remain untouched.",
-    "Existing untracked evaluation results remain untouched."
+    "Existing unrelated untracked evaluation results remain untouched."
   ],
   "slices": [
     {
       "id": "CR-01",
-      "title": "Current research and real runtime feasibility probe",
-      "status": "completed",
-      "evidence": [
-        "official Codex manual refreshed 2026-07-18",
-        "openai/codex GitHub current metadata",
-        "D:/project-copilot-codex-probe/probe-provider.stdout.jsonl",
-        "D:/project-copilot-codex-probe/probe-rules.stdout.jsonl"
-      ]
+      "title": "Current Web/GitHub research, commercial verification and runtime feasibility",
+      "status": "completed"
     },
     {
       "id": "CR-02",
-      "title": "TDD implementation of isolated workspace, provider, JSONL runtime and governed tools",
+      "title": "TDD SDK transport, structured output and governed MCP implementation",
       "status": "completed"
     },
     {
       "id": "CR-03",
-      "title": "Reuse existing Chat UI with runtime switch and named workflow buttons",
+      "title": "Thin Chat UI, named workflows and Obsidian-style evidence graph",
       "status": "completed"
     },
     {
       "id": "CR-04",
-      "title": "Frozen complex benchmark, browser acceptance and human review",
-      "status": "blocked",
-      "blocker": "Windows elevated sandbox failed the outside-source negative read. WSL2/Landlock passed the prototype boundary but still needs production integration."
+      "title": "Frozen comparison contract and browser acceptance",
+      "status": "completed",
+      "note": "Old-backend baseline and SDK contract are recorded separately. A full native-Windows real-model SDK quality score is deliberately not claimed because the host-read isolation gate fails."
     },
     {
       "id": "CR-05",
-      "title": "Deployment handoff, independent review, verification, commit and push",
+      "title": "Deployment handoff, independent review, final verification, commit and push",
       "status": "in_progress"
     }
   ],
-  "current_blocker": "The authorized Windows elevated sandbox is installed but cannot isolate readable host drives on this PC. Secure real-model acceptance now requires explicit approval and implementation of the validated WSL2/Landlock backend."
+  "current_blocker": "No commercial-license blocker was found for the Codex SDK plus company API/Azure route. The remaining production blocker is native Windows host-read isolation. The SDK/App Server/MCP synthetic contract and UI are runnable; company-file real-model deployment remains fail-closed until the validated WSL2/Landlock boundary is integrated and re-accepted."
 }

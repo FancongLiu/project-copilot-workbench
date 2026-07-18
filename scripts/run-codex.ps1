@@ -7,9 +7,6 @@ param(
     [string]$RuntimePath,
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
-    [string]$CodexRuntimeRoot,
-    [Parameter(Mandatory = $true)]
-    [ValidateNotNullOrEmpty()]
     [string]$CodexConfig,
     [int]$Port = 8790,
     [ValidateSet("low", "medium", "high", "xhigh")]
@@ -30,12 +27,12 @@ if (-not (Test-Path -LiteralPath $preflight -PathType Leaf)) {
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $resolvedConfig = (Resolve-Path -LiteralPath $CodexConfig).Path
 $resolvedRuntime = [System.IO.Path]::GetFullPath($RuntimePath)
-$resolvedCodexRoot = (Resolve-Path -LiteralPath $CodexRuntimeRoot).Path
-$codexExe = Get-ChildItem -LiteralPath (Join-Path $resolvedCodexRoot "node_modules") `
-    -Filter "codex.exe" -File -Recurse | Sort-Object FullName | Select-Object -First 1
-if (-not $codexExe) {
-    throw "codex.exe was not found. Run scripts/bootstrap-codex-runtime.ps1 first."
+$codexPath = & (Join-Path $root ".venv\Scripts\python.exe") `
+    -c "import codex_cli_bin; print(codex_cli_bin.bundled_codex_path())"
+if ($LASTEXITCODE -ne 0 -or -not $codexPath) {
+    throw "The Codex Python SDK runtime was not found. Run scripts/bootstrap-codex-runtime.ps1 first."
 }
+$codexExe = Get-Item -LiteralPath $codexPath.Trim()
 
 New-Item -ItemType Directory -Force -Path $resolvedRuntime | Out-Null
 $env:HAYSTACK_TELEMETRY_ENABLED = "False"
@@ -43,6 +40,7 @@ $env:PROJECT_COPILOT_AGENT_RUNTIME = "codex"
 $env:PROJECT_COPILOT_ACK_CODEX_SWITCH = "true"
 $env:PROJECT_COPILOT_CODEX_CONFIG = $resolvedConfig
 $env:PROJECT_COPILOT_CODEX_BIN = $codexExe.FullName
+$env:PROJECT_COPILOT_CODEX_TRANSPORT = "python-sdk"
 $env:PROJECT_COPILOT_CODEX_RUNTIME_ROOT = Join-Path $resolvedRuntime "codex-agent"
 $env:PROJECT_COPILOT_CODEX_REASONING_EFFORT = $ReasoningEffort
 

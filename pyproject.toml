@@ -32,6 +32,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+codex = [
+  "openai-codex==0.144.4",
+]
 dev = [
   "playwright==1.60.0",
   "hypothesis==6.156.6",

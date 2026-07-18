@@ -29,10 +29,12 @@ def test_direction_page_is_one_plain_chat_without_defrost_navigation(
     assert "离线方向演示" in page.text
     assert "本地私有索引" in page.text
     assert 'href="/workbench"' not in page.text
-    assert 'data-testid="project-map"' not in page.text
+    assert 'data-testid="project-map"' in page.text
+    assert 'id="project-map-expand"' in page.text
+    assert 'id="project-map-close"' in page.text
     assert 'id="direction-files"' in page.text
     assert "multiple" in page.text
-    assert "/static/vendor/cytoscape-3.34.0.min.js" not in page.text
+    assert "/static/vendor/cytoscape-3.34.0.min.js" in page.text
     assert "data-workspace-name=" in page.text
     assert "data-source-count=" in page.text
     assert 'data-testid="active-project"' in page.text

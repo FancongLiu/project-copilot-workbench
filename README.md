@@ -4,6 +4,29 @@ A public-safe project knowledge and governed analytics workbench. V2 adds
 durable project workspaces, auditable imports, bounded Haystack tool use, cited
 answers, and a fully synthetic HVAC evaluation suite.
 
+## Current Codex SDK direction
+
+The selected next-generation profile keeps the same single engineer-facing
+Chat but replaces the weak shared-agent path with the official beta
+`openai-codex` Python SDK and its pinned Codex App Server. A required MCP server
+offers nine bounded read-only knowledge/HVAC tools; final answers can contain readable
+Markdown, governed tables/charts and original-filename citations. There is no
+silent fallback to the legacy CLI or a fake model result. Shell, file-change and
+Web-search events are rejected; document inspection uses the governed knowledge
+tool.
+
+The page also includes an Obsidian-style evidence graph implemented with the
+already-vendored Cytoscape renderer. It is hidden during ordinary Chat, appears
+after grounded evidence is used, shows the current evidence path in compact
+mode, and expands to the full project graph only when requested. See the
+[Codex SDK deployment and acceptance handoff](docs/codex-runtime-deployment.md).
+
+Company-file execution remains fail-closed on native Windows because the
+current elevated sandbox can still read unrelated host files on an ordinarily
+readable drive. The synthetic SDK/App Server/MCP contract is runnable and
+tested; production rollout waits for the validated WSL2/Landlock boundary to
+be integrated and accepted.
+
 ## Four architecture trial
 
 The local direction build keeps the current compact Chat at `/` and exposes
@@ -16,10 +39,9 @@ read-only tools and source contract:
 - `/versions/evidence` — answer plus on-demand evidence workbench;
 - `/versions/canvas` — concise Chat plus a stable engineering deliverable.
 
-The variants do not copy or fork the backend. Current independent review favors
-the evidence workbench as the default foundation, the queue as a shared input
-capability and the canvas only for complex tables/charts. The root route remains
-unchanged until the Chairman completes direction acceptance.
+The variants do not copy or fork the backend. The root route is the modern
+single-Chat surface with the secondary evidence graph; the three variants stay
+available only as retained architecture-level comparison assets.
 
 ![Workbench desktop view](docs/assets/workbench-desktop.png)
 

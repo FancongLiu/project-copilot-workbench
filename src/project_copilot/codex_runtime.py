@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 import json
+import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,10 +25,32 @@ PREFLIGHT_SCHEMA_VERSION = 2
 PERMISSIONS_PROFILE_VERSION = 1
 DENIED_READ_EXIT_CODE = 73
 MCP_TOOLS = {
+    "search_project_knowledge": (
+        "search-project-knowledge",
+        "已检索项目资料",
+    ),
+    "query_hvac_database": ("query_hvac_database", "已完成受控数据查询"),
+    "inspect_hvac_snapshot": ("inspect_hvac_snapshot", "已完成运行快照检查"),
+    "inspect_configuration_history": (
+        "inspect_configuration_history",
+        "已完成配置历史核对",
+    ),
+    "inspect_configuration_change_effect": (
+        "inspect_configuration_change_effect",
+        "已完成配置变更效果核对",
+    ),
+    "inspect_metric_extreme": ("inspect_metric_extreme", "已完成指标极值检查"),
     "schema": ("schema", "数据字段检查"),
     "data_quality": ("data-quality", "数据质量检查"),
     "cop_ranking": ("cop-ranking", "能效排名"),
 }
+VIRTUAL_DATA_LOCATIONS = {
+    "telemetry.csv": "datasets/telemetry.csv",
+    "config_history.csv": "datasets/config_history.csv",
+    "assets.csv": "datasets/assets.csv",
+    "point_aliases.csv": "configuration/point-dictionary.csv",
+}
+_NUMBER_TOKEN = re.compile(r"(?<![\w.-])-?\d+(?:,\d{3})*(?:\.\d+)?")
 
 
 class CodexRuntimeError(RuntimeError):
@@ -89,9 +113,7 @@ def _codex_sandbox_group_sid() -> str:
         sid, _, _ = win32security.LookupAccountName(None, "CodexSandboxUsers")
         return str(win32security.ConvertSidToStringSid(sid))
     except Exception as exc:
-        raise CodexRuntimeError(
-            "Codex elevated sandbox group is unavailable"
-        ) from exc
+        raise CodexRuntimeError("Codex elevated sandbox group is unavailable") from exc
 
 
 def protect_private_runtime_paths(
@@ -139,10 +161,17 @@ class CodexWorkspaceBuilder:
     def prepare(self) -> PreparedCodexWorkspace:
         runtime_root = self.settings.runtime_root.resolve()
         if _path_is_within(runtime_root, REPOSITORY_ROOT):
-            raise CodexRuntimeError("Codex runtime storage must be outside the repository")
+            raise CodexRuntimeError(
+                "Codex runtime storage must be outside the repository"
+            )
         source_docs = self.corpus_root / "docs" / "source"
         source_database = self.corpus_root / "datasets" / "hvac_bakeoff.duckdb"
-        if not source_docs.is_dir() or not source_database.is_file():
+        source_manifest = self.corpus_root / "manifest.json"
+        if (
+            not source_docs.is_dir()
+            or not source_database.is_file()
+            or not source_manifest.is_file()
+        ):
             raise CodexRuntimeError("Fixed synthetic Codex evidence is unavailable")
 
         session_root = runtime_root / "runs" / uuid.uuid4().hex
@@ -157,6 +186,14 @@ class CodexWorkspaceBuilder:
         shutil.copytree(source_docs, copied_docs)
         database_path = evidence_root / "hvac_bakeoff.duckdb"
         shutil.copy2(source_database, database_path)
+        toolbox_database = evidence_root / "datasets" / "hvac_bakeoff.duckdb"
+        toolbox_database.parent.mkdir()
+        try:
+            os.link(database_path, toolbox_database)
+        except OSError:
+            shutil.copy2(database_path, toolbox_database)
+        shutil.copy2(source_manifest, evidence_root / "manifest.json")
+        shutil.copytree(source_docs, evidence_root / "docs" / "source")
         (workspace / "AGENTS.md").write_text(
             (ASSET_DIR / "AGENTS.template.md").read_text(encoding="utf-8"),
             encoding="utf-8",
@@ -171,7 +208,9 @@ class CodexWorkspaceBuilder:
                     f"Duplicate human source filename in fixed corpus: {path.name}"
                 )
             source_files[path.name] = path
-        source_files["telemetry.csv"] = None
+        source_files["manifest.json"] = evidence_root / "manifest.json"
+        for virtual_filename in VIRTUAL_DATA_LOCATIONS:
+            source_files[virtual_filename] = None
 
         output_schema = codex_home / "answer.schema.json"
         output_schema.write_text(
@@ -180,9 +219,91 @@ class CodexWorkspaceBuilder:
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["answer_markdown", "citations"],
+                    "required": [
+                        "answer_markdown",
+                        "tables",
+                        "charts",
+                        "citations",
+                    ],
                     "properties": {
                         "answer_markdown": {"type": "string", "minLength": 1},
+                        "tables": {
+                            "type": "array",
+                            "maxItems": 4,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["title", "columns", "rows"],
+                                "properties": {
+                                    "title": {"type": "string", "maxLength": 100},
+                                    "columns": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "maxItems": 12,
+                                        "items": {
+                                            "type": "string",
+                                            "maxLength": 80,
+                                        },
+                                    },
+                                    "rows": {
+                                        "type": "array",
+                                        "maxItems": 100,
+                                        "items": {
+                                            "type": "array",
+                                            "maxItems": 12,
+                                            "items": {
+                                                "type": [
+                                                    "string",
+                                                    "number",
+                                                    "boolean",
+                                                    "null",
+                                                ]
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "charts": {
+                            "type": "array",
+                            "maxItems": 4,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": [
+                                    "kind",
+                                    "title",
+                                    "unit",
+                                    "points",
+                                ],
+                                "properties": {
+                                    "kind": {"enum": ["line", "bar"]},
+                                    "title": {"type": "string", "maxLength": 100},
+                                    "unit": {"type": "string", "maxLength": 30},
+                                    "points": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "maxItems": 200,
+                                        "items": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "required": ["label", "value"],
+                                            "properties": {
+                                                "label": {
+                                                    "type": "string",
+                                                    "maxLength": 100,
+                                                },
+                                                "value": {"type": "number"},
+                                                "series": {
+                                                    "type": "string",
+                                                    "maxLength": 80,
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
                         "citations": {
                             "type": "array",
                             "minItems": 1,
@@ -255,14 +376,17 @@ class CodexWorkspaceBuilder:
                 "[shell_environment_policy]",
                 'inherit = "core"',
                 "ignore_default_excludes = false",
-                'exclude = ["CODEX_API_KEY", "*KEY*", "*TOKEN*", "*SECRET*", "PROJECT_COPILOT_MCP_DATABASE"]',
+                (
+                    'exclude = ["CODEX_API_KEY", "*KEY*", "*TOKEN*", "*SECRET*", '
+                    '"PROJECT_COPILOT_MCP_DATABASE", "PROJECT_COPILOT_MCP_CORPUS"]'
+                ),
                 "",
                 "[permissions.project-copilot.filesystem]",
                 '":minimal" = "read"',
                 '":tmpdir" = "write"',
-                f"{_toml_string(workspace)} = \"read\"",
-                f"{_toml_string(database_path.parent)} = \"deny\"",
-                f"{_toml_string(codex_home)} = \"deny\"",
+                f'{_toml_string(workspace)} = "read"',
+                f'{_toml_string(database_path.parent)} = "deny"',
+                f'{_toml_string(codex_home)} = "deny"',
                 "",
                 "[permissions.project-copilot.network]",
                 "enabled = false",
@@ -273,11 +397,20 @@ class CodexWorkspaceBuilder:
                 "required = true",
                 "startup_timeout_sec = 15",
                 "tool_timeout_sec = 45",
-                'enabled_tools = ["schema", "data_quality", "cop_ranking"]',
+                (
+                    'enabled_tools = ["schema", "data_quality", "cop_ranking", '
+                    '"search_project_knowledge", "query_hvac_database", '
+                    '"inspect_hvac_snapshot", '
+                    '"inspect_configuration_history", '
+                    '"inspect_configuration_change_effect", '
+                    '"inspect_metric_extreme"]'
+                ),
                 'default_tools_approval_mode = "auto"',
                 "",
                 f"[mcp_servers.{MCP_SERVER_NAME}.env]",
                 f"PROJECT_COPILOT_MCP_DATABASE = {_toml_string(database_path)}",
+                (f"PROJECT_COPILOT_MCP_CORPUS = {_toml_string(database_path.parent)}"),
+                'POLARS_SKIP_CPU_CHECK = "1"',
                 f"PYTHONPATH = {_toml_string(python_path)}",
                 "",
                 "[windows]",
@@ -479,8 +612,7 @@ def validate_elevated_sandbox_preflight(settings: CodexRuntimeSettings) -> None:
         ) from exc
     if (
         payload.get("schema_version") != PREFLIGHT_SCHEMA_VERSION
-        or payload.get("permissions_profile_version")
-        != PERMISSIONS_PROFILE_VERSION
+        or payload.get("permissions_profile_version") != PERMISSIONS_PROFILE_VERSION
         or payload.get("status") != "passed"
     ):
         raise CodexRuntimeError("Codex elevated sandbox preflight is outdated")
@@ -494,17 +626,16 @@ class CodexTurnParser:
     def __init__(self, prepared: PreparedCodexWorkspace) -> None:
         self.prepared = prepared
 
-    def parse(self, jsonl: str) -> dict[str, Any]:
+    def parse(self, jsonl: str, *, question: str = "") -> dict[str, Any]:
         answer_text = ""
         completed = False
         activities: list[dict[str, str]] = []
-        data_evidence_tools: set[str] = set()
+        tool_tables: list[dict[str, Any]] = []
+        tool_charts: list[dict[str, Any]] = []
+        tool_payloads: list[object] = []
+        tool_citations: dict[str, dict[str, object]] = {}
         try:
-            events = [
-                json.loads(line)
-                for line in jsonl.splitlines()
-                if line.strip()
-            ]
+            events = [json.loads(line) for line in jsonl.splitlines() if line.strip()]
         except (json.JSONDecodeError, TypeError) as exc:
             raise CodexRuntimeError(
                 "Codex Agent did not produce a verifiable answer"
@@ -521,35 +652,73 @@ class CodexTurnParser:
             if event_type != "item.completed":
                 continue
             item = event.get("item", {})
-            if item.get("type") == "agent_message":
+            item_type = item.get("type")
+            if item_type == "file_change":
+                raise CodexRuntimeError("Codex attempted a forbidden file change")
+            if item_type == "web_search":
+                raise CodexRuntimeError("Codex attempted a forbidden web search")
+            if item_type == "command_execution":
+                raise CodexRuntimeError("Codex attempted a forbidden shell command")
+            if item_type == "agent_message":
                 answer_text = str(item.get("text", "")).strip()
                 continue
-            if item.get("type") != "mcp_tool_call":
+            if item_type != "mcp_tool_call":
                 continue
             server = str(item.get("server", ""))
             tool = str(item.get("tool", ""))
             if server != MCP_SERVER_NAME or tool not in MCP_TOOLS:
-                continue
+                raise CodexRuntimeError("Codex attempted an unapproved MCP tool")
             if item.get("status") != "completed" or item.get("error"):
                 raise CodexRuntimeError("Governed data operation failed")
             result = item.get("result")
             structured_content = (
-                result.get("structured_content")
-                if isinstance(result, dict)
-                else None
+                result.get("structured_content") if isinstance(result, dict) else None
             )
-            rows = (
-                structured_content.get("result")
-                if isinstance(structured_content, dict)
-                else None
-            )
-            if not isinstance(rows, list) or not rows:
+            payload = None
+            if isinstance(structured_content, dict):
+                payload = (
+                    structured_content.get("result")
+                    if "result" in structured_content
+                    else structured_content
+                )
+            if isinstance(payload, list):
+                has_evidence = bool(payload)
+                if has_evidence:
+                    tool_payloads.append(payload)
+                if tool in {"data_quality", "cop_ranking"}:
+                    tool_citations["telemetry.csv"] = self._virtual_tool_citation(
+                        "telemetry.csv",
+                        "Read-only synthetic telemetry snapshot; calculations were "
+                        "performed by a governed MCP tool.",
+                    )
+            elif isinstance(payload, dict):
+                has_evidence = bool(payload)
+                if has_evidence:
+                    tool_payloads.append(payload)
+                tool_tables.extend(self._validated_tables(payload.get("tables", [])))
+                tool_charts.extend(self._validated_charts(payload.get("charts", [])))
+                raw_citations = payload.get("citations", [])
+                if not isinstance(raw_citations, list):
+                    raise CodexRuntimeError("Governed data citations are invalid")
+                for raw_citation in raw_citations:
+                    canonical = self._canonical_tool_citation(raw_citation)
+                    canonical_filename = str(canonical["filename"])
+                    if (
+                        self.prepared.source_files[canonical_filename] is not None
+                        and tool != "search_project_knowledge"
+                    ):
+                        raise CodexRuntimeError(
+                            "Codex document citation is not verified by the "
+                            "knowledge tool"
+                        )
+                    tool_citations.setdefault(canonical_filename, canonical)
+            else:
+                has_evidence = False
+            if not has_evidence:
                 raise CodexRuntimeError(
                     "Governed data operation did not return evidence"
                 )
             tool_id, summary = MCP_TOOLS[tool]
-            if tool in {"data_quality", "cop_ranking"}:
-                data_evidence_tools.add(tool_id)
             if not any(activity["tool"] == tool_id for activity in activities):
                 activities.append(
                     {"tool": tool_id, "status": "completed", "summary": summary}
@@ -559,6 +728,10 @@ class CodexTurnParser:
         try:
             structured = json.loads(answer_text)
             answer = str(structured["answer_markdown"]).strip()
+            model_tables = self._validated_tables(structured.get("tables", []))
+            model_charts = self._validated_charts(structured.get("charts", []))
+            tables = tool_tables or model_tables
+            charts = tool_charts or model_charts
             requested_citations = structured["citations"]
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise CodexRuntimeError(
@@ -566,21 +739,36 @@ class CodexTurnParser:
             ) from exc
         if not answer or not isinstance(requested_citations, list):
             raise CodexRuntimeError("Codex Agent did not produce a verifiable answer")
-        citations = self._verified_citations(
-            requested_citations,
-            data_evidence_tools,
-        )
+        citations = self._verified_citations(requested_citations, tool_citations)
         if not citations:
-            raise CodexRuntimeError("Codex Agent answer lacked verified project evidence")
-        has_documents = any(item["filename"] != "telemetry.csv" for item in citations)
-        mode = "combined" if activities and has_documents else "data" if activities else "knowledge"
+            raise CodexRuntimeError(
+                "Codex Agent answer lacked verified project evidence"
+            )
+        self._verify_numeric_grounding(
+            answer=answer,
+            tables=model_tables if not tool_tables else [],
+            charts=model_charts if not tool_charts else [],
+            citations=citations,
+            tool_payloads=tool_payloads,
+            question=question,
+        )
+        has_documents = any(
+            str(item["filename"]) not in VIRTUAL_DATA_LOCATIONS for item in citations
+        )
+        mode = (
+            "combined"
+            if activities and has_documents
+            else "data"
+            if activities
+            else "knowledge"
+        )
         return {
             "mode": mode,
             "demo_mode": False,
             "model_backed": True,
             "answer_markdown": answer,
-            "tables": [],
-            "charts": [],
+            "tables": tables,
+            "charts": charts,
             "citations": citations,
             "activities": activities,
             "clarification": False,
@@ -588,10 +776,301 @@ class CodexTurnParser:
             "grounding_status": "grounded",
         }
 
+    def _canonical_tool_citation(self, raw: object) -> dict[str, object]:
+        if not isinstance(raw, dict):
+            raise CodexRuntimeError("Governed data citations are invalid")
+        filename = str(raw.get("filename", "")).strip()
+        excerpt = str(raw.get("excerpt", "")).strip()
+        if not filename:
+            raise CodexRuntimeError("Governed data citations are invalid")
+        source = self.prepared.source_files.get(filename)
+        if source is None:
+            if filename not in VIRTUAL_DATA_LOCATIONS:
+                raise CodexRuntimeError("Governed data citation filename is invalid")
+            return self._virtual_tool_citation(filename, excerpt)
+        content = source.read_text(encoding="utf-8", errors="strict")
+        excerpt = excerpt[:500]
+        if not excerpt or excerpt not in content:
+            raise CodexRuntimeError("Governed document citation is invalid")
+        return {
+            "filename": filename,
+            "excerpt": excerpt,
+            "location": self._document_location(source),
+            "source_status": str(raw.get("source_status", "只读证据"))[:80],
+            "source_role": str(raw.get("source_role", source.parent.name))[:80],
+            "support_share_pct": 0,
+        }
+
+    @staticmethod
+    def _virtual_tool_citation(filename: str, excerpt: str) -> dict[str, object]:
+        return {
+            "filename": filename,
+            "excerpt": excerpt[:500]
+            or "Read-only governed project data returned by the MCP service.",
+            "location": VIRTUAL_DATA_LOCATIONS[filename],
+            "source_status": "只读证据",
+            "source_role": "dataset",
+            "support_share_pct": 0,
+        }
+
+    def _document_location(self, source: Path) -> str:
+        documents_root = self.prepared.workspace_root / "docs" / "source"
+        try:
+            return source.relative_to(documents_root).as_posix()
+        except ValueError:
+            if source.name == "manifest.json":
+                return "manifest.json"
+            raise CodexRuntimeError("Codex citation path is outside approved evidence")
+
+    @staticmethod
+    def _numbers(value: object) -> list[float]:
+        if isinstance(value, bool) or value is None:
+            return []
+        if isinstance(value, (int, float)):
+            number = float(value)
+            return [number] if math.isfinite(number) else []
+        if isinstance(value, str):
+            return [
+                float(match.group(0).replace(",", ""))
+                for match in _NUMBER_TOKEN.finditer(value)
+            ]
+        if isinstance(value, dict):
+            return [
+                number
+                for item in value.values()
+                for number in CodexTurnParser._numbers(item)
+            ]
+        if isinstance(value, (list, tuple)):
+            return [
+                number for item in value for number in CodexTurnParser._numbers(item)
+            ]
+        return []
+
+    @staticmethod
+    def _is_explicit_numeric_rejection(text: str, match: re.Match[str]) -> bool:
+        boundaries = ("\n", ".", "!", "?", ";", "。", "！", "？", "；")
+        start = max(text.rfind(boundary, 0, match.start()) for boundary in boundaries)
+        ends = [
+            position
+            for boundary in boundaries
+            if (position := text.find(boundary, match.end())) >= 0
+        ]
+        end = min(ends) if ends else len(text)
+        clause = text[start + 1 : end].casefold()
+        clause = re.sub(r"^[\s#>*+\-\d.)、]+", "", clause).strip()
+        if any(
+            reversal in clause
+            for reversal in (
+                " but ",
+                " however",
+                " actually",
+                " is correct",
+                " is supported",
+                " is the factual",
+                "但是",
+                "不过",
+                "其实",
+                "事实上",
+                "已确认",
+                "是正确",
+            )
+        ):
+            return False
+        english = re.match(
+            r"^(?:(?:i|we)\s+)?(?:(?:cannot|can't|can not|do not|don't|"
+            r"will not|won't)\s+(?:verify|confirm|support|accept|use|treat|"
+            r"set|change)\b|(?:refuse|decline)\b|reject(?:ed|ing)?\b)",
+            clause,
+        )
+        chinese = re.match(
+            r"^(?:我(?:们)?\s*)?(?:拒绝|无法确认|不能确认|不采纳|不接受|"
+            r"不会把|不能把|不会将|不能将)",
+            clause,
+        )
+        return bool(english or chinese)
+
+    @staticmethod
+    def _claim_numbers(text: str) -> list[float]:
+        claims: list[float] = []
+        for match in _NUMBER_TOKEN.finditer(text):
+            if CodexTurnParser._is_explicit_numeric_rejection(text, match):
+                continue
+            token = match.group(0).replace(",", "")
+            value = float(token)
+            suffix = text[match.end() : match.end() + 8].casefold()
+            has_unit = bool(
+                re.match(
+                    r"\s*(?:%|°|℃|c\b|k\b|kw\b|kwh\b|hz\b|kpa\b|s\b|min\b|h\b)",
+                    suffix,
+                )
+            )
+            if "." in token or abs(value) >= 10 or has_unit:
+                claims.append(value)
+        return claims
+
+    @staticmethod
+    def _supported_values(values: list[float]) -> list[float]:
+        finite = list(dict.fromkeys(value for value in values if math.isfinite(value)))
+        bounded = finite[:200]
+        supported = list(bounded)
+        for value in bounded:
+            supported.extend(
+                (value / 60.0, value / 3600.0, value * 10.0, value * 100.0)
+            )
+        for index, left in enumerate(bounded):
+            for right in bounded[index + 1 :]:
+                supported.extend((abs(left - right), left + right))
+                if right:
+                    supported.append(left / right)
+                if left:
+                    supported.append(right / left)
+                    supported.append(abs(right - left) / abs(left) * 100.0)
+        return supported
+
+    def _verify_numeric_grounding(
+        self,
+        *,
+        answer: str,
+        tables: list[dict[str, Any]],
+        charts: list[dict[str, Any]],
+        citations: list[dict[str, object]],
+        tool_payloads: list[object],
+        question: str,
+    ) -> None:
+        # Numbers in the user's question are requests, not proof. Only governed
+        # tool output and verified source excerpts may ground factual numbers.
+        evidence_values: list[float] = []
+        for payload in tool_payloads:
+            evidence_values.extend(self._numbers(payload))
+        for citation in citations:
+            evidence_values.extend(self._numbers(citation.get("excerpt", "")))
+        answer_claims = self._claim_numbers(answer)
+        presentation_claims = self._numbers(tables) + self._numbers(charts)
+        if not answer_claims and not presentation_claims:
+            return
+        supported = self._supported_values(evidence_values)
+        unsupported_presentations = [
+            claim
+            for claim in presentation_claims
+            if not any(
+                abs(claim - evidence) <= max(0.01, abs(evidence) * 0.005)
+                for evidence in evidence_values
+            )
+        ]
+        unsupported_answers = [
+            claim
+            for claim in answer_claims
+            if not any(
+                abs(claim - evidence) <= max(0.01, abs(evidence) * 0.005)
+                for evidence in supported
+            )
+        ]
+        if unsupported_presentations or unsupported_answers:
+            raise CodexRuntimeError(
+                "Codex answer contains unsupported numeric evidence"
+            )
+
+    @staticmethod
+    def _validated_tables(raw_tables: object) -> list[dict[str, Any]]:
+        if not isinstance(raw_tables, list) or len(raw_tables) > 4:
+            raise CodexRuntimeError("Codex table payload is invalid")
+        tables: list[dict[str, Any]] = []
+        for raw_table in raw_tables:
+            if not isinstance(raw_table, dict):
+                raise CodexRuntimeError("Codex table payload is invalid")
+            title = raw_table.get("title")
+            columns = raw_table.get("columns")
+            rows = raw_table.get("rows")
+            if (
+                not isinstance(title, str)
+                or len(title) > 100
+                or not isinstance(columns, list)
+                or not 1 <= len(columns) <= 12
+                or not all(
+                    isinstance(column, str) and 0 < len(column) <= 80
+                    for column in columns
+                )
+                or not isinstance(rows, list)
+                or len(rows) > 100
+            ):
+                raise CodexRuntimeError("Codex table payload is invalid")
+            normalized_rows: list[list[object]] = []
+            for row in rows:
+                if not isinstance(row, list) or len(row) != len(columns):
+                    raise CodexRuntimeError("Codex table payload is invalid")
+                normalized_row: list[object] = []
+                for cell in row:
+                    if cell is None or isinstance(cell, (str, bool, int)):
+                        if isinstance(cell, str) and len(cell) > 500:
+                            raise CodexRuntimeError("Codex table payload is invalid")
+                        normalized_row.append(cell)
+                    elif isinstance(cell, float) and math.isfinite(cell):
+                        normalized_row.append(cell)
+                    else:
+                        raise CodexRuntimeError("Codex table payload is invalid")
+                normalized_rows.append(normalized_row)
+            tables.append(
+                {"title": title, "columns": list(columns), "rows": normalized_rows}
+            )
+        return tables
+
+    @staticmethod
+    def _validated_charts(raw_charts: object) -> list[dict[str, Any]]:
+        if not isinstance(raw_charts, list) or len(raw_charts) > 4:
+            raise CodexRuntimeError("Codex chart payload is invalid")
+        charts: list[dict[str, Any]] = []
+        for raw_chart in raw_charts:
+            if not isinstance(raw_chart, dict):
+                raise CodexRuntimeError("Codex chart payload is invalid")
+            kind = raw_chart.get("kind")
+            title = raw_chart.get("title")
+            unit = raw_chart.get("unit")
+            points = raw_chart.get("points")
+            if (
+                kind not in {"line", "bar"}
+                or not isinstance(title, str)
+                or len(title) > 100
+                or not isinstance(unit, str)
+                or len(unit) > 30
+                or not isinstance(points, list)
+                or not 1 <= len(points) <= 200
+            ):
+                raise CodexRuntimeError("Codex chart payload is invalid")
+            normalized_points: list[dict[str, object]] = []
+            for point in points:
+                if not isinstance(point, dict):
+                    raise CodexRuntimeError("Codex chart payload is invalid")
+                label = point.get("label")
+                value = point.get("value")
+                series = point.get("series")
+                if (
+                    not isinstance(label, str)
+                    or not 0 < len(label) <= 100
+                    or isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))
+                    or (series is not None and not isinstance(series, str))
+                    or (isinstance(series, str) and len(series) > 80)
+                ):
+                    raise CodexRuntimeError("Codex chart payload is invalid")
+                normalized = {"label": label, "value": value}
+                if series is not None:
+                    normalized["series"] = series
+                normalized_points.append(normalized)
+            charts.append(
+                {
+                    "kind": kind,
+                    "title": title,
+                    "unit": unit,
+                    "points": normalized_points,
+                }
+            )
+        return charts
+
     def _verified_citations(
         self,
         requested: list[object],
-        data_evidence_tools: set[str],
+        tool_citations: dict[str, dict[str, object]],
     ) -> list[dict[str, object]]:
         citations: list[dict[str, object]] = []
         seen: set[str] = set()
@@ -599,32 +1078,27 @@ class CodexTurnParser:
             if not isinstance(raw, dict):
                 raise CodexRuntimeError("Codex citation payload is invalid")
             filename = str(raw.get("filename", "")).strip()
-            excerpt = str(raw.get("excerpt", "")).strip()
-            if not filename or filename in seen or filename not in self.prepared.source_files:
+            if (
+                not filename
+                or filename in seen
+                or filename not in self.prepared.source_files
+            ):
                 raise CodexRuntimeError("Codex citation filename is not verified")
             source = self.prepared.source_files[filename]
+            canonical = tool_citations.get(filename)
+            if canonical is not None:
+                citations.append(dict(canonical))
+                seen.add(filename)
+                continue
             if source is None:
-                if filename != "telemetry.csv" or not data_evidence_tools:
-                    raise CodexRuntimeError("Codex data citation is not verified")
-                excerpt = "只读合成遥测快照；计算由受控 MCP 工具完成。"
-                location = "datasets/telemetry.csv"
-                role = "dataset"
-            else:
-                content = source.read_text(encoding="utf-8", errors="strict")
-                if not excerpt or len(excerpt) > 500 or excerpt not in content:
-                    raise CodexRuntimeError("Codex citation excerpt is not verified")
-                location = source.relative_to(self.prepared.workspace_root).as_posix()
-                role = source.parent.name
-            citations.append(
-                {
-                    "filename": filename,
-                    "excerpt": excerpt,
-                    "location": location,
-                    "source_status": "只读证据",
-                    "source_role": role,
-                    "support_share_pct": 0,
-                }
+                raise CodexRuntimeError("Codex data citation is not verified")
+            raise CodexRuntimeError(
+                "Codex document citation is not verified by the knowledge tool"
             )
+        for filename, canonical in tool_citations.items():
+            if filename in seen:
+                continue
+            citations.append(dict(canonical))
             seen.add(filename)
         return citations
 
@@ -633,11 +1107,10 @@ class CodexProcessRunner:
     def run(self, launch: CodexLaunch, prompt: str, timeout_seconds: int) -> str:
         launch.prepared.events_log.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with launch.prepared.events_log.open(
-                "w", encoding="utf-8"
-            ) as stdout, launch.prepared.stderr_log.open(
-                "w", encoding="utf-8"
-            ) as stderr:
+            with (
+                launch.prepared.events_log.open("w", encoding="utf-8") as stdout,
+                launch.prepared.stderr_log.open("w", encoding="utf-8") as stderr,
+            ):
                 completed = subprocess.run(
                     launch.argv,
                     input=prompt,
@@ -658,6 +1131,63 @@ class CodexProcessRunner:
                 f"Codex Agent exited with code {completed.returncode}; see private runtime log"
             )
         return launch.prepared.events_log.read_text(encoding="utf-8")
+
+
+class CodexPythonSdkRunner:
+    def __init__(
+        self,
+        settings: CodexRuntimeSettings,
+        *,
+        process_runner: Any = subprocess.run,
+    ) -> None:
+        self.settings = settings
+        self.process_runner = process_runner
+
+    def run(self, launch: CodexLaunch, prompt: str, timeout_seconds: int) -> str:
+        prepared = launch.prepared
+        prepared.events_log.parent.mkdir(parents=True, exist_ok=True)
+        request = {
+            "codex_bin": str(self.settings.codex_bin),
+            "cwd": str(prepared.workspace_root),
+            "prompt": prompt,
+            "model": self.settings.model,
+            "model_provider": "company",
+            "effort": self.settings.reasoning_effort,
+            "output_schema": json.loads(
+                prepared.output_schema.read_text(encoding="utf-8")
+            ),
+        }
+        argv = [
+            str(self.settings.python_executable),
+            "-m",
+            "project_copilot.codex_sdk_worker",
+        ]
+        try:
+            completed = self.process_runner(
+                argv,
+                input=json.dumps(request, ensure_ascii=False),
+                cwd=prepared.workspace_root,
+                env=launch.env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise CodexRuntimeError(
+                "Codex Agent exceeded the configured time budget"
+            ) from exc
+        stdout = str(completed.stdout or "")
+        stderr = str(completed.stderr or "")
+        prepared.events_log.write_text(stdout, encoding="utf-8")
+        prepared.stderr_log.write_text(stderr, encoding="utf-8")
+        if completed.returncode != 0:
+            raise CodexRuntimeError(
+                f"Codex Agent exited with code {completed.returncode}; see private runtime log"
+            )
+        return stdout
 
 
 class CodexRuntime:
@@ -693,7 +1223,11 @@ class CodexRuntime:
             urlparse(settings.base_url).hostname or ""
         ).casefold() not in {"", "localhost", "127.0.0.1", "::1"}
         self.source_count = (
-            sum(1 for path in (self.corpus_root / "docs" / "source").rglob("*") if path.is_file())
+            sum(
+                1
+                for path in (self.corpus_root / "docs" / "source").rglob("*")
+                if path.is_file()
+            )
             + 1
         )
 
@@ -708,9 +1242,7 @@ class CodexRuntime:
 
         codex_bin = os.environ.get("PROJECT_COPILOT_CODEX_BIN", "").strip()
         if not codex_bin:
-            raise CodexRuntimeError(
-                "Codex mode requires PROJECT_COPILOT_CODEX_BIN"
-            )
+            raise CodexRuntimeError("Codex mode requires PROJECT_COPILOT_CODEX_BIN")
         provider = load_codex_switch_settings()
         runtime_root = Path(
             os.environ.get(
@@ -734,7 +1266,20 @@ class CodexRuntime:
             enforce_windows_acl=True,
         )
         validate_elevated_sandbox_preflight(settings)
-        return cls(settings, corpus_root)
+        transport = (
+            os.environ.get("PROJECT_COPILOT_CODEX_TRANSPORT", "python-sdk")
+            .strip()
+            .casefold()
+        )
+        if transport == "python-sdk":
+            runner: Any = CodexPythonSdkRunner(settings)
+        elif transport == "cli-jsonl":
+            runner = CodexProcessRunner()
+        else:
+            raise CodexRuntimeError(
+                "Unknown Codex transport; expected python-sdk or cli-jsonl"
+            )
+        return cls(settings, corpus_root, runner=runner)
 
     async def answer_async(
         self,
@@ -753,7 +1298,7 @@ class CodexRuntime:
                 prompt,
                 self.settings.timeout_seconds,
             )
-            return CodexTurnParser(prepared).parse(jsonl)
+            return CodexTurnParser(prepared).parse(jsonl, question=question)
         except CodexRuntimeError:
             raise
         except Exception as exc:
@@ -788,7 +1333,12 @@ class CodexRuntime:
                 f"Current engineer question:\n{question}",
                 (
                     "Return the required JSON object. answer_markdown must lead with the direct "
-                    "conclusion and use a compact Markdown table only when useful. Every citation "
+                    "conclusion. Do not run Shell, PowerShell, Python, file-change, or Web-search "
+                    "operations; use search_project_knowledge for all document evidence. "
+                    "Put comparison rows in tables and chart-ready numeric series in "
+                    "charts only when they materially improve the answer; otherwise return empty "
+                    "arrays. Every displayed value must come from inspected project evidence or a "
+                    "governed data-tool result. Every citation "
                     "must use an exact human filename and an exact excerpt copied from that source. "
                     "For telemetry.csv use an empty excerpt; it is accepted only after a governed MCP call."
                 ),
