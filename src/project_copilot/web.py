@@ -33,6 +33,7 @@ from project_copilot.codex_runtime import (
     CodexRuntime,
     CodexRuntimeError,
 )
+from project_copilot.opencode_runtime import OpenCodeRuntime
 from project_copilot.contract import ProjectPackage, load_project_package
 from project_copilot.defrost_diagnostics import (
     DefrostAssetContext,
@@ -456,56 +457,67 @@ def create_app(
     direction_runtime_mode = os.environ.get(
         "PROJECT_COPILOT_AGENT_RUNTIME", "haystack"
     ).casefold()
-    if direction_runtime_mode not in {"codex", "haystack"}:
+    if direction_runtime_mode not in {"codex", "opencode", "haystack"}:
         raise RuntimeError(f"Unsupported Agent runtime: {direction_runtime_mode}")
+    private_agent_mode = direction_runtime_mode in {"codex", "opencode"}
 
-    legacy_knowledge, knowledge_provider_name = resolve_knowledge_provider(package)
+    legacy_knowledge = None
+    knowledge_provider_name = "agent-local-tools"
+    if not private_agent_mode:
+        legacy_knowledge, knowledge_provider_name = resolve_knowledge_provider(package)
     manager = WorkspaceManager(selected_runtime)
-    embedding_backend = (
-        None if direction_runtime_mode == "codex" else _build_embedding_backend()
-    )
+    embedding_backend = None if private_agent_mode else _build_embedding_backend()
     indexer = ProjectIndexer(
         manager,
         embedding_backend=embedding_backend,
-        reranker=None if direction_runtime_mode == "codex" else _build_reranker(),
+        reranker=None if private_agent_mode else _build_reranker(),
     )
     _bootstrap_workspace(manager, indexer, package)
     if embedding_backend is not None:
         for workspace in manager.list_workspaces():
             indexer.reindex(workspace.project_id)
-    chat_generator, model_mode = _build_chat_generator()
-    chat_base_url = str(getattr(chat_generator, "api_base_url", "") or "")
-    model_backed = model_mode != "deterministic-test-double"
+    chat_generator = None
+    model_mode = f"{direction_runtime_mode}-agent-runtime"
+    model_backed = private_agent_mode
     egress_detail = {
-        "chat": (
-            "approved-remote"
-            if model_backed and _is_remote_endpoint(chat_base_url)
-            else "loopback"
-            if model_backed
-            else "disabled"
-        ),
-        "embedding": (
-            "approved-remote"
-            if embedding_backend is not None
-            and _is_remote_endpoint(
-                os.environ.get(
-                    "PROJECT_COPILOT_EMBEDDING_BASE_URL",
-                    os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
-                )
-            )
-            else "loopback"
-            if embedding_backend is not None
-            else "disabled"
-        ),
-        "knowledge": (
-            "approved-remote"
-            if knowledge_provider_name == "anythingllm-query"
-            and _is_remote_endpoint(os.environ.get("ANYTHINGLLM_BASE_URL", ""))
-            else "loopback"
-            if knowledge_provider_name == "anythingllm-query"
-            else "local"
-        ),
+        "chat": "disabled",
+        "embedding": "disabled",
+        "knowledge": "local",
     }
+    if not private_agent_mode:
+        chat_generator, model_mode = _build_chat_generator()
+        chat_base_url = str(getattr(chat_generator, "api_base_url", "") or "")
+        model_backed = model_mode != "deterministic-test-double"
+        egress_detail = {
+            "chat": (
+                "approved-remote"
+                if model_backed and _is_remote_endpoint(chat_base_url)
+                else "loopback"
+                if model_backed
+                else "disabled"
+            ),
+            "embedding": (
+                "approved-remote"
+                if embedding_backend is not None
+                and _is_remote_endpoint(
+                    os.environ.get(
+                        "PROJECT_COPILOT_EMBEDDING_BASE_URL",
+                        os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
+                    )
+                )
+                else "loopback"
+                if embedding_backend is not None
+                else "disabled"
+            ),
+            "knowledge": (
+                "approved-remote"
+                if knowledge_provider_name == "anythingllm-query"
+                and _is_remote_endpoint(os.environ.get("ANYTHINGLLM_BASE_URL", ""))
+                else "loopback"
+                if knowledge_provider_name == "anythingllm-query"
+                else "local"
+            ),
+        }
     egress_channel_labels = {
         "chat": "company-chat",
         "embedding": "company-embedding",
@@ -674,26 +686,29 @@ def create_app(
             )
         return citations
 
-    if direction_runtime_mode == "codex":
-        app.state.direction_demo = CodexRuntime.from_environment(
+    if private_agent_mode:
+        runtime_class = (
+            OpenCodeRuntime if direction_runtime_mode == "opencode" else CodexRuntime
+        )
+        app.state.direction_demo = runtime_class.from_environment(
             corpus_root=direction_corpus,
             application_runtime=selected_runtime,
         )
         model_backed = True
-        app.state.model_mode = "codex-agent-runtime"
-        codex_remote = bool(
+        app.state.model_mode = f"{direction_runtime_mode}-agent-runtime"
+        agent_remote = bool(
             getattr(app.state.direction_demo, "provider_is_remote", True)
         )
         egress_detail = {
-            "chat": "approved-remote" if codex_remote else "loopback",
+            "chat": "approved-remote" if agent_remote else "loopback",
             "embedding": "disabled",
             "knowledge": "local",
         }
-        egress_channels = ["company-chat"] if codex_remote else []
-        downstream_approval_acknowledged = codex_remote
-        egress_mode = "approved-provider" if codex_remote else "loopback-only"
+        egress_channels = ["company-chat"] if agent_remote else []
+        downstream_approval_acknowledged = agent_remote
+        egress_mode = "approved-provider" if agent_remote else "loopback-only"
         egress_display = (
-            "Approved company endpoint" if codex_remote else "Loopback only"
+            "Approved company endpoint" if agent_remote else "Loopback only"
         )
     elif direction_runtime_mode == "haystack":
         app.state.direction_demo = (
@@ -924,15 +939,15 @@ def create_app(
             raise HTTPException(status_code=404, detail="Unknown architecture version")
         active = manager.active_workspace()
         architecture_info = architectures[architecture]
-        codex_mode = app.state.direction_runtime_mode == "codex"
+        agent_mode = app.state.direction_runtime_mode in {"codex", "opencode"}
         workspace_name = (
             app.state.direction_demo.workspace_name
-            if codex_mode
+            if agent_mode
             else active.display_name
         )
         source_count = (
             app.state.direction_demo.source_count
-            if codex_mode
+            if agent_mode
             else len(indexer.list_sources(active.project_id))
         )
         return templates.TemplateResponse(
@@ -942,14 +957,14 @@ def create_app(
                 "model_backed": model_backed,
                 "model_name": (
                     app.state.direction_demo.model
-                    if codex_mode
+                    if agent_mode
                     else getattr(chat_generator, "model", "离线测试")
                 ),
                 "egress_display": egress_display,
                 "workspace_name": workspace_name,
                 "source_count": source_count,
-                "scope_label": ("固定合成测试资料" if codex_mode else "本地私有索引"),
-                "uploads_enabled": not codex_mode,
+                "scope_label": ("固定合成测试资料" if agent_mode else "本地私有索引"),
+                "uploads_enabled": not agent_mode,
                 "architecture": architecture,
                 "architecture_name": architecture_info["name"],
                 "architecture_description": architecture_info["description"],
@@ -997,7 +1012,7 @@ def create_app(
         async_answer = getattr(app.state.direction_demo, "answer_async", None)
         try:
             if async_answer is not None:
-                if app.state.direction_runtime_mode == "codex":
+                if app.state.direction_runtime_mode in {"codex", "opencode"}:
                     return _sanitize_direction_payload(
                         await async_answer(
                             payload.question,
@@ -1018,7 +1033,7 @@ def create_app(
     async def upload_direction_sources(
         files: list[UploadFile] = File(...),
     ) -> dict[str, object]:
-        if app.state.direction_runtime_mode == "codex":
+        if app.state.direction_runtime_mode in {"codex", "opencode"}:
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -1072,7 +1087,7 @@ def create_app(
     @app.get("/api/direction/graph")
     def direction_graph() -> dict[str, object]:
         active = manager.active_workspace()
-        if app.state.direction_runtime_mode == "codex":
+        if app.state.direction_runtime_mode in {"codex", "opencode"}:
             source_root = direction_corpus / "docs" / "source"
             source_records = [
                 {
@@ -1280,6 +1295,11 @@ def create_app(
     async def query_copilot(
         project_id: str, payload: QuestionRequest
     ) -> dict[str, object]:
+        if private_agent_mode:
+            raise HTTPException(
+                status_code=409,
+                detail="Legacy Copilot API is disabled in the fixed Agent runtime.",
+            )
         workspace = workspace_payload(project_id)
         agent = ProjectAgent(
             project_id=project_id,
@@ -1297,6 +1317,12 @@ def create_app(
 
     @app.post("/api/knowledge/query")
     def query_knowledge(payload: QuestionRequest) -> dict[str, object]:
+        if private_agent_mode:
+            raise HTTPException(
+                status_code=409,
+                detail="Legacy knowledge API is disabled in the fixed Agent runtime.",
+            )
+        assert legacy_knowledge is not None
         return asdict(legacy_knowledge.query(payload.question))
 
     @app.get("/api/workspaces/{project_id}/analytics/summary")

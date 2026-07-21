@@ -4,8 +4,8 @@
   "status_authority": "this_file",
   "checkpoint_projection": "docs/CODEX_RUNTIME_CHECKPOINT.md",
   "event_log": "docs/CODEX_RUNTIME_TASK_EVENTS.jsonl",
-  "status": "completed",
-  "revision": 11,
+  "status": "in_progress",
+  "revision": 13,
   "write_owner": "root",
   "objective": "Deliver a company-private ultra-thin engineer Web client backed by the official Codex Python SDK and Codex agent runtime, preserve the existing Haystack/DuckDB site and synthetic HVAC corpus as comparison assets, and verify the new path with governed read-only tools, reproducible tests, browser acceptance, independent review and deployment handoff.",
   "latest_direct_correction": {
@@ -118,6 +118,54 @@
       "claim": "The bounded Codex SDK and Obsidian-style evidence-graph delivery was committed and pushed without force.",
       "evidence": "commit cfa8dc8 on branch codex/agentic-rag-bakeoff",
       "result": "origin/codex/agentic-rag-bakeoff advanced from 74ad158 to cfa8dc8"
+    },
+    {
+      "id": "CR-E012",
+      "claim": "Current official OpenCode evidence supports the replaceable SDK, local MCP and deny-by-default permissions adapter.",
+      "evidence": "docs/research/2026-07-21-opencode-runtime-comparison.md and official OpenCode docs/GitHub links",
+      "result": "OpenCode v1.18.3 is MIT and active; no parity claim is made from license or popularity"
+    },
+    {
+      "id": "CR-E013",
+      "claim": "Existing simple and first-complex OpenCode payloads replay through the strict adapter before new model calls.",
+      "evidence": "evaluation/results/opencode-existing-payload-replay-20260721.json",
+      "result": "simple 4 tools/7 citations grounded; first-complex 6 tools/10 citations grounded with four-table output cap"
+    },
+    {
+      "id": "CR-E014",
+      "claim": "The OpenCode worker and grounding/display seams were fixed with TDD after reproducible failures.",
+      "evidence": "tests/test_opencode_runtime.py, tests/test_codex_runtime.py, tests/test_direction_agent.py and working-tree OpenCode files",
+      "result": "v1 SDK path/query/body mismatch, wide-table grounding loss, aggregate presentation overflow and duplicate pytz dependency are covered by regression tests"
+    },
+    {
+      "id": "CR-E015",
+      "claim": "Two predeclared same-model synthetic OpenCode cases completed with grounded evidence and safety behavior.",
+      "evidence": "evaluation/results/opencode-codex-comparison-20260721-cc01-opencode-fixed-xhigh.json and evaluation/results/opencode-codex-comparison-20260721-cc02-opencode-fixed-xhigh-replay.json",
+      "result": "CC01 194.939s/3 tools/6 citations; CC02 151.046s/3 tools/6 citations; CC02 completed read-only work and refused write/control"
+    },
+    {
+      "id": "CR-E016",
+      "claim": "A live Codex quality control was not run because the native Windows isolation preflight is absent/failed closed.",
+      "evidence": "docs/CODEX_RUNTIME_CHECKPOINT.md and the current preflight command output",
+      "result": "No Codex parity or winner is claimed; WSL2/Landlock remains the production isolation follow-up"
+    },
+    {
+      "id": "CR-E017",
+      "claim": "Independent review found and closed the private-Agent egress, discarded-citation grounding and OpenCode descendant-cleanup defects.",
+      "evidence": "tests/test_codex_runtime.py, tests/test_opencode_runtime.py, tests/test_web_app.py and the independent rereview",
+      "result": "Legacy remote APIs return 409 in fixed Agent modes; discarded citation metadata cannot ground numbers; Windows taskkill nonzero/timeout/OSError fail closed; rereview Ready: Yes"
+    },
+    {
+      "id": "CR-E018",
+      "claim": "The comparison boundary and stale CC02 gold correction are machine-readable without rewriting the frozen contract.",
+      "evidence": "evaluation/test_opencode_codex_comparison_contract.py and the CC01/CC02 OpenCode/Codex result artifacts",
+      "result": "CC02 semantic facts pass with contract correction; both Codex controls record blocked_by_isolation, model_call_started=false and comparison_eligible=false"
+    },
+    {
+      "id": "CR-E019",
+      "claim": "Final focused and full verification passed after all review fixes and lock regeneration.",
+      "evidence": "scripts/verify.cmd on 2026-07-21",
+      "result": "Ruff check/format passed; 448 tests passed and 14 intentional tests skipped; release guard passed"
     }
   ],
   "safety_boundaries": [
@@ -161,7 +209,19 @@
       "id": "CR-05",
       "title": "Deployment handoff, independent review, final verification, commit and push",
       "status": "completed"
+    },
+    {
+      "id": "CR-06",
+      "title": "OpenCode SDK replay, same-model comparison and adapter hardening",
+      "status": "blocked_by_isolation",
+      "acceptance": [
+        "official Web/GitHub evidence refreshed",
+        "existing simple and first-complex payloads replayed",
+        "two predeclared complex cases measured with latency/tool/grounding/citation/safety evidence",
+        "Codex control status recorded without bypassing native-Windows isolation",
+        "focused/full verification and independent review passed; public-safe commit and non-force push follow this checkpoint"
+      ]
     }
   ],
-  "current_blocker": "No commercial-license blocker was found for the Codex SDK plus company API/Azure route. The remaining production blocker is native Windows host-read isolation. The SDK/App Server/MCP synthetic contract and UI are runnable; company-file real-model deployment remains fail-closed until the validated WSL2/Landlock boundary is integrated and re-accepted."
+  "current_blocker": "The public-safe OpenCode adapter, two OpenCode measurements, review fixes and release gates are complete. A live Codex cross-backend quality control remains blocked by the native-Windows host-read isolation gate; machine-readable artifacts record that no Codex model call started, and no parity or winner claim is made."
 }

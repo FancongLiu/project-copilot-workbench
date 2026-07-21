@@ -1,6 +1,6 @@
 # Codex runtime comparison checkpoint
 
-Last updated: 2026-07-19 (Asia/Shanghai)
+Last updated: 2026-07-21 (Asia/Shanghai)
 
 The authoritative scope and status are in `docs/CODEX_RUNTIME_TASK_LEDGER.json`.
 
@@ -47,6 +47,29 @@ mode, and expands to the complete project graph on demand.
 - Codex mode does not initialize the legacy embedding/reranking stack. The old
   Haystack/DuckDB site and the synthetic HVAC corpus remain comparison assets.
 
+## OpenCode continuation (2026-07-21)
+
+- Official OpenCode SDK/provider/MCP/permission documentation and GitHub API
+  evidence were refreshed. OpenCode v1.18.3 is a replaceable MIT alternative;
+  no quality parity is inferred from popularity or license.
+- Existing private simple and first-complex payloads replayed through the
+  current strict adapter before new model calls. Sanitized evidence is in
+  `evaluation/results/opencode-existing-payload-replay-20260721.json`; raw
+  `.opencode-live` payloads remain local and unpublished.
+- TDD fixed the OpenCode 1.18.3 v1 SDK path/query/body mismatch, preserved
+  numeric grounding from non-displayable wide tables, bounded event tables to
+  12 columns and aggregate output to four tables/charts, and removed the
+  duplicate pytz dependency.
+- Frozen CC01 and CC02 xhigh OpenCode cases completed on the synthetic corpus.
+  CC01 measured 194.939 seconds with three tools and six citations; CC02
+  measured 151.046 seconds with three tools and six citations and correctly
+  refused write/control. CC02's stale gold assumptions are recorded in the
+  adjudication rather than applied as hindsight penalties.
+- A live Codex control remains blocked by the documented native-Windows
+  isolation gate. No OpenCode-versus-Codex quality winner or parity claim is
+  made. Both blocked controls now have machine-readable artifacts recording
+  that no Codex model call started.
+
 ## Verification evidence
 
 - `tests/test_codex_runtime.py`: **44 passed**. This includes an actual SDK
@@ -79,10 +102,13 @@ as proof, reject unsupported numeric
 claims and presentations, reject every Shell/file-change/Web-search event,
 force App Server `--strict-config`, redact internal paths before the API
 response (including citation metadata), share canonical graph/citation
-locations, highlight only the exactly cited dataset, and publish constrained
-MCP schemas with optional presentation parameters. A residual minor risk remains:
-the outer subprocess timeout kills the SDK worker but does not yet prove
-descendant cleanup on every supported OS.
+locations, highlight only the exactly cited dataset, publish constrained MCP
+schemas with optional presentation parameters, disable legacy remote APIs in
+fixed Agent modes, exclude discarded citation metadata from numeric grounding,
+and fail closed if Windows descendant process-tree cleanup cannot be verified.
+
+The final release gate passed Ruff check/format, **448 tests passed, 14
+intentional tests skipped**, and the release guard passed.
 
 ## Honest benchmark boundary
 
@@ -101,12 +127,14 @@ been migrated to it.
 
 ## Remaining bounded work
 
-None for this bounded delivery. Commit `cfa8dc8` was pushed to
-`origin/codex/agentic-rag-bakeoff` without force.
+The focused/full verification and independent rereview are complete. Commit and
+push only the explicitly audited public-safe files without force, then keep the
+loopback trial server available.
 
-The next production-isolation effort is a separate goal: integrate the already
-validated WSL2/Landlock boundary, then rerun the real-model nine-case campaign.
-It must not be represented as completed by this synthetic SDK contract.
+The live Codex quality control remains a separate fail-closed boundary: the
+validated WSL2/Landlock integration must precede any real-model Codex parity
+campaign. It must not be represented as completed by this synthetic SDK or
+OpenCode evidence.
 
 Do not restart the old workspace-write 8790 proof as a company-data service. It
 is architecture evidence only.

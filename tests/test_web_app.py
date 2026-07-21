@@ -81,6 +81,7 @@ def test_web_app_exposes_bounded_knowledge_and_analysis_apis(tmp_path: Path) -> 
     assert health.json() == {
         "status": "ok",
         "project_id": "synthetic-hvac-demo",
+        "agent_runtime": "haystack",
         "knowledge_provider": "haystack-local",
         "network_allowed": False,
         "nl2sql_allowed": False,

@@ -1720,6 +1720,41 @@ def test_direction_toolbox_filters_multiple_control_events_and_time_window() -> 
     )
 
 
+def test_direction_toolbox_bounds_mixed_event_table_for_agent_clients() -> None:
+    result = DirectionToolbox(BAKEOFF_ROOT).inspect_snapshot(
+        "control_events",
+        event_types=[
+            "compressor_feedback_mismatch",
+            "defrost",
+            "discharge_temperature_alarm",
+            "eev_feedback_mismatch",
+            "indoor_fan_feedback_mismatch",
+            "outdoor_fan_feedback_mismatch",
+        ],
+    )
+
+    table = result["tables"][0]
+    assert len(table["title"]) <= 100
+    assert 1 <= len(table["columns"]) <= 12
+    assert all(len(row) == len(table["columns"]) for row in table["rows"])
+
+
+def test_direction_toolbox_bounds_single_control_event_table_for_agent_clients() -> (
+    None
+):
+    result = DirectionToolbox(BAKEOFF_ROOT).inspect_snapshot(
+        "control_events",
+        asset_id="HP-03",
+        event_type="eev_feedback_mismatch",
+    )
+
+    table = result["tables"][0]
+    assert len(table["columns"]) <= 12
+    assert "平均命令反馈偏差（个百分点）" in table["columns"]
+    assert "最大命令反馈偏差（个百分点）" in table["columns"]
+    assert all(len(row) == len(table["columns"]) for row in table["rows"])
+
+
 def test_direction_toolbox_filters_alarm_events_by_alarm_code() -> None:
     result = DirectionToolbox(BAKEOFF_ROOT).inspect_snapshot(
         "alarm_events",

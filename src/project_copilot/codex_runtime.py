@@ -287,7 +287,11 @@ class CodexWorkspaceBuilder:
                                         "items": {
                                             "type": "object",
                                             "additionalProperties": False,
-                                            "required": ["label", "value"],
+                                            "required": [
+                                                "label",
+                                                "value",
+                                                "series",
+                                            ],
                                             "properties": {
                                                 "label": {
                                                     "type": "string",
@@ -295,7 +299,7 @@ class CodexWorkspaceBuilder:
                                                 },
                                                 "value": {"type": "number"},
                                                 "series": {
-                                                    "type": "string",
+                                                    "type": ["string", "null"],
                                                     "maxLength": 80,
                                                 },
                                             },
@@ -395,7 +399,7 @@ class CodexWorkspaceBuilder:
                 f"command = {_toml_string(self.settings.python_executable)}",
                 'args = ["-m", "project_copilot.codex_mcp_server"]',
                 "required = true",
-                "startup_timeout_sec = 15",
+                "startup_timeout_sec = 60",
                 "tool_timeout_sec = 45",
                 (
                     'enabled_tools = ["schema", "data_quality", "cop_ranking", '
@@ -692,25 +696,25 @@ class CodexTurnParser:
                         "performed by a governed MCP tool.",
                     )
             elif isinstance(payload, dict):
-                has_evidence = bool(payload)
+                grounding_payload = {
+                    key: value for key, value in payload.items() if key != "citations"
+                }
+                has_evidence = bool(grounding_payload)
                 if has_evidence:
-                    tool_payloads.append(payload)
+                    tool_payloads.append(grounding_payload)
                 tool_tables.extend(self._validated_tables(payload.get("tables", [])))
                 tool_charts.extend(self._validated_charts(payload.get("charts", [])))
                 raw_citations = payload.get("citations", [])
                 if not isinstance(raw_citations, list):
                     raise CodexRuntimeError("Governed data citations are invalid")
                 for raw_citation in raw_citations:
+                    if isinstance(raw_citation, dict):
+                        raw_filename = str(raw_citation.get("filename", "")).strip()
+                        source = self.prepared.source_files.get(raw_filename)
+                        if source is not None and tool != "search_project_knowledge":
+                            continue
                     canonical = self._canonical_tool_citation(raw_citation)
                     canonical_filename = str(canonical["filename"])
-                    if (
-                        self.prepared.source_files[canonical_filename] is not None
-                        and tool != "search_project_knowledge"
-                    ):
-                        raise CodexRuntimeError(
-                            "Codex document citation is not verified by the "
-                            "knowledge tool"
-                        )
                     tool_citations.setdefault(canonical_filename, canonical)
             else:
                 has_evidence = False
@@ -730,8 +734,8 @@ class CodexTurnParser:
             answer = str(structured["answer_markdown"]).strip()
             model_tables = self._validated_tables(structured.get("tables", []))
             model_charts = self._validated_charts(structured.get("charts", []))
-            tables = tool_tables or model_tables
-            charts = tool_charts or model_charts
+            tables = (tool_tables or model_tables)[:4]
+            charts = (tool_charts or model_charts)[:4]
             requested_citations = structured["citations"]
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise CodexRuntimeError(

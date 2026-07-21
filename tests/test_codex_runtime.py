@@ -103,6 +103,7 @@ def test_workspace_builder_creates_fresh_least_privilege_session(
     assert "required = true" in config
     assert '"search_project_knowledge"' in config
     assert '"inspect_configuration_change_effect"' in config
+    assert "startup_timeout_sec = 60" in config
     assert "PROJECT_COPILOT_MCP_CORPUS" in config
     assert '":root"' not in config
     assert "enabled = false" in config
@@ -111,6 +112,11 @@ def test_workspace_builder_creates_fresh_least_privilege_session(
     assert {"answer_markdown", "citations", "tables", "charts"} <= set(
         output_schema["required"]
     )
+    point_schema = output_schema["properties"]["charts"]["items"]["properties"][
+        "points"
+    ]["items"]
+    assert set(point_schema["required"]) == {"label", "value", "series"}
+    assert point_schema["properties"]["series"]["type"] == ["string", "null"]
 
 
 def test_workspace_builder_protects_private_runtime_when_acl_is_required(
@@ -861,6 +867,195 @@ def test_turn_parser_rejects_document_citation_from_non_knowledge_tool(
         )
 
 
+def test_turn_parser_ignores_unverified_document_metadata_from_data_tool(
+    tmp_path: Path,
+) -> None:
+    prepared = CodexWorkspaceBuilder(CORPUS_ROOT, _settings(tmp_path)).prepare()
+    source = prepared.source_files["data-analysis-sop.md"]
+    assert source is not None
+    excerpt = source.read_text(encoding="utf-8")[:80]
+    events = [
+        {
+            "type": "item.completed",
+            "item": {
+                "id": "configuration-effect",
+                "type": "mcp_tool_call",
+                "server": "hvac",
+                "tool": "inspect_configuration_change_effect",
+                "arguments": {
+                    "asset_id": "HP-02",
+                    "parameter_name": "supply_air_sp_c",
+                },
+                "result": _mcp_payload(
+                    {
+                        "summary": "configuration effect",
+                        "tables": [],
+                        "charts": [],
+                        "citations": [
+                            {
+                                "filename": "telemetry.csv",
+                                "excerpt": "governed telemetry evidence",
+                                "location": "datasets/telemetry.csv",
+                            },
+                            {
+                                "filename": "data-analysis-sop.md",
+                                "excerpt": excerpt,
+                                "location": "sops/data-analysis-sop.md",
+                            },
+                        ],
+                    }
+                ),
+                "status": "completed",
+            },
+        },
+        {
+            "type": "item.completed",
+            "item": {
+                "id": "answer",
+                "type": "agent_message",
+                "text": _telemetry_answer(),
+            },
+        },
+        {"type": "turn.completed", "usage": {}},
+    ]
+
+    payload = CodexTurnParser(prepared).parse(
+        "\n".join(json.dumps(event, ensure_ascii=False) for event in events)
+    )
+
+    assert [citation["filename"] for citation in payload["citations"]] == [
+        "telemetry.csv"
+    ]
+
+
+def test_turn_parser_cannot_ground_numbers_from_discarded_document_metadata(
+    tmp_path: Path,
+) -> None:
+    prepared = CodexWorkspaceBuilder(CORPUS_ROOT, _settings(tmp_path)).prepare()
+    answer = json.dumps(
+        {
+            "answer_markdown": "## Conclusion\n\nThe verified result is 777.7 kWh.",
+            "tables": [],
+            "charts": [],
+            "citations": [{"filename": "telemetry.csv", "excerpt": ""}],
+        }
+    )
+    events = [
+        {
+            "type": "item.completed",
+            "item": {
+                "id": "configuration-effect",
+                "type": "mcp_tool_call",
+                "server": "hvac",
+                "tool": "inspect_configuration_change_effect",
+                "arguments": {
+                    "asset_id": "HP-02",
+                    "parameter_name": "supply_air_sp_c",
+                },
+                "result": _mcp_payload(
+                    {
+                        "summary": "configuration effect",
+                        "tables": [
+                            {
+                                "title": "Verified evidence",
+                                "columns": ["asset_id", "energy_kwh"],
+                                "rows": [["HP-02", 10.0]],
+                            }
+                        ],
+                        "charts": [],
+                        "citations": [
+                            {
+                                "filename": "telemetry.csv",
+                                "excerpt": "governed telemetry evidence",
+                                "location": "datasets/telemetry.csv",
+                            },
+                            {
+                                "filename": "data-analysis-sop.md",
+                                "excerpt": "Unverified document metadata says 777.7 kWh.",
+                                "location": "sops/data-analysis-sop.md",
+                            },
+                        ],
+                    }
+                ),
+                "status": "completed",
+            },
+        },
+        {
+            "type": "item.completed",
+            "item": {"id": "answer", "type": "agent_message", "text": answer},
+        },
+        {"type": "turn.completed", "usage": {}},
+    ]
+
+    with pytest.raises(CodexRuntimeError, match="unsupported numeric evidence"):
+        CodexTurnParser(prepared).parse(
+            "\n".join(json.dumps(event) for event in events)
+        )
+
+
+def test_turn_parser_bounds_aggregate_tool_presentations(tmp_path: Path) -> None:
+    prepared = CodexWorkspaceBuilder(CORPUS_ROOT, _settings(tmp_path)).prepare()
+    events = []
+    for index in range(5):
+        events.append(
+            {
+                "type": "item.completed",
+                "item": {
+                    "id": f"data-quality-{index}",
+                    "type": "mcp_tool_call",
+                    "server": "hvac",
+                    "tool": "data_quality",
+                    "arguments": {},
+                    "result": _mcp_payload(
+                        {
+                            "tables": [
+                                {
+                                    "title": f"Evidence {index}",
+                                    "columns": ["value"],
+                                    "rows": [[index]],
+                                }
+                            ],
+                            "charts": [],
+                            "citations": [{"filename": "telemetry.csv", "excerpt": ""}],
+                        }
+                    ),
+                    "status": "completed",
+                },
+            }
+        )
+    events.extend(
+        [
+            {
+                "type": "item.completed",
+                "item": {
+                    "id": "answer",
+                    "type": "agent_message",
+                    "text": json.dumps(
+                        {
+                            "answer_markdown": "Grounded summary.",
+                            "tables": [],
+                            "charts": [],
+                            "citations": [{"filename": "telemetry.csv", "excerpt": ""}],
+                        }
+                    ),
+                },
+            },
+            {"type": "turn.completed", "usage": {}},
+        ]
+    )
+
+    payload = CodexTurnParser(prepared).parse(
+        "\n".join(json.dumps(event) for event in events)
+    )
+
+    assert [table["title"] for table in payload["tables"]] == [
+        "Evidence 0",
+        "Evidence 1",
+        "Evidence 2",
+        "Evidence 3",
+    ]
+
+
 def test_turn_parser_rejects_model_presentation_values_not_returned_by_tools(
     tmp_path: Path,
 ) -> None:
@@ -1590,6 +1785,7 @@ def test_installed_python_sdk_controls_pinned_app_server_without_real_key(
                 f"command = {json.dumps(sys.executable)}",
                 'args = ["-m", "project_copilot.codex_mcp_server"]',
                 "required = true",
+                "startup_timeout_sec = 60",
                 'enabled_tools = ["inspect_configuration_change_effect"]',
                 "",
                 "[mcp_servers.hvac.env]",
@@ -1991,6 +2187,12 @@ def test_mcp_typed_operations_reuse_governed_hvac_toolbox() -> None:
         CORPUS_ROOT,
         query="HP-02 CR-017 approved supply-air setpoint change",
     )
+    history = run_typed_operation(
+        "inspect_configuration_history",
+        CORPUS_ROOT,
+        asset_id="HP-02",
+        parameter_name="supply_air_sp_c",
+    )
     effect = run_typed_operation(
         "inspect_configuration_change_effect",
         CORPUS_ROOT,
@@ -1999,6 +2201,16 @@ def test_mcp_typed_operations_reuse_governed_hvac_toolbox() -> None:
     )
 
     assert knowledge["citations"]
+    assert any(
+        citation["filename"].endswith(".md") for citation in knowledge["citations"]
+    )
+    assert {citation["filename"] for citation in history["citations"]} == {
+        "config_history.csv"
+    }
+    assert {citation["filename"] for citation in effect["citations"]} == {
+        "config_history.csv",
+        "telemetry.csv",
+    }
     assert effect["tables"][0]["rows"][0][2] == 12.0
     assert effect["tables"][0]["rows"][1][2] == 10.0
     assert effect["charts"][0]["points"] == [

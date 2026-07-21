@@ -17,6 +17,14 @@ OPERATIONS = {
     "data_quality": ASSET_DIR / "data-quality.sql",
     "cop_ranking": ASSET_DIR / "cop-ranking.sql",
 }
+VIRTUAL_DATA_FILENAMES = frozenset(
+    {
+        "assets.csv",
+        "config_history.csv",
+        "point_aliases.csv",
+        "telemetry.csv",
+    }
+)
 READ_ONLY_TOOL = ToolAnnotations(
     readOnlyHint=True,
     destructiveHint=False,
@@ -143,18 +151,18 @@ def run_typed_operation(
     if operation == "search_project_knowledge":
         return toolbox.search_knowledge(str(arguments.get("query", "")))
     if operation == "query_hvac_database":
-        return toolbox.query_database(
+        result = toolbox.query_database(
             sql=str(arguments.get("sql", "")),
             title=str(arguments.get("title", "")),
             chart_kind=str(arguments.get("chart_kind", "none")),
             x_column=str(arguments.get("x_column", "")),
             y_column=str(arguments.get("y_column", "")),
         )
-    if operation == "inspect_hvac_snapshot":
+    elif operation == "inspect_hvac_snapshot":
         event_types = arguments.get("event_types")
         if event_types is not None and not isinstance(event_types, list):
             raise ValueError("event_types must be a list")
-        return toolbox.inspect_snapshot(
+        result = toolbox.inspect_snapshot(
             str(arguments.get("inspection", "")),
             str(arguments.get("asset_id", "")),
             str(arguments.get("event_type", "")),
@@ -163,23 +171,37 @@ def run_typed_operation(
             str(arguments.get("end_time", "")),
             str(arguments.get("alarm_code", "")),
         )
-    if operation == "inspect_configuration_history":
-        return toolbox.inspect_configuration_history(
+    elif operation == "inspect_configuration_history":
+        result = toolbox.inspect_configuration_history(
             str(arguments.get("asset_id", "")),
             str(arguments.get("parameter_name", "")),
         )
-    if operation == "inspect_configuration_change_effect":
-        return toolbox.inspect_configuration_change_effect(
+    elif operation == "inspect_configuration_change_effect":
+        result = toolbox.inspect_configuration_change_effect(
             str(arguments.get("asset_id", "")),
             str(arguments.get("parameter_name", "")),
         )
-    if operation == "inspect_metric_extreme":
-        return toolbox.inspect_metric_extreme(
+    elif operation == "inspect_metric_extreme":
+        result = toolbox.inspect_metric_extreme(
             str(arguments.get("metric", "")),
             str(arguments.get("direction", "")),
             str(arguments.get("asset_id", "")),
         )
-    raise ValueError(f"Unsupported governed typed operation: {operation}")
+    else:
+        raise ValueError(f"Unsupported governed typed operation: {operation}")
+    citations = result.get("citations", [])
+    if not isinstance(citations, list) or not all(
+        isinstance(citation, dict) for citation in citations
+    ):
+        raise ValueError("Governed typed-operation citations are invalid")
+    return {
+        **result,
+        "citations": [
+            citation
+            for citation in citations
+            if str(citation.get("filename", "")) in VIRTUAL_DATA_FILENAMES
+        ],
+    }
 
 
 mcp = FastMCP(

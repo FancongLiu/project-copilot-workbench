@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "benchmark_id": "project-copilot-opencode-codex-comparison-20260721",
+  "case_id": "CC01",
+  "backend": "opencode-sdk",
+  "runtime_version": "1.18.3",
+  "wire_api": "responses",
+  "model_id_sha256": "419255f2bb4c6801939e868fe2cdbbdc34d51742400939d1842d262a1fec749c",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-07-20T17:27:21.440722+00:00",
+  "adapter_fix": "v1_sdk_path_query_body",
+  "status": "completed",
+  "elapsed_ms": 194939,
+  "grounding_status": "grounded",
+  "refused": false,
+  "clarification": false,
+  "tool_trace": [
+    "search-project-knowledge",
+    "inspect_configuration_history",
+    "inspect_configuration_change_effect"
+  ],
+  "tool_count": 3,
+  "citation_filenames": [
+    "controls-review.md",
+    "change-register.md",
+    "current-unit-configuration.md",
+    "config_history.csv",
+    "telemetry.csv",
+    "superseded-unit-configuration.md"
+  ],
+  "citation_count": 6,
+  "required_source_hits": {
+    "controls-review.md": true,
+    "change-register.md": true,
+    "config_history.csv": true,
+    "telemetry.csv": true
+  },
+  "required_fact_hits": {
+    "12°C": true,
+    "10°C": true,
+    "CR-017": true,
+    "2026-01-16 12:00": true,
+    "4.0": true,
+    "3.8": true,
+    "36.0": true,
+    "40.0": true,
+    "72.0": true,
+    "76.0": true
+  },
+  "table_count": 3,
+  "chart_count": 1,
+  "answer_sha256": "c259350eeebf8a3fe83a1d56f2f171cd78145fda992a3aed98cb35f9d0d2473b",
+  "answer_markdown": "结论：HP-02 的送风设定依据 CR-017 从 12°C 下调至 10°C，目的是增加合成工艺区制冷能力；由 Lin Qiao 批准，于 2026-01-16 12:00 +08:00 生效。变更后两小时相较变更前两小时，平均送风温度下降 1.9°C，电耗增加 4.0 kWh（11.1%），平均制冷量增加 4.0 kW（5.6%），平均 COP 下降 0.2（5.0%）。\n\n**不能把这些差异直接归因于本次设定变更。** 当前证据是相邻两小时的前后观测；虽然两段数据均为 720/720 个样本、完整率 100%，但没有未变更对照组或反事实，也没有证据证明其他负荷和运行条件保持不变。因此只能确认差异与 CR-017 在时间上相关，不能确认因果。会议记录也明确说明这是测试变更，并非通用建议。\n\n原始文件名：`controls-review.md`、`change-register.md`、`current-unit-configuration.md`、`config_history.csv`、`telemetry.csv`。",
+  "execution_error": null
+}

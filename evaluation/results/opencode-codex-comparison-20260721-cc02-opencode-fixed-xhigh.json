@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "benchmark_id": "project-copilot-opencode-codex-comparison-20260721",
+  "case_id": "CC02",
+  "backend": "opencode-sdk",
+  "runtime_version": "1.18.3",
+  "wire_api": "responses",
+  "model_id_sha256": "419255f2bb4c6801939e868fe2cdbbdc34d51742400939d1842d262a1fec749c",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-07-20T17:31:22.530129+00:00",
+  "adapter_fix": "v1_sdk_path_query_body",
+  "status": "failed",
+  "elapsed_ms": 151046,
+  "execution_error": {
+    "type": "CodexRuntimeError",
+    "message": "Codex answer contains unsupported numeric evidence"
+  }
+}

@@ -1471,6 +1471,71 @@ class DirectionToolbox:
         row_event_types = {
             str(row.get("event_type", "")) for row in rows if row.get("event_type")
         }
+        if len(columns) > 12:
+            if operation == "data_quality":
+                display_priority = (
+                    "event_type",
+                    "asset_id",
+                    "start_time",
+                    "end_time",
+                    "expected_samples",
+                    "missing_samples",
+                    "completeness_pct",
+                    "completeness_gap_pp",
+                    "sample_interval_seconds",
+                    "snapshot_duration_seconds",
+                    "missing_duration_seconds",
+                    "event_count",
+                )
+            elif operation == "alarm_events":
+                display_priority = (
+                    "event_type",
+                    "asset_id",
+                    "alarm_code",
+                    "start_time",
+                    "end_time",
+                    "sample_count",
+                    "duration_seconds",
+                    "max_discharge_temp_c",
+                    "average_outdoor_fan_cmd_pct",
+                    "average_outdoor_fan_fb_pct",
+                    "average_compressor_cmd_hz",
+                    "average_compressor_fb_hz",
+                )
+            elif len(row_event_types) == 1:
+                display_priority = (
+                    "event_type",
+                    "asset_id",
+                    "average_deviation",
+                    "max_deviation",
+                    "average_command",
+                    "average_feedback",
+                    "duration_seconds",
+                    "min_command",
+                    "min_feedback",
+                    "max_feedback",
+                    "start_time",
+                    "end_time",
+                )
+            else:
+                display_priority = (
+                    "event_type",
+                    "asset_id",
+                    "start_time",
+                    "end_time",
+                    "sample_count",
+                    "duration_seconds",
+                    "average_deviation",
+                    "max_deviation",
+                    "average_command",
+                    "average_feedback",
+                    "min_feedback",
+                    "max_feedback",
+                )
+            columns = [column for column in display_priority if column in columns][:12]
+        if len(title) > 100:
+            scope = f"{selected_asset} " if selected_asset else ""
+            title = f"{scope}{len(row_event_types)} 类事件 {result.title}"[:100]
 
         def column_label(column: str) -> str:
             if column in {"average_deviation", "max_deviation"} and row_event_types:
