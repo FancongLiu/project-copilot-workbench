@@ -366,6 +366,11 @@ def test_opencode_sdk_runner_kills_windows_process_tree_on_timeout(
             self.returncode = 1
 
     monkeypatch.setattr(opencode_module.os, "name", "nt")
+    monkeypatch.delattr(
+        opencode_module.subprocess,
+        "CREATE_NEW_PROCESS_GROUP",
+        raising=False,
+    )
     monkeypatch.setattr(
         opencode_module.subprocess, "Popen", lambda *a, **k: FakeProcess()
     )

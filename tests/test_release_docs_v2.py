@@ -171,6 +171,8 @@ def test_documents_ci_lock_keeps_every_production_parser_version() -> None:
 
     assert production_versions
     assert set(runtime_versions) <= set(production_versions)
+    assert production_versions["hf-xet"] == "1.5.2"
+    assert ci_versions["hf-xet"] == "1.5.2"
     assert set(production_versions) <= set(ci_versions)
     assert {
         name: (version, production_versions.get(name))

@@ -516,7 +516,9 @@ class OpenCodeSdkRunner:
             encoding="utf-8",
             errors="strict",
             creationflags=(
-                subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                if os.name == "nt"
+                else 0
             ),
             start_new_session=os.name != "nt",
         )

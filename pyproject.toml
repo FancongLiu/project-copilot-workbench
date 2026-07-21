@@ -45,6 +45,7 @@ dev = [
 documents = [
   "docling==2.113.0",
   "docling-haystack==1.2.0",
+  "hf-xet==1.5.2",
 ]
 reranking = [
   "sentence-transformers-haystack==0.1.1",
