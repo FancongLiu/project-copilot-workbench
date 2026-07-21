@@ -538,33 +538,6 @@ haystack-experimental==0.19.0 \
     # via
     #   -c requirements.documents.lock
     #   haystack-ai
-hf-xet==1.5.1 \
-    --hash=sha256:0c97106032ef70467b4f6bc2d0ccc266d7613ee076afc56516c502f87ce1c4a6 \
-    --hash=sha256:3474760d10e3bb6f92ff3f024fcb00c0b3e4001e9b035c7483e49a5dd17aa70f \
-    --hash=sha256:4f561cbbb92f80960772059864b7fb07eae879adde1b2e781ec6f86f6ac26c59 \
-    --hash=sha256:51ef4500dab3764b41135ee1381a4b62ce56fc54d4c92b719b59e597d6df5bf6 \
-    --hash=sha256:6071d5ccb4d8d2cbd5fea5cc798da4f0ba3f44e25369591c4e89a4987050e61d \
-    --hash=sha256:6208adb15d192b90e4c2ad2a27ed864359b2cb0f2494eb6d7c7f3699ac02e2bf \
-    --hash=sha256:6762d89b9e3267dfd502b29b2a327b4525f33b17e7b509a78d94e2151a30ce30 \
-    --hash=sha256:6abd35c3221eff63836618ddfb954dcf84798603f71d8e33e3ed7b04acfdbe6e \
-    --hash=sha256:6f7a04a8ad962422e225bc49fbbac99dc1806764b1f3e54dbd154bffa7593947 \
-    --hash=sha256:8298485c1e36e7e67cbd01eeb1376619b7af43d4f1ec245caae306f890a8a32d \
-    --hash=sha256:892e3a3a3aecc12aded8b93cf4f9cd059282c7de0732f7d55026f3abdf474350 \
-    --hash=sha256:93d090b57b211133f6c0dab0205ef5cb6d89162979ba75a74845045cc3063b8e \
-    --hash=sha256:94e761bbd266bf4c03cee73753916062665ce8365aa40ed321f45afcb934b41e \
-    --hash=sha256:97f212a88d14bbf573619a74b7fecb238de77d08fc702e54dec6f78276ca3283 \
-    --hash=sha256:a93df2039190502835b1db8cd7e178b0b7b889fe9ab51299d5ced26e0dd879a4 \
-    --hash=sha256:bf67e6ed10260cef62e852789dc91ebb03f382d5bdc4b1dbeb64763ea275e7d6 \
-    --hash=sha256:c6b6cd08ca095058780b50b8ce4d6cbf6787bcf27841705d58a9d32246e3e47a \
-    --hash=sha256:d48199c2bf4f8df0adc55d31d1368b6ec0e4d4f45bc86b08038089c23db0bed8 \
-    --hash=sha256:dbf48c0d02cf0b2e568944330c60d9120c272dabe013bd892d48e25bc6797577 \
-    --hash=sha256:e1af0de8ca6f190d4294a28b88023db64a1e2d1d719cab044baf75bec569e7a9 \
-    --hash=sha256:e78e4e5192ad2b674c2e1160b651cb9134db974f8ae1835bdfbfb0166b894a43 \
-    --hash=sha256:e7dbb40617410f432182d918e37c12303fe6700fd6aa6c5964e30a535a4461d6 \
-    --hash=sha256:f4ad3ebd4c32dd2b27099d69dc7b2df821e30767e46fb6ee6a0713778243b8ff \
-    --hash=sha256:f61e3665892a6c8c5e765395838b8ddf36185da835253d4bc4509a81e49fb342 \
-    --hash=sha256:f7b3002f95d1c13e24bcb4537baa8f0eb3838957067c91bb4959bc004a6435f5
-    # via huggingface-hub
 httpcore==1.0.9 \
     --hash=sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55 \
     --hash=sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8
@@ -1683,7 +1656,7 @@ python-pptx==1.0.2 \
     # via
     #   -c requirements.documents.lock
     #   docling-slim
-pywin32==312 \
+pywin32==312 ; sys_platform == "win32" \
     --hash=sha256:02ebca0f0242b75292e218065004310d6a477407c09fa449bfe4f6022bc0c0fc \
     --hash=sha256:17948aeadbdb091f0ced6ef0841620794e68327b94ee415571c1203594b7215c \
     --hash=sha256:3020656e34f1cf7faeb7bccd2b84653a607c6ff0c55ada85e6487d61716deabd \
@@ -1710,6 +1683,7 @@ pywin32==312 \
     #   docling-parse
     #   mcp
     #   mpire
+    #   project-copilot-workbench (pyproject.toml)
 pyyaml==6.0.3 \
     --hash=sha256:00c4bdeba853cc34e7dd471f16b4114f4162dc03e6b7afcc2128711f0eca823c \
     --hash=sha256:0150219816b6a1fa26fb4699fb7daa9caf09eb1999f3b70fb6e786805e80375a \

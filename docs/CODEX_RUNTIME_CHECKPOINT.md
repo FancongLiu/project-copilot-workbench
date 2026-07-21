@@ -107,8 +107,11 @@ schemas with optional presentation parameters, disable legacy remote APIs in
 fixed Agent modes, exclude discarded citation metadata from numeric grounding,
 and fail closed if Windows descendant process-tree cleanup cannot be verified.
 
-The final release gate passed Ruff check/format, **448 tests passed, 14
-intentional tests skipped**, and the release guard passed.
+The final release gate passed Ruff check/format, **449 tests passed, 14
+intentional tests skipped**, and the release guard passed. The shared runtime,
+development and document locks retain MCP's `pywin32` dependency behind an
+explicit Windows platform marker, so Ubuntu CI does not attempt to install a
+Windows-only wheel.
 
 ## Honest benchmark boundary
 

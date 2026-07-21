@@ -1,3 +1,4 @@
+import re
 import tomllib
 from pathlib import Path
 
@@ -31,6 +32,22 @@ def test_runtime_declares_cross_platform_zoneinfo_data() -> None:
 
     assert "tzdata==2026.3" in dependencies
     assert not any(dependency.startswith("pytz==") for dependency in dependencies)
+
+
+def test_hash_locks_keep_pywin32_windows_only() -> None:
+    pattern = re.compile(
+        r'^pywin32==312\s*;\s*sys_platform\s*==\s*["\']win32["\']\s*\\$',
+        re.MULTILINE,
+    )
+
+    for filename in (
+        "requirements.lock",
+        "requirements.runtime.lock",
+        "requirements.documents.lock",
+        "requirements.documents-ci.lock",
+    ):
+        lock = (REPOSITORY_ROOT / filename).read_text(encoding="utf-8")
+        assert pattern.search(lock), f"{filename} made pywin32 cross-platform"
 
 
 def test_wheel_includes_compact_agentic_hvac_direction_corpus() -> None:

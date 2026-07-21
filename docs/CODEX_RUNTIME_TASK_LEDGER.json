@@ -5,7 +5,7 @@
   "checkpoint_projection": "docs/CODEX_RUNTIME_CHECKPOINT.md",
   "event_log": "docs/CODEX_RUNTIME_TASK_EVENTS.jsonl",
   "status": "in_progress",
-  "revision": 13,
+  "revision": 14,
   "write_owner": "root",
   "objective": "Deliver a company-private ultra-thin engineer Web client backed by the official Codex Python SDK and Codex agent runtime, preserve the existing Haystack/DuckDB site and synthetic HVAC corpus as comparison assets, and verify the new path with governed read-only tools, reproducible tests, browser acceptance, independent review and deployment handoff.",
   "latest_direct_correction": {
@@ -165,7 +165,13 @@
       "id": "CR-E019",
       "claim": "Final focused and full verification passed after all review fixes and lock regeneration.",
       "evidence": "scripts/verify.cmd on 2026-07-21",
-      "result": "Ruff check/format passed; 448 tests passed and 14 intentional tests skipped; release guard passed"
+      "result": "Ruff check/format passed; 449 tests passed and 14 intentional tests skipped after the CI lock fix; release guard passed"
+    },
+    {
+      "id": "CR-E020",
+      "claim": "All hash locks preserve MCP's pywin32 dependency as Windows-only so Ubuntu CI can install the shared dependency graph.",
+      "evidence": "pyproject.toml, requirements.lock, requirements.runtime.lock, requirements.documents.lock, requirements.documents-ci.lock and tests/test_packaging.py",
+      "result": "All four locks contain pywin32==312 with sys_platform == win32; the regression and document-lock parity tests pass"
     }
   ],
   "safety_boundaries": [
