@@ -5,7 +5,10 @@ from pathlib import Path
 import certifi
 import pytest
 from fastapi.testclient import TestClient
-from haystack.components.generators.chat import OpenAIChatGenerator
+from haystack.components.generators.chat import (
+    OpenAIChatGenerator,
+    OpenAIResponsesChatGenerator,
+)
 
 from project_copilot.analytics import AnalyticsWorkspace
 from project_copilot.web import (
@@ -55,8 +58,9 @@ def test_web_workspace_upload_inventory_and_primary_agent_flow(tmp_path: Path) -
 
     dashboard = client.get("/")
     assert dashboard.status_code == 200
-    assert 'data-testid="workspace-panel"' in dashboard.text
-    assert 'data-testid="copilot-panel"' in dashboard.text
+    assert 'data-testid="direction-chat"' in dashboard.text
+    assert 'data-testid="workspace-panel"' not in dashboard.text
+    assert 'data-testid="copilot-panel"' not in dashboard.text
 
     created = client.post(
         "/api/workspaces",
@@ -552,6 +556,36 @@ def test_company_mode_builds_haystack_openai_compatible_generator(monkeypatch) -
     assert generator.api_base_url == "https://ai.internal/v1"
     assert generator.model == "company-model"
     assert mode == "company-openai-compatible"
+
+
+def test_codex_switch_mode_builds_haystack_responses_generator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        """model_provider = "custom"
+model = "company-reasoning-model"
+
+[model_providers.custom]
+name = "Company"
+wire_api = "responses"
+base_url = "https://ai.internal.example/v1"
+experimental_bearer_token = "placeholder-secret"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PROJECT_COPILOT_MODEL_MODE", "codex-switch")
+    monkeypatch.setenv("PROJECT_COPILOT_CODEX_CONFIG", str(config))
+    monkeypatch.setenv("PROJECT_COPILOT_ACK_CODEX_SWITCH", "true")
+
+    generator, mode = _build_chat_generator()
+
+    assert isinstance(generator, OpenAIResponsesChatGenerator)
+    assert generator.api_base_url == "https://ai.internal.example/v1"
+    assert generator.model == "company-reasoning-model"
+    assert generator.generation_kwargs["store"] is False
+    assert generator.timeout == 150
+    assert mode == "codex-switch-responses"
 
 
 def test_company_mode_uses_ssl_context_for_internal_ca(monkeypatch) -> None:

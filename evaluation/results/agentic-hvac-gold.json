@@ -1,0 +1,80 @@
+{
+  "row_counts": {
+    "raw": 103650,
+    "unique": 103620,
+    "ideal": 103680
+  },
+  "data_gap": {
+    "asset_id": "HP-02",
+    "missing_points": 60,
+    "duration_seconds": 600
+  },
+  "duplicates": {
+    "asset_id": "HP-03",
+    "duplicate_keys": 30,
+    "redundant_rows": 30
+  },
+  "out_of_order": {
+    "asset_id": "HP-04",
+    "negative_time_steps": 59
+  },
+  "command_feedback_mismatch": {
+    "asset_id": "HP-02",
+    "sample_count": 42,
+    "duration_seconds": 420,
+    "mean_absolute_error_hz": 50.0
+  },
+  "high_discharge_temperature": {
+    "asset_id": "HP-03",
+    "sample_count": 120,
+    "duration_seconds": 1200,
+    "maximum_c": 130.0
+  },
+  "short_cycling": {
+    "asset_id": "HP-04",
+    "starts_in_hour": 6,
+    "shortest_on_seconds": 300,
+    "shortest_off_seconds": 300
+  },
+  "efficiency_degradation": {
+    "asset_id": "HP-01",
+    "electric_energy_kwh": 20.0,
+    "thermal_energy_kwh": 40.0,
+    "weighted_cop": 2.0
+  },
+  "configuration_change": {
+    "asset_id": "HP-02",
+    "before_supply_air_mean_c": 12.2,
+    "after_supply_air_mean_c": 10.3,
+    "difference_c": -1.9,
+    "before_energy_kwh": 36.0,
+    "after_energy_kwh": 40.0
+  },
+  "defrost_sequence": {
+    "asset_id": "HP-01",
+    "sample_count": 48,
+    "duration_seconds": 480,
+    "compressor_on_samples": 48,
+    "outdoor_fan_off_samples": 48,
+    "coil_temperature_rise_c": 14.0
+  },
+  "valve_stuck": {
+    "asset_id": "HP-03",
+    "sample_count": 180,
+    "feedback_distinct_values": 1,
+    "mean_absolute_error_pct_points": 30.0
+  },
+  "low_suction_pressure": {
+    "asset_id": "HP-04",
+    "sample_count": 360,
+    "suction_pressure_kpa_g": 320.0,
+    "thermal_output_kw": 31.5,
+    "cop": 2.25
+  },
+  "telemetry_freeze": {
+    "asset_id": "HP-02",
+    "sample_count": 90,
+    "duration_seconds": 900,
+    "sensor_tuple_distinct_values": 1
+  }
+}

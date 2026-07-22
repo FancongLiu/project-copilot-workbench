@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "benchmark_id": "project-copilot-opencode-codex-comparison-20260721",
+  "case_id": "CC01",
+  "backend": "opencode-sdk",
+  "runtime_version": "1.18.3",
+  "wire_api": "chat_completions",
+  "model_id_sha256": "419255f2bb4c6801939e868fe2cdbbdc34d51742400939d1842d262a1fec749c",
+  "reasoning_effort": "medium",
+  "recorded_at": "2026-07-20T17:12:15.167936+00:00",
+  "status": "failed",
+  "elapsed_ms": 360520,
+  "execution_error": {
+    "type": "OpenCodeRuntimeError",
+    "message": "OpenCode Agent exceeded the configured time budget"
+  }
+}

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project Copilot 四版架构对比</title>
+    <link rel="stylesheet" href="/static/direction.css">
+  </head>
+  <body class="versions-page">
+    <main class="versions-shell">
+      <header>
+        <span class="direction-kicker">PROJECT COPILOT</span>
+        <h1>四版架构方向验收</h1>
+        <p>同一后端、同一问题和同一证据协议，只比较整体工作方式。</p>
+      </header>
+      <section class="version-grid" aria-label="网站架构版本">
+        {% for item in architectures %}
+        <article class="version-card">
+          <h2>{{ item.name }}</h2>
+          <p>{{ item.description }}</p>
+          <a href="/versions/{{ item.id }}">打开这个版本</a>
+        </article>
+        {% endfor %}
+      </section>
+      <a class="baseline-home-link" href="/">返回当前基线</a>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,442 @@
+{
+  "schema_version": "1",
+  "ledger_id": "project-copilot-agentic-rag-direction-20260716",
+  "status_authority": "this_file",
+  "checkpoint_projection": "docs/AGENTIC_RAG_CHECKPOINT.md",
+  "event_log": "docs/AGENTIC_RAG_TASK_EVENTS.jsonl",
+  "status": "completed",
+  "revision": 15,
+  "write_owner": "root",
+  "objective": "Rapidly deliver and compare four local-private general project intelligence single-Chat architectures: the frozen current baseline plus three architecture-level variants. Commercial HVAC remains the first rigorous validation domain. Select by shared complex-question backtests and human engineer journeys, not visual-detail polish or theoretical optimality.",
+  "product_contract": {
+    "input": [
+      "local project code, documents, configurations, meetings, decisions, backtests and approved structured data",
+      "commercial-HVAC documents and ten-second telemetry as the first rigorous validation domain",
+      "structured telemetry or approved analytical tables",
+      "one or more files uploaded directly beside the chat composer",
+      "a natural-language user question"
+    ],
+    "process": [
+      "decide whether the question requires knowledge retrieval, database analysis or both",
+      "retrieve source evidence and/or execute a governed read-only data query",
+      "automatically parse, index and activate uploaded files without exposing ingestion internals",
+      "clarify missing definitions instead of guessing",
+      "compose one engineer-readable answer",
+      "emit an optional query-scoped evidence path without exposing private chain-of-thought",
+      "run the same complex multi-question workload across the frozen baseline and three architecture variants"
+    ],
+    "output": [
+      "clear Markdown answer",
+      "primary conclusions and numbers visually dominant, with sources, scope and caveats de-emphasized as compact secondary text",
+      "tables and governed charts when useful",
+      "compact citations led by the exact original filename, with useful original excerpt, location and explainable support visible only on expansion",
+      "an optional query-scoped evidence view that keeps exact original filenames and excerpts available without occupying the main answer",
+      "no internal IDs or unnecessary implementation terminology"
+    ]
+  },
+  "chairman_corrections": [
+    {
+      "id": "AR-C001",
+      "summary": "Agentic RAG is the governing architecture, not an optional label. The product must autonomously choose knowledge, data or combined tools."
+    },
+    {
+      "id": "AR-C002",
+      "summary": "Do not claim a framework is best from documentation or popularity. Use the same HVAC corpus, model and gold questions to measure candidates."
+    },
+    {
+      "id": "AR-C003",
+      "summary": "The goal is a solution that satisfies the business outcome, not theoretical optimality. Prefer a fast usable direction build followed by evidence-led deepening."
+    },
+    {
+      "id": "AR-C004",
+      "summary": "Build realistic synthetic multi-unit ten-second telemetry and matching configuration knowledge first so every architecture decision can be backtested."
+    },
+    {
+      "id": "AR-C005",
+      "summary": "Defrost is only one test case. It must not be the homepage, navigation model or product boundary."
+    },
+    {
+      "id": "AR-C006",
+      "summary": "No silent capability downgrade is allowed. An offline scripted demo may validate page direction, but it cannot satisfy or be presented as the real intelligence acceptance gate."
+    },
+    {
+      "id": "AR-C007",
+      "summary": "The current Codex Switch configuration provides an authorized OpenAI-compatible Responses API endpoint and model. Use it for model-backed evaluation without copying credentials into the repository or logs."
+    },
+    {
+      "id": "AR-C008",
+      "summary": "The product is a general local project brain, not an HVAC-only application. HVAC remains a validation corpus rather than the permanent product boundary."
+    },
+    {
+      "id": "AR-C009",
+      "summary": "The message list must scroll inside the viewport while the composer remains fixed at the bottom on desktop and mobile."
+    },
+    {
+      "id": "AR-C010",
+      "summary": "The legacy Workbench and its poor user-facing data-management page must not remain a primary navigation destination."
+    },
+    {
+      "id": "AR-C011",
+      "summary": "Add a collapsible animated knowledge graph that shows project contents and highlights only auditable retrieval, database and citation paths during each query."
+    },
+    {
+      "id": "AR-C012",
+      "summary": "Real local project material and derived indexes are private and must remain outside the public Git repository, distribution archives and GitHub."
+    },
+    {
+      "id": "AR-C013",
+      "summary": "Every requirement starts with current Web and GitHub research. Prefer downloading and integrating mature maintained components; custom work is limited to glue and project-specific behavior."
+    },
+    {
+      "id": "AR-C014",
+      "summary": "Answers must reduce cognitive load: the conclusion, ranking and key numbers lead; source provenance, statistical scope and limitations remain available as smaller secondary text."
+    },
+    {
+      "id": "AR-C015",
+      "summary": "File ingestion belongs inside the single Chat: upload files beside the composer, automatically parse and index them, retire the complex legacy management page, and preserve the exact original filename from ingestion through every citation."
+    },
+    {
+      "id": "AR-C016",
+      "summary": "Supersede the default full-project graph. The primary evidence UI is an exact original-filename reference summary below the answer; users may expand original excerpts and a query-scoped level-by-level relative path only when they want to audit where the answer came from. Internal Markdown paths never appear in answer text."
+    },
+    {
+      "id": "AR-C017",
+      "summary": "Freeze the current site as the old-version baseline and create three additional website variants. Spend effort only on overall architecture, information hierarchy, core UI interaction and end-to-end business flow; do not polish low-value visual details before the winning architecture is selected."
+    },
+    {
+      "id": "AR-C018",
+      "summary": "Evaluate all four versions with the same harder, freer multi-part questions. Selection must measure whether knowledge and data questions can be answered together, whether the response structure is easy to read, and whether long filenames, paths and other low-value evidence metadata avoid dominating the answer."
+    },
+    {
+      "id": "AR-C019",
+      "summary": "The four-version trial must preserve failed results rather than polishing around them. The final shared-backend benchmark completed 14/14 requests but passed only 1/14 automatic hard gates and scored 21.4/100 in independent HVAC review, so further UI detail work stops until structured answer synthesis, partial delivery, citation whitelisting and event-semantic validation improve the unchanged benchmark."
+    }
+  ],
+  "safety_boundaries": [
+    "Do not modify OnionQuant runtime, Cron, context_state, Inbox or Outbox.",
+    "Use only fully synthetic or public-safe data in the public repository.",
+    "Use read-only database credentials, query validation and bounded results for model-generated queries.",
+    "Do not expose unrestricted shell, Python, Web, MCP or physical equipment control to ordinary users.",
+    "Store real local-project indexes outside the public repository and reject private data from Git, wheels and source distributions.",
+    "Exclude secrets, Codex configuration, .env, .git, .venv, caches, build outputs and OnionQuant runtime state from private indexing.",
+    "Do not force-push or destructively reset Git history."
+  ],
+  "candidates": [
+    {
+      "id": "haystack-duckdb",
+      "role": "fast lightweight direction build",
+      "status": "selected current direction delivery, but not accepted as general engineering intelligence: the earlier narrow v35 suite executed 52/52 requests and passed its adjudication, while the harder final four-version benchmark passed only 1/14 automatic hard gates and scored 21.4/100 in independent HVAC review"
+    },
+    {
+      "id": "wren",
+      "role": "future lightweight NL2SQL and semantic-layer component",
+      "status": "current v0.13.0 is not a unified document-RAG product; test later on D or F without replacing the accepted chat"
+    },
+    {
+      "id": "db-gpt",
+      "role": "conditional full-stack challenger",
+      "status": "deferred until the authorized provider proves Chat Completions plus embedding compatibility in isolated WSL2"
+    },
+    {
+      "id": "ragflow",
+      "role": "future dedicated enterprise RAG deployment",
+      "status": "not admitted on this machine: official Docker, memory and 50 GB deployment allowance is disproportionate to the approximately 51 MB source and business-data footprint"
+    },
+    {
+      "id": "cytoscape-js",
+      "role": "evaluated project-map visualization candidate",
+      "status": "superseded in the ordinary UI by the simpler query-scoped evidence path; retained only as research evidence, not loaded by the Chat page"
+    },
+    {
+      "id": "haystack-private-catalog",
+      "role": "current local-private indexing candidate",
+      "status": "reuse the existing Haystack/Docling indexing path behind a repository-external read-only project catalog before evaluating heavier GraphRAG or Neo4j services"
+    }
+  ],
+  "slices": [
+    {
+      "id": "AR-01",
+      "title": "Requirement correction, current research and measurable selection contract",
+      "status": "completed",
+      "acceptance": [
+        "single-chat product contract",
+        "Agentic RAG preserved",
+        "no unmeasured best-framework claim",
+        "candidate and falsification criteria recorded"
+      ],
+      "evidence": [
+        "docs/AGENTIC_RAG_TASK_LEDGER.json",
+        "docs/AGENTIC_RAG_CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "AR-02",
+      "title": "Reproducible multi-unit HVAC telemetry, knowledge corpus and hidden truth",
+      "status": "completed",
+      "dependencies": ["AR-01"],
+      "acceptance": [
+        "multiple assets and operating modes",
+        "ten-second telemetry",
+        "data-quality defects and labeled events",
+        "configuration, point map, meetings, decisions and service evidence",
+        "fully synthetic provenance"
+      ],
+      "evidence": [
+        "scripts/generate_agentic_hvac_bakeoff.py",
+        "examples/agentic_hvac_bakeoff/manifest.json",
+        "examples/agentic_hvac_bakeoff/datasets/telemetry.csv",
+        "examples/agentic_hvac_bakeoff/datasets/telemetry.parquet",
+        "examples/agentic_hvac_bakeoff/datasets/hvac_bakeoff.duckdb",
+        "examples/agentic_hvac_bakeoff/hidden_truth/events.json",
+        "evaluation/test_agentic_rag_bakeoff.py"
+      ]
+    },
+    {
+      "id": "AR-03",
+      "title": "Knowledge, database, combined-query, chart and safety benchmark",
+      "status": "completed",
+      "dependencies": ["AR-02"],
+      "acceptance": [
+        "frozen gold questions and exact expected evidence",
+        "repeatable numerical truth",
+        "clarification and refusal cases",
+        "cross-project isolation cases"
+      ],
+      "evidence": [
+        "evaluation/agentic_rag_bakeoff.json",
+        "evaluation/run_agentic_rag_bakeoff.py",
+        "evaluation/results/agentic-hvac-gold.json",
+        "evaluation/test_agentic_rag_gold.py",
+        "fresh focused verification: 6 passed"
+      ]
+    },
+    {
+      "id": "AR-04",
+      "title": "Fast single-chat direction build using the first candidate that clears the evidence gate",
+      "status": "completed",
+      "dependencies": ["AR-03"],
+      "acceptance": [
+        "one intuitive chat page",
+        "model-backed knowledge, database and combined routing through the authorized Responses API",
+        "Markdown, tables, governed charts and citation cards",
+        "no defrost-centric navigation",
+        "the offline scripted shell is labeled as a direction-only aid and is not counted as intelligence completion"
+      ],
+      "evidence": [
+        "src/project_copilot/direction.py",
+        "src/project_copilot/templates/direction.html",
+        "src/project_copilot/static/direction.js",
+        "src/project_copilot/static/direction.css",
+        "tests/test_direction_agent.py",
+        "tests/test_direction_demo.py",
+        "real Responses-API desktop plus multi-turn 320px browser journey passed",
+        "final independent rereview: Critical 0, Important 0",
+        "fresh focused and browser verification passed; final release verification is recorded in the delivery handoff"
+      ]
+    },
+    {
+      "id": "AR-05",
+      "title": "Measured local bake-off, browser journey and independent review",
+      "status": "completed",
+      "dependencies": ["AR-04"],
+      "acceptance": [
+        "same model and corpus across candidates",
+        "raw per-case evidence retained",
+        "human HVAC-engineer journey",
+        "no release-blocking review findings"
+      ],
+      "disposition": "The lightweight candidate passed the live gate. Wren, DB-GPT and RAGFlow were not silently scored as worse: each was dispositioned at a documented feasibility/compatibility gate before installation, so no cross-candidate quality winner is claimed.",
+      "evidence": [
+        "evaluation/results/agentic-rag-haystack-duckdb-live-v35.json",
+        "evaluation/reviews/agentic-rag-haystack-duckdb-live-v35-review.json",
+        "evaluation/results/agentic-rag-haystack-duckdb-live-v35-adjudication.json",
+        "docs/research/2026-07-17-agentic-rag-platform-recheck.md",
+        "automatic contract checks: 52/52 behavior, 52/52 tool, 44/44 evidence",
+        "independent HVAC engineer review: 52/52 accepted, bound to raw-result SHA f17bf6a25f333570ebb73daeb3c43bed13069438c19c32b5bf27a1208285fbca",
+        "independent code review: benchmark and product failures classified with no unreviewed failure case"
+      ]
+    },
+    {
+      "id": "AR-06",
+      "title": "Chairman trial handoff, deployment documentation, commit and push",
+      "status": "completed",
+      "dependencies": ["AR-05"],
+      "acceptance": [
+        "local trial URL",
+        "directional limitations stated",
+        "company-PC handoff updated",
+        "non-force commit and push"
+      ],
+      "evidence": [
+        "http://127.0.0.1:8788/versions",
+        "docs/agentic-rag-direction-handoff.md",
+        "docs/company-agent-handoff.md",
+        "implementation and handoff commit 3151a02 pushed without force to origin/codex/agentic-rag-bakeoff"
+      ]
+    },
+    {
+      "id": "AR-07",
+      "title": "Chairman UX correction and open-source project-map selection",
+      "status": "completed",
+      "dependencies": ["AR-05"],
+      "acceptance": [
+        "message history scrolls inside a bounded viewport and composer remains fixed",
+        "legacy Workbench is absent from the ordinary user journey",
+        "users upload one or more files beside the composer and receive an automatic indexing confirmation",
+        "the original uploaded filename is preserved end to end and is the primary citation label",
+        "conclusions dominate while provenance and limitations use compact secondary typography",
+        "current GitHub and official evidence selects a maintained graph component",
+        "new product contract and private-data boundary are durable in the ledger"
+      ],
+      "evidence": [
+        "docs/AGENTIC_RAG_TASK_LEDGER.json",
+        "docs/AGENTIC_RAG_CHECKPOINT.md",
+        "tests/test_direction_demo.py",
+        "tests/test_browser_acceptance.py"
+      ]
+    },
+    {
+      "id": "AR-08",
+      "title": "Collapsible animated project map and auditable query-path highlighting",
+      "status": "superseded",
+      "superseded_by": "AR-11",
+      "dependencies": ["AR-07"],
+      "acceptance": [
+        "graph nodes cover files, entities, configurations, meetings, data tables and analyses",
+        "knowledge search, database analysis and final citations highlight distinct auditable paths",
+        "graph remains optional and collapsible on small screens",
+        "no private reasoning trace is displayed"
+      ]
+    },
+    {
+      "id": "AR-09",
+      "title": "Repository-external private local-project catalog proof",
+      "status": "completed",
+      "dependencies": ["AR-07"],
+      "acceptance": [
+        "read-only catalog indexes approved business-relevant content under an explicitly approved local project root",
+        "secrets, environments, caches, Git internals and OnionQuant runtime state are excluded",
+        "private files and derived indexes remain outside the public worktree and release archives",
+        "the public repository contains only code, synthetic examples and deployment documentation"
+      ]
+    },
+    {
+      "id": "AR-11",
+      "title": "Engineer-first original-filename references and optional evidence paths",
+      "status": "completed",
+      "dependencies": ["AR-07", "AR-09"],
+      "acceptance": [
+        "the ordinary Chat has no persistent full-project graph or Cytoscape download",
+        "each answer leads with exact original filenames in a compact reference summary",
+        "expansion shows original excerpts and an optional level-by-level relative retrieval path",
+        "Markdown file links in paragraphs and headings render only their human label, never an internal path",
+        "long-file excerpts center on the matched evidence instead of truncating only the beginning",
+        "independent rereview reports Critical 0 and Important 0"
+      ],
+      "evidence": [
+        "src/project_copilot/static/direction.js",
+        "src/project_copilot/templates/direction.html",
+        "tests/test_direction_demo.py",
+        "tests/test_browser_acceptance.py",
+        "real browser acceptance at http://127.0.0.1:8788"
+      ]
+    },
+    {
+      "id": "AR-12",
+      "title": "Freeze baseline, research current mature interaction patterns and specify three architecture variants",
+      "status": "completed",
+      "dependencies": ["AR-11"],
+      "acceptance": [
+        "the current single-Chat behavior is reproducibly available as the baseline",
+        "current Web/GitHub/official evidence supports each variant's interaction architecture",
+        "three variants differ at the information-architecture and workflow level, not merely styling",
+        "all four versions share the same backend, safety and original-filename evidence contract",
+        "variant specifications define falsification and human-journey criteria before implementation"
+      ]
+    },
+    {
+      "id": "AR-13",
+      "title": "Architecture variant A implementation and focused acceptance",
+      "status": "completed",
+      "dependencies": ["AR-12"],
+      "acceptance": [
+        "architecture-level UI journey is runnable",
+        "single Chat remains the ordinary entry",
+        "complex answers and evidence are readable without unnecessary metadata"
+      ]
+    },
+    {
+      "id": "AR-14",
+      "title": "Architecture variant B implementation and focused acceptance",
+      "status": "completed",
+      "dependencies": ["AR-12"],
+      "acceptance": [
+        "architecture-level UI journey is runnable",
+        "single Chat remains the ordinary entry",
+        "complex answers and evidence are readable without unnecessary metadata"
+      ]
+    },
+    {
+      "id": "AR-15",
+      "title": "Architecture variant C implementation and focused acceptance",
+      "status": "completed",
+      "dependencies": ["AR-12"],
+      "acceptance": [
+        "architecture-level UI journey is runnable",
+        "single Chat remains the ordinary entry",
+        "complex answers and evidence are readable without unnecessary metadata"
+      ]
+    },
+    {
+      "id": "AR-16",
+      "title": "Four-version shared complex-question backtest, human acceptance and recommendation",
+      "status": "completed",
+      "dependencies": ["AR-13", "AR-14", "AR-15"],
+      "acceptance": [
+        "all versions run the same model, corpus, complex questions and safety boundaries",
+        "automatic scoring covers multi-part completion, knowledge/data evidence, tables/charts and citation correctness",
+        "desktop and mobile human journeys score readability, cognitive load and discoverability",
+        "the recommendation states measured strengths, failures and rejection reasons without claiming theoretical optimality"
+      ],
+      "disposition": "The architecture experiment is complete but no UI is promoted. Independent UI review scored baseline 2/5, conversation 3/5, evidence 4/5 and canvas 4/5, all below the 4.2/5 replacement gate. The shared 14-case model run completed every request with zero execution failures but passed 1/14 automatic hard gates; independent HVAC review scored pass 0, partial 6, fail 8 (21.4/100). Stop UI detail work and improve the shared backend against the same frozen questions.",
+      "evidence": [
+        "docs/research/2026-07-18-four-version-architecture-study.md",
+        "evaluation/four_version_complex_questions.json",
+        "evaluation/results/four-version-shared-backend-live.json",
+        "evaluation/reviews/four-version-human-ui-review-20260718.md",
+        "evaluation/reviews/four-version-complex-benchmark-human-review-20260718.md",
+        "evaluation/reviews/four-version-code-review-20260718.md",
+        "independent final code rereview: Critical 0, Important 0"
+      ]
+    },
+    {
+      "id": "AR-10",
+      "title": "New-direction human acceptance, handoff, verification, commit and push",
+      "status": "completed",
+      "dependencies": ["AR-09", "AR-16"],
+      "acceptance": [
+        "Chairman can trial the corrected interface at the local URL",
+        "desktop and mobile human journey passes",
+        "independent review has no Critical or Important findings",
+        "private-data release guard, tests and packaging pass",
+        "detailed company-PC handoff is committed and pushed without force"
+      ],
+      "disposition": "Architecture delivery and cross-platform release closure are complete. GitHub Actions run 29617892095 passed Ubuntu, Windows, package, browser, documents and secret-scanning jobs after the project-timezone/tzdata remediation. This is still not an intelligence-quality acceptance: the harder real-model benchmark remains at 1/14 automatic hard gates and 21.4/100 independent HVAC review, so no route is promoted over the frozen root and the next bounded objective must improve the shared backend against the unchanged questions.",
+      "evidence": [
+        "four current routes reachable under http://127.0.0.1:8788/versions",
+        "current single-Chat desktop/mobile browser suite: 9 passed, one opt-in real-model case skipped",
+        "opt-in approved-provider browser query retained as a numeric-grounding failure",
+        "independent final staged review: Critical 0, Important 0",
+        "Ruff, 391 collected Python tests, release guard, build, distribution contents, wheel install smoke, dependency audit and license check passed",
+        "commit 3151a02 pushed without force to origin/codex/agentic-rag-bakeoff",
+        "GitHub Actions run 29615856293 retained as failed cross-platform evidence; timezone remediation and a green replacement run remain",
+        "local remediation verification: full Python suite, deterministic 23/23 offline evaluation, browser acceptance, Ruff and release guard exit successfully; independent portability review Critical 0, Important 0, Minor 0",
+        "GitHub Actions run 29617892095 passed test (Ubuntu), test (Windows), package, browser, documents and secrets for commit b5eed1e"
+      ]
+    }
+  ],
+  "current_blockers": [],
+  "completion_disposition": "Delivered the frozen baseline plus three architecture variants, measured them honestly, fixed the cross-platform timezone release defect, and obtained a fully green GitHub Actions run. UI detail work remains stopped because the shared backend failed the harder engineering gate; that intelligence-quality work is a separate future bounded objective.",
+  "next_slice_ids": [],
+  "updated_at": "2026-07-18T06:31:01+08:00"
+}

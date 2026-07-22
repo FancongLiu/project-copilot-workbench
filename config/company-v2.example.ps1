@@ -6,6 +6,9 @@ param(
 
     [string]$OpenAIModel = "approved-model-id",
 
+    [ValidateSet("responses", "chat_completions")]
+    [string]$OpenAIWireApi = "responses",
+
     [string[]]$AllowedHosts = @("ai-gateway.example.invalid"),
 
     [string]$CaBundle = "",
@@ -34,6 +37,7 @@ $env:PROJECT_COPILOT_MODEL_MODE = $ModelMode
 if ($ModelMode -eq "deterministic") {
     Remove-Item Env:PROJECT_COPILOT_OPENAI_BASE_URL -ErrorAction SilentlyContinue
     Remove-Item Env:PROJECT_COPILOT_OPENAI_MODEL -ErrorAction SilentlyContinue
+    Remove-Item Env:PROJECT_COPILOT_OPENAI_WIRE_API -ErrorAction SilentlyContinue
     Remove-Item Env:PROJECT_COPILOT_ALLOWED_HOSTS -ErrorAction SilentlyContinue
     Remove-Item Env:PROJECT_COPILOT_CA_BUNDLE -ErrorAction SilentlyContinue
     Remove-Item Env:PROJECT_COPILOT_EMBEDDING_MODEL -ErrorAction SilentlyContinue
@@ -83,6 +87,7 @@ else {
 
     $env:PROJECT_COPILOT_OPENAI_BASE_URL = $OpenAIBaseUrl.TrimEnd("/")
     $env:PROJECT_COPILOT_OPENAI_MODEL = $OpenAIModel.Trim()
+    $env:PROJECT_COPILOT_OPENAI_WIRE_API = $OpenAIWireApi
     $env:PROJECT_COPILOT_ALLOWED_HOSTS = $NormalizedAllowedHosts -join ","
 
     if ($EmbeddingModel.Trim()) {
@@ -116,6 +121,7 @@ else {
     Write-Host "Configured company OpenAI-compatible mode."
     Write-Host "Base URL: $($env:PROJECT_COPILOT_OPENAI_BASE_URL)"
     Write-Host "Model: $($env:PROJECT_COPILOT_OPENAI_MODEL)"
+    Write-Host "Wire API: $($env:PROJECT_COPILOT_OPENAI_WIRE_API)"
     Write-Host "Allowed hosts: $($env:PROJECT_COPILOT_ALLOWED_HOSTS)"
     Write-Host "API key: injected (value not displayed)"
     if ($env:PROJECT_COPILOT_EMBEDDING_MODEL) {

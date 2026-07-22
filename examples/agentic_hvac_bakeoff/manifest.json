@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "generator_version": "hvac-synth-v2",
+  "fully_synthetic": true,
+  "license": "CC0-1.0",
+  "engineering_use": "evaluation_only_not_engineering_guidance",
+  "timezone": "Asia/Shanghai",
+  "start": "2026-01-15T00:00:00+08:00",
+  "duration_hours": 72,
+  "sample_interval_seconds": 10,
+  "assets": [
+    "HP-01",
+    "HP-02",
+    "HP-03",
+    "HP-04"
+  ],
+  "expected_raw_rows": 103650,
+  "expected_unique_rows": 103620,
+  "expected_missing_grid_points": 60,
+  "knowledge_root": "docs/source",
+  "structured_data": [
+    "datasets/hvac_bakeoff.duckdb",
+    "datasets/telemetry.csv",
+    "datasets/telemetry.parquet",
+    "datasets/assets.csv",
+    "datasets/config_history.csv",
+    "datasets/point_aliases.csv"
+  ],
+  "excluded_from_candidate_context": [
+    "hidden_truth"
+  ]
+}

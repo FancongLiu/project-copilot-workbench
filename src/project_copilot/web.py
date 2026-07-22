@@ -2,16 +2,21 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from haystack.components.generators.chat import OpenAIChatGenerator
+from haystack.components.generators.chat import (
+    OpenAIChatGenerator,
+    OpenAIResponsesChatGenerator,
+)
 from haystack.utils import Secret
 from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -19,13 +24,23 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from project_copilot.agent import DeterministicChatGenerator, ProjectAgent
 from project_copilot.analysis import AnalysisIntentError, ApprovedAnalysisEngine
 from project_copilot.analytics import AnalyticsValidationError, AnalyticsWorkspace
-from project_copilot.company_api import CompanyAPISettings
+from project_copilot.company_api import (
+    CompanyAPISettings,
+    load_codex_switch_settings,
+)
+from project_copilot.codex_runtime import (
+    VIRTUAL_DATA_LOCATIONS,
+    CodexRuntime,
+    CodexRuntimeError,
+)
+from project_copilot.opencode_runtime import OpenCodeRuntime
 from project_copilot.contract import ProjectPackage, load_project_package
 from project_copilot.defrost_diagnostics import (
     DefrostAssetContext,
     DefrostDiagnosticsEngine,
     DefrostRulePack,
 )
+from project_copilot.direction import DirectionAgent, DirectionDemo, DirectionToolbox
 from project_copilot.embeddings import OpenAIEmbeddingBackend
 from project_copilot.ingestion import ImportedFile, IngestionError, ProjectIndexer
 from project_copilot.ingestion import SentenceTransformersReranker
@@ -45,6 +60,189 @@ REPOSITORY_ROOT = PACKAGE_DIR.parents[1]
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=1_000)
     request_id: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class DirectionTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2_000)
+
+
+class DirectionQuestionRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=1_000)
+    history: list[DirectionTurn] = Field(default_factory=list, max_length=6)
+    workflow_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+    )
+
+
+_MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+_WINDOWS_ABSOLUTE_PATH = re.compile(
+    r"(?<![A-Za-z0-9_])[A-Za-z]:[\\/][^\s<>\"'`()\[\]{}]+"
+)
+_POSIX_ABSOLUTE_PATH = re.compile(
+    r"(?<![A-Za-z0-9_])/(?:[^/\s<>\"'`()\[\]{}]+/)+[^\s<>\"'`()\[\]{}]+"
+)
+_INTERNAL_RELATIVE_PATH = re.compile(
+    r"(?<![A-Za-z0-9_./-])(?:background|company|configuration|datasets|docs|"
+    r"project\.local|runtime|src)[\\/][^\s<>\"'`()\[\]{}]+",
+    re.IGNORECASE,
+)
+
+
+def _looks_internal_path(value: str) -> bool:
+    return bool(
+        _WINDOWS_ABSOLUTE_PATH.search(value)
+        or _POSIX_ABSOLUTE_PATH.search(value)
+        or _INTERNAL_RELATIVE_PATH.search(value)
+    )
+
+
+def _sanitize_public_text(value: object) -> str:
+    text = str(value or "")
+    text = _MARKDOWN_LINK.sub(
+        lambda match: (
+            match.group(1) if _looks_internal_path(match.group(2)) else match.group(0)
+        ),
+        text,
+    )
+    for pattern in (
+        _WINDOWS_ABSOLUTE_PATH,
+        _POSIX_ABSOLUTE_PATH,
+        _INTERNAL_RELATIVE_PATH,
+    ):
+        text = pattern.sub("", text)
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
+_SAFE_CITATION_ROOTS = {
+    "background",
+    "configuration",
+    "controls",
+    "decisions",
+    "meeting",
+    "meetings",
+    "service",
+    "sop",
+    "sops",
+}
+
+
+def _public_filename(value: object) -> str:
+    filename = str(value or "source").replace("\\", "/").rsplit("/", 1)[-1]
+    filename = re.sub(r"[\x00-\x1f<>:\"|?*]", "", filename).strip(" .")
+    return filename or "source"
+
+
+def _public_citation_location(value: object, filename: str) -> str:
+    expected_virtual = VIRTUAL_DATA_LOCATIONS.get(filename)
+    if expected_virtual is not None:
+        return expected_virtual
+    location = str(value or "").replace("\\", "/").strip()
+    if location.startswith("docs/source/"):
+        location = location.removeprefix("docs/source/")
+    parts = [part for part in location.split("/") if part not in {"", "."}]
+    if (
+        not parts
+        or location.startswith("/")
+        or _WINDOWS_ABSOLUTE_PATH.search(location)
+        or ".." in parts
+        or parts[-1] != filename
+        or parts[0].casefold() not in _SAFE_CITATION_ROOTS
+    ):
+        return filename
+    return "/".join(parts)
+
+
+def _public_metadata_label(value: object, fallback: str) -> str:
+    raw = str(value or "")
+    if "/" in raw or "\\" in raw:
+        return fallback
+    return _sanitize_public_text(raw)[:80] or fallback
+
+
+def _sanitize_direction_payload(payload: dict[str, object]) -> dict[str, object]:
+    sanitized = dict(payload)
+    answer = _sanitize_public_text(payload.get("answer_markdown", ""))
+    if not answer:
+        raise CodexRuntimeError("Answer contained no public-safe content")
+    sanitized["answer_markdown"] = answer
+    tables: list[dict[str, object]] = []
+    for raw_table in payload.get("tables", []) or []:
+        if not isinstance(raw_table, dict):
+            continue
+        rows = [
+            [
+                _sanitize_public_text(cell) if isinstance(cell, str) else cell
+                for cell in row
+            ]
+            for row in raw_table.get("rows", []) or []
+            if isinstance(row, list)
+        ]
+        tables.append(
+            {
+                **raw_table,
+                "title": _sanitize_public_text(raw_table.get("title", "")) or "结果",
+                "columns": [
+                    _sanitize_public_text(column) or "字段"
+                    for column in raw_table.get("columns", []) or []
+                ],
+                "rows": rows,
+            }
+        )
+    sanitized["tables"] = tables
+    charts: list[dict[str, object]] = []
+    for raw_chart in payload.get("charts", []) or []:
+        if not isinstance(raw_chart, dict):
+            continue
+        points = []
+        for raw_point in raw_chart.get("points", []) or []:
+            if not isinstance(raw_point, dict):
+                continue
+            point = dict(raw_point)
+            point["label"] = _sanitize_public_text(raw_point.get("label", "")) or "—"
+            if "series" in point:
+                point["series"] = _sanitize_public_text(point.get("series", "")) or "—"
+            points.append(point)
+        charts.append(
+            {
+                **raw_chart,
+                "title": _sanitize_public_text(raw_chart.get("title", "")) or "图表",
+                "unit": _sanitize_public_text(raw_chart.get("unit", "")),
+                "points": points,
+            }
+        )
+    sanitized["charts"] = charts
+    citations: list[dict[str, object]] = []
+    for raw_citation in payload.get("citations", []) or []:
+        if not isinstance(raw_citation, dict):
+            continue
+        citation = dict(raw_citation)
+        filename = _public_filename(raw_citation.get("filename", "source"))
+        citation["filename"] = filename
+        citation["location"] = _public_citation_location(
+            raw_citation.get("location", ""), filename
+        )
+        citation["excerpt"] = _sanitize_public_text(raw_citation.get("excerpt", ""))
+        citation["source_role"] = _public_metadata_label(
+            raw_citation.get("source_role", ""), "evidence"
+        )
+        citation["source_status"] = _public_metadata_label(
+            raw_citation.get("source_status", ""), "read-only evidence"
+        )
+        citations.append(citation)
+    sanitized["citations"] = citations
+    activities: list[dict[str, object]] = []
+    for raw_activity in payload.get("activities", []) or []:
+        if not isinstance(raw_activity, dict):
+            continue
+        activity = dict(raw_activity)
+        activity["summary"] = _sanitize_public_text(raw_activity.get("summary", ""))
+        activities.append(activity)
+    sanitized["activities"] = activities
+    return sanitized
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -132,23 +330,52 @@ def _build_chat_generator():  # type: ignore[no-untyped-def]
     mode = os.getenv("PROJECT_COPILOT_MODEL_MODE", "deterministic").casefold()
     if mode == "deterministic":
         return DeterministicChatGenerator(), "deterministic-test-double"
-    if mode != "company":
+    if mode == "codex-switch":
+        settings = load_codex_switch_settings()
+    elif mode == "company":
+        allowed_hosts = tuple(
+            host.strip()
+            for host in os.environ.get("PROJECT_COPILOT_ALLOWED_HOSTS", "").split(",")
+            if host.strip()
+        )
+        settings = CompanyAPISettings(
+            base_url=os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
+            api_key=os.environ.get("PROJECT_COPILOT_OPENAI_API_KEY", ""),
+            model=os.environ.get("PROJECT_COPILOT_OPENAI_MODEL", ""),
+            allowed_hosts=allowed_hosts,
+            wire_api=os.environ.get(
+                "PROJECT_COPILOT_OPENAI_WIRE_API", "chat_completions"
+            ),
+        )
+    else:
         raise RuntimeError(f"Unsupported model mode: {mode}")
-    allowed_hosts = tuple(
-        host.strip()
-        for host in os.environ.get("PROJECT_COPILOT_ALLOWED_HOSTS", "").split(",")
-        if host.strip()
-    )
-    settings = CompanyAPISettings(
-        base_url=os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
-        api_key=os.environ.get("PROJECT_COPILOT_OPENAI_API_KEY", ""),
-        model=os.environ.get("PROJECT_COPILOT_OPENAI_MODEL", ""),
-        allowed_hosts=allowed_hosts,
-    )
     http_client_kwargs: dict[str, object] = {
         "trust_env": False,
         "verify": build_tls_context(os.environ.get("PROJECT_COPILOT_CA_BUNDLE")),
     }
+    if settings.wire_api == "responses":
+        return (
+            OpenAIResponsesChatGenerator(
+                api_key=Secret.from_token(settings.api_key),
+                model=settings.model,
+                api_base_url=settings.base_url,
+                timeout=150,
+                max_retries=0,
+                generation_kwargs={
+                    "store": False,
+                    "reasoning": {
+                        "effort": os.environ.get(
+                            "PROJECT_COPILOT_REASONING_EFFORT", "high"
+                        )
+                    },
+                },
+                tools_strict=True,
+                http_client_kwargs=http_client_kwargs,
+            ),
+            "codex-switch-responses"
+            if mode == "codex-switch"
+            else "company-openai-responses",
+        )
     return (
         OpenAIChatGenerator(
             api_key=Secret.from_token(settings.api_key),
@@ -227,57 +454,70 @@ def create_app(
         runtime_root or Path(tempfile.gettempdir()) / "project-copilot-workbench-v2"
     ).resolve()
     selected_runtime.mkdir(parents=True, exist_ok=True)
+    direction_runtime_mode = os.environ.get(
+        "PROJECT_COPILOT_AGENT_RUNTIME", "haystack"
+    ).casefold()
+    if direction_runtime_mode not in {"codex", "opencode", "haystack"}:
+        raise RuntimeError(f"Unsupported Agent runtime: {direction_runtime_mode}")
+    private_agent_mode = direction_runtime_mode in {"codex", "opencode"}
 
-    legacy_knowledge, knowledge_provider_name = resolve_knowledge_provider(package)
-    knowledge_provider_display = {
-        "haystack-local": "Haystack BM25",
-        "anythingllm-query": "AnythingLLM query",
-    }[knowledge_provider_name]
+    legacy_knowledge = None
+    knowledge_provider_name = "agent-local-tools"
+    if not private_agent_mode:
+        legacy_knowledge, knowledge_provider_name = resolve_knowledge_provider(package)
     manager = WorkspaceManager(selected_runtime)
-    embedding_backend = _build_embedding_backend()
+    embedding_backend = None if private_agent_mode else _build_embedding_backend()
     indexer = ProjectIndexer(
         manager,
         embedding_backend=embedding_backend,
-        reranker=_build_reranker(),
+        reranker=None if private_agent_mode else _build_reranker(),
     )
     _bootstrap_workspace(manager, indexer, package)
     if embedding_backend is not None:
         for workspace in manager.list_workspaces():
             indexer.reindex(workspace.project_id)
-    chat_generator, model_mode = _build_chat_generator()
+    chat_generator = None
+    model_mode = f"{direction_runtime_mode}-agent-runtime"
+    model_backed = private_agent_mode
     egress_detail = {
-        "chat": (
-            "approved-remote"
-            if model_mode == "company-openai-compatible"
-            and _is_remote_endpoint(
-                os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", "")
-            )
-            else "loopback"
-            if model_mode == "company-openai-compatible"
-            else "disabled"
-        ),
-        "embedding": (
-            "approved-remote"
-            if embedding_backend is not None
-            and _is_remote_endpoint(
-                os.environ.get(
-                    "PROJECT_COPILOT_EMBEDDING_BASE_URL",
-                    os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
-                )
-            )
-            else "loopback"
-            if embedding_backend is not None
-            else "disabled"
-        ),
-        "knowledge": (
-            "approved-remote"
-            if knowledge_provider_name == "anythingllm-query"
-            and _is_remote_endpoint(os.environ.get("ANYTHINGLLM_BASE_URL", ""))
-            else "loopback"
-            if knowledge_provider_name == "anythingllm-query"
-            else "local"
-        ),
+        "chat": "disabled",
+        "embedding": "disabled",
+        "knowledge": "local",
     }
+    if not private_agent_mode:
+        chat_generator, model_mode = _build_chat_generator()
+        chat_base_url = str(getattr(chat_generator, "api_base_url", "") or "")
+        model_backed = model_mode != "deterministic-test-double"
+        egress_detail = {
+            "chat": (
+                "approved-remote"
+                if model_backed and _is_remote_endpoint(chat_base_url)
+                else "loopback"
+                if model_backed
+                else "disabled"
+            ),
+            "embedding": (
+                "approved-remote"
+                if embedding_backend is not None
+                and _is_remote_endpoint(
+                    os.environ.get(
+                        "PROJECT_COPILOT_EMBEDDING_BASE_URL",
+                        os.environ.get("PROJECT_COPILOT_OPENAI_BASE_URL", ""),
+                    )
+                )
+                else "loopback"
+                if embedding_backend is not None
+                else "disabled"
+            ),
+            "knowledge": (
+                "approved-remote"
+                if knowledge_provider_name == "anythingllm-query"
+                and _is_remote_endpoint(os.environ.get("ANYTHINGLLM_BASE_URL", ""))
+                else "loopback"
+                if knowledge_provider_name == "anythingllm-query"
+                else "local"
+            ),
+        }
     egress_channel_labels = {
         "chat": "company-chat",
         "embedding": "company-embedding",
@@ -336,6 +576,154 @@ def create_app(
     app.state.analytics = default_analytics
     app.state.analysis = legacy_analysis
     app.state.model_mode = model_mode
+    source_direction_corpus = REPOSITORY_ROOT / "examples" / "agentic_hvac_bakeoff"
+    bundled_direction_corpus = PACKAGE_DIR / "direction_demo"
+    direction_corpus = (
+        source_direction_corpus
+        if source_direction_corpus.is_dir()
+        else bundled_direction_corpus
+    )
+
+    def search_active_workspace(query: str) -> list[dict[str, object]]:
+        active = manager.active_workspace()
+        normalized_query = query.casefold().replace("\\", "/")
+        source_records = indexer.list_sources(active.project_id)
+
+        def mentions_source_location(location: str) -> bool:
+            normalized_location = location.casefold().replace("\\", "/")
+            return (
+                re.search(
+                    rf"(?<![A-Za-z0-9_./-]){re.escape(normalized_location)}(?![A-Za-z0-9_./-])",
+                    normalized_query,
+                )
+                is not None
+            )
+
+        path_matches = [
+            source
+            for source in source_records
+            if source.source_location
+            and mentions_source_location(source.source_location)
+        ]
+        basename_matches = [
+            source
+            for source in source_records
+            if (source.original_filename or source.filename).casefold()
+            in normalized_query
+        ]
+        exact_sources = path_matches or basename_matches
+        if not path_matches and len(basename_matches) > 1:
+            basename = (
+                basename_matches[0].original_filename or basename_matches[0].filename
+            )
+            locations = sorted(
+                source.source_location or source.original_filename or source.filename
+                for source in basename_matches
+            )
+            return [
+                {
+                    "_clarification_message": (
+                        f"找到多个名为 {basename} 的文件，请在问题中写明相对路径："
+                        + "、".join(locations)
+                    )
+                }
+            ]
+        if exact_sources:
+            exact_citations: list[dict[str, object]] = []
+            for source in exact_sources:
+                filtered = indexer.search(
+                    active.project_id,
+                    query,
+                    source_ids={source.source_id},
+                    top_k=3,
+                )
+                if filtered.refused or not filtered.citations:
+                    location = (
+                        source.source_location
+                        or source.original_filename
+                        or source.filename
+                    )
+                    return [
+                        {
+                            "_clarification_message": (
+                                f"指定文件 {location} 已入库，但没有检索到足以回答该问题的内容。"
+                            )
+                        }
+                    ]
+                for citation in filtered.citations:
+                    exact_citations.append(
+                        {
+                            "filename": citation.source,
+                            "excerpt": citation.excerpt[:4_000],
+                            "location": citation.source_location
+                            or source.source_location
+                            or citation.source,
+                            "source_status": "\u5df2\u5165\u5e93",
+                            "source_role": citation.category,
+                            "support_weight": max(float(citation.score), 0.1),
+                            "_exact_filename": True,
+                        }
+                    )
+            return exact_citations
+
+        citations: list[dict[str, object]] = []
+        result = indexer.search(active.project_id, query, top_k=5)
+        for citation in result.citations:
+            location_parts = [citation.source_location or citation.source]
+            if citation.page is not None:
+                location_parts.append(f"page {citation.page}")
+            elif citation.section:
+                location_parts.append(citation.section)
+            citations.append(
+                {
+                    "filename": citation.source,
+                    "excerpt": citation.excerpt[:500],
+                    "location": " · ".join(location_parts),
+                    "source_status": "\u5df2\u5165\u5e93",
+                    "source_role": citation.category,
+                    "support_weight": max(float(citation.score), 0.1),
+                }
+            )
+        return citations
+
+    if private_agent_mode:
+        runtime_class = (
+            OpenCodeRuntime if direction_runtime_mode == "opencode" else CodexRuntime
+        )
+        app.state.direction_demo = runtime_class.from_environment(
+            corpus_root=direction_corpus,
+            application_runtime=selected_runtime,
+        )
+        model_backed = True
+        app.state.model_mode = f"{direction_runtime_mode}-agent-runtime"
+        agent_remote = bool(
+            getattr(app.state.direction_demo, "provider_is_remote", True)
+        )
+        egress_detail = {
+            "chat": "approved-remote" if agent_remote else "loopback",
+            "embedding": "disabled",
+            "knowledge": "local",
+        }
+        egress_channels = ["company-chat"] if agent_remote else []
+        downstream_approval_acknowledged = agent_remote
+        egress_mode = "approved-provider" if agent_remote else "loopback-only"
+        egress_display = (
+            "Approved company endpoint" if agent_remote else "Loopback only"
+        )
+    elif direction_runtime_mode == "haystack":
+        app.state.direction_demo = (
+            DirectionAgent(
+                DirectionToolbox(
+                    direction_corpus,
+                    workspace_search=search_active_workspace,
+                ),
+                chat_generator,
+            )
+            if model_backed
+            else DirectionDemo(direction_corpus)
+        )
+    app.state.direction_runtime_mode = direction_runtime_mode
+    app.state.direction_model_backed = model_backed
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost", "::1", "[::1]", "testserver"],
@@ -522,32 +910,295 @@ def create_app(
         )
         return response
 
-    @app.get("/", response_class=HTMLResponse)
-    def dashboard(request: Request):  # type: ignore[no-untyped-def]
+    architectures = {
+        "baseline": {
+            "name": "基线：简洁证据 Chat",
+            "description": "当前版本，连续问答与按需原始文件名证据。",
+        },
+        "conversation": {
+            "name": "V1：连续对话台",
+            "description": "生成中继续追加问题，按队列保持连续工作。",
+        },
+        "evidence": {
+            "name": "V2：答案与证据工作台",
+            "description": "完整答案居中，原文与检索路径在按需证据面板核查。",
+        },
+        "canvas": {
+            "name": "V3：工程成果画布",
+            "description": "聊天保持简短，长报告、表格和图表进入稳定成果区。",
+        },
+    }
+
+    def direction_response(
+        request: Request,
+        architecture: str,
+        *,
+        show_version_nav: bool,
+    ):  # type: ignore[no-untyped-def]
+        if architecture not in architectures:
+            raise HTTPException(status_code=404, detail="Unknown architecture version")
         active = manager.active_workspace()
-        model_mode_display = (
-            "Demonstration test mode - not for field decisions"
-            if model_mode == "deterministic-test-double"
-            else model_mode
+        architecture_info = architectures[architecture]
+        agent_mode = app.state.direction_runtime_mode in {"codex", "opencode"}
+        workspace_name = (
+            app.state.direction_demo.workspace_name
+            if agent_mode
+            else active.display_name
+        )
+        source_count = (
+            app.state.direction_demo.source_count
+            if agent_mode
+            else len(indexer.list_sources(active.project_id))
         )
         return templates.TemplateResponse(
             request=request,
-            name="index.html",
+            name="direction.html",
             context={
-                "package": package,
-                "active_workspace": active,
-                "workspaces": [
-                    workspace_payload(item.project_id)
-                    for item in manager.list_workspaces()
-                ],
-                "sources": indexer.list_sources(active.project_id),
-                "metrics": analytics_summary_payload(active.project_id),
-                "knowledge_provider_display": knowledge_provider_display,
-                "model_mode": model_mode_display,
+                "model_backed": model_backed,
+                "model_name": (
+                    app.state.direction_demo.model
+                    if agent_mode
+                    else getattr(chat_generator, "model", "离线测试")
+                ),
                 "egress_display": egress_display,
-                "downstream_approval_acknowledged": downstream_approval_acknowledged,
+                "workspace_name": workspace_name,
+                "source_count": source_count,
+                "scope_label": ("固定合成测试资料" if agent_mode else "本地私有索引"),
+                "uploads_enabled": not agent_mode,
+                "architecture": architecture,
+                "architecture_name": architecture_info["name"],
+                "architecture_description": architecture_info["description"],
+                "show_version_nav": show_version_nav,
+                "show_graph": not show_version_nav,
             },
         )
+
+    @app.get("/", response_class=HTMLResponse)
+    def dashboard(request: Request):  # type: ignore[no-untyped-def]
+        return direction_response(request, "baseline", show_version_nav=False)
+
+    @app.get("/workbench")
+    def workbench(request: Request):  # type: ignore[no-untyped-def]
+        del request
+        return RedirectResponse(url="/", status_code=307)
+
+    @app.get("/direction", response_class=HTMLResponse)
+    def direction(request: Request):  # type: ignore[no-untyped-def]
+        return direction_response(request, "baseline", show_version_nav=False)
+
+    @app.get("/versions", response_class=HTMLResponse)
+    def version_overview(request: Request):  # type: ignore[no-untyped-def]
+        return templates.TemplateResponse(
+            request=request,
+            name="versions.html",
+            context={
+                "architectures": [
+                    {"id": architecture_id, **architecture_info}
+                    for architecture_id, architecture_info in architectures.items()
+                ]
+            },
+        )
+
+    @app.get("/versions/{architecture}", response_class=HTMLResponse)
+    def version_page(
+        request: Request,
+        architecture: str,
+    ):  # type: ignore[no-untyped-def]
+        return direction_response(request, architecture, show_version_nav=True)
+
+    @app.post("/api/direction/query")
+    async def query_direction(payload: DirectionQuestionRequest) -> dict[str, object]:
+        history = [turn.model_dump() for turn in payload.history]
+        async_answer = getattr(app.state.direction_demo, "answer_async", None)
+        try:
+            if async_answer is not None:
+                if app.state.direction_runtime_mode in {"codex", "opencode"}:
+                    return _sanitize_direction_payload(
+                        await async_answer(
+                            payload.question,
+                            history=history,
+                            workflow_id=payload.workflow_id,
+                        )
+                    )
+                return _sanitize_direction_payload(
+                    await async_answer(payload.question, history=history)
+                )
+            return _sanitize_direction_payload(
+                app.state.direction_demo.answer(payload.question, history=history)
+            )
+        except CodexRuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    @app.post("/api/direction/sources", status_code=201)
+    async def upload_direction_sources(
+        files: list[UploadFile] = File(...),
+    ) -> dict[str, object]:
+        if app.state.direction_runtime_mode in {"codex", "opencode"}:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Codex evaluation mode uses fixed synthetic evidence; "
+                    "uploads are disabled until active-workspace isolation is implemented."
+                ),
+            )
+        active = manager.active_workspace()
+        try:
+            if (
+                len(files) == 1
+                and Path(files[0].filename or "").suffix.casefold() == ".zip"
+            ):
+                payload = await files[0].read(ProjectIndexer.MAX_ARCHIVE_BYTES + 1)
+                imported = indexer.import_archive(
+                    active.project_id,
+                    files[0].filename or "project-package.zip",
+                    payload,
+                )
+            else:
+                if any(
+                    Path(upload.filename or "").suffix.casefold() == ".zip"
+                    for upload in files
+                ):
+                    raise IngestionError("Upload one Project Package ZIP by itself")
+                pending: list[ImportedFile] = []
+                for upload in files:
+                    filename = upload.filename or "unnamed"
+                    payload = await upload.read(ProjectIndexer.MAX_FILE_BYTES + 1)
+                    pending.append(
+                        ImportedFile(
+                            filename=filename,
+                            content=payload,
+                            category=_category_for_path(Path(filename)),
+                        )
+                    )
+                imported = indexer.import_files(active.project_id, pending)
+        except IngestionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "files": [
+                {
+                    "filename": item.original_filename or item.filename,
+                    "category": item.category,
+                    "status": item.status,
+                }
+                for item in imported
+            ]
+        }
+
+    @app.get("/api/direction/graph")
+    def direction_graph() -> dict[str, object]:
+        active = manager.active_workspace()
+        if app.state.direction_runtime_mode in {"codex", "opencode"}:
+            source_root = direction_corpus / "docs" / "source"
+            source_records = [
+                {
+                    "source_id": path.relative_to(source_root).as_posix(),
+                    "filename": path.name,
+                    "location": path.relative_to(source_root).as_posix(),
+                    "category": path.parent.name,
+                }
+                for path in sorted(source_root.rglob("*"))
+                if path.is_file()
+            ]
+            for filename, location in VIRTUAL_DATA_LOCATIONS.items():
+                source_records.append(
+                    {
+                        "source_id": location,
+                        "filename": filename,
+                        "location": location,
+                        "category": (
+                            "dataset"
+                            if location.startswith("datasets/")
+                            else "configuration"
+                        ),
+                    }
+                )
+            graph_name = app.state.direction_demo.workspace_name
+        else:
+            source_records = [
+                {
+                    "source_id": source.source_id,
+                    "filename": source.original_filename or source.filename,
+                    "location": source.source_location
+                    or source.original_filename
+                    or source.filename,
+                    "category": source.category,
+                }
+                for source in indexer.list_sources(active.project_id)
+            ]
+            graph_name = active.display_name
+        nodes: list[dict[str, str]] = [
+            {"id": "project", "label": graph_name, "kind": "project"}
+        ]
+        edges: list[dict[str, str]] = []
+        folder_ids: dict[str, str] = {}
+        for source in sorted(
+            source_records,
+            key=lambda item: str(item["location"]).casefold(),
+        ):
+            display_filename = str(source["filename"])
+            location = str(source["location"]).replace("\\", "/")
+            path_parts = [part for part in location.split("/") if part]
+            directories = path_parts[:-1]
+            parent_id = "project"
+            accumulated: list[str] = []
+            for directory in directories:
+                accumulated.append(directory)
+                directory_path = "/".join(accumulated)
+                folder_id = folder_ids.get(directory_path)
+                if folder_id is None:
+                    folder_id = (
+                        "folder-"
+                        + hashlib.sha256(directory_path.encode("utf-8")).hexdigest()[
+                            :12
+                        ]
+                    )
+                    folder_ids[directory_path] = folder_id
+                    nodes.append(
+                        {
+                            "id": folder_id,
+                            "label": directory,
+                            "kind": "folder",
+                            "location": directory_path,
+                        }
+                    )
+                    edges.append(
+                        {
+                            "id": f"{parent_id}-{folder_id}",
+                            "source": parent_id,
+                            "target": folder_id,
+                            "kind": "contains",
+                        }
+                    )
+                parent_id = folder_id
+            file_id = (
+                "file-"
+                + hashlib.sha256(str(source["source_id"]).encode("utf-8")).hexdigest()[
+                    :12
+                ]
+            )
+            nodes.append(
+                {
+                    "id": file_id,
+                    "label": display_filename,
+                    "kind": "file",
+                    "category": str(source["category"]),
+                    "location": location,
+                }
+            )
+            edges.append(
+                {
+                    "id": f"{parent_id}-{file_id}",
+                    "source": parent_id,
+                    "target": file_id,
+                    "kind": "contains",
+                }
+            )
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "summarized": False,
+            "layout": "directory-flow",
+        }
 
     @app.get("/api/health")
     def health() -> dict[str, object]:
@@ -555,6 +1206,7 @@ def create_app(
         return {
             "status": "ok",
             "project_id": active.project_id,
+            "agent_runtime": app.state.direction_runtime_mode,
             "knowledge_provider": knowledge_provider_name,
             "network_allowed": bool(egress_channels),
             "nl2sql_allowed": package.security.allow_nl2sql,
@@ -643,6 +1295,11 @@ def create_app(
     async def query_copilot(
         project_id: str, payload: QuestionRequest
     ) -> dict[str, object]:
+        if private_agent_mode:
+            raise HTTPException(
+                status_code=409,
+                detail="Legacy Copilot API is disabled in the fixed Agent runtime.",
+            )
         workspace = workspace_payload(project_id)
         agent = ProjectAgent(
             project_id=project_id,
@@ -660,6 +1317,12 @@ def create_app(
 
     @app.post("/api/knowledge/query")
     def query_knowledge(payload: QuestionRequest) -> dict[str, object]:
+        if private_agent_mode:
+            raise HTTPException(
+                status_code=409,
+                detail="Legacy knowledge API is disabled in the fixed Agent runtime.",
+            )
+        assert legacy_knowledge is not None
         return asdict(legacy_knowledge.query(payload.question))
 
     @app.get("/api/workspaces/{project_id}/analytics/summary")

@@ -7,6 +7,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import pytest
 from haystack import Document
 
+from project_copilot import ingestion as ingestion_module
 from project_copilot.ingestion import (
     DoclingOfficeParser,
     ImportedFile,
@@ -527,3 +528,22 @@ def test_windows_unsafe_filenames_are_rejected(tmp_path: Path, filename: str) ->
             workspace.project_id,
             [ImportedFile(filename, b"synthetic", "background")],
         )
+
+
+def test_relevant_excerpt_selects_window_covering_most_query_terms() -> None:
+    content = (
+        ("prefix " * 15)
+        + "alpha D-008 approved the earlier decision. "
+        + ("middle " * 75)
+        + "very-long-query-token marks the later meeting. "
+        + ("suffix " * 80)
+    )
+
+    excerpt = ingestion_module._relevant_excerpt(
+        content,
+        "alpha very-long-query-token",
+        max_chars=800,
+    )
+
+    assert "alpha D-008" in excerpt
+    assert "very-long-query-token" in excerpt

@@ -1,0 +1,5 @@
+asset_id,model,zone,controller,rated_cooling_kw,rated_heating_kw
+HP-01,SYN-HP60,East evaluation zone,SYN-C-601,60,65
+HP-02,SYN-HP80,West evaluation zone,SYN-C-802,80,86
+HP-03,SYN-HP50,Process evaluation zone A,SYN-C-503,50,55
+HP-04,SYN-HP70,Process evaluation zone B,SYN-C-704,70,75

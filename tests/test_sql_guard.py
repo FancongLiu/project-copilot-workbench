@@ -12,6 +12,22 @@ def test_sql_guard_allows_single_select_and_applies_row_limit() -> None:
     assert guarded.sql == "SELECT AVG(power_kw) AS avg_power FROM telemetry LIMIT 200"
 
 
+def test_sql_guard_allows_bounded_absolute_and_time_part_analysis() -> None:
+    guard = SQLSelectGuard(
+        allowed_tables={"telemetry"},
+        allowed_columns={"timestamp", "power_kw"},
+    )
+
+    guarded = guard.validate(
+        "SELECT EXTRACT(hour FROM timestamp) AS hour_of_day, "
+        "AVG(ABS(power_kw)) AS avg_absolute_power "
+        "FROM telemetry GROUP BY EXTRACT(hour FROM timestamp)"
+    )
+
+    assert "EXTRACT(HOUR FROM timestamp)" in guarded.sql
+    assert "AVG(ABS(power_kw))" in guarded.sql
+
+
 @pytest.mark.parametrize(
     "sql",
     [
@@ -64,3 +80,20 @@ def test_sql_guard_rejects_unknown_columns() -> None:
 
     with pytest.raises(SQLPolicyError, match="Columns are not allowed"):
         guard.validate("select employee_name from telemetry")
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "select 999 as energy_kwh",
+        "select 999 as energy_kwh from telemetry",
+        "select count(*) from telemetry a cross join telemetry b",
+    ],
+)
+def test_sql_guard_rejects_tableless_constants_and_join_amplification(
+    sql: str,
+) -> None:
+    guard = SQLSelectGuard(allowed_tables={"telemetry"})
+
+    with pytest.raises(SQLPolicyError):
+        guard.validate(sql)

@@ -204,6 +204,11 @@ Evidence: `REPLACE`
 
 ## H. Primary Agent/model workflow
 
+- [ ] The model-backed root `/` page is visibly documented and tested as a
+  bundled synthetic-only acceptance surface; it never claims to answer from an
+  active imported company workspace.
+- [ ] Imported project questions use `/workbench` or the workspace-scoped API,
+  and the active project identity is visible before submission.
 - [ ] The primary `/api/workspaces/{project_id}/copilot/query` workflow uses the configured company
   OpenAI-compatible test endpoint or deterministic test double through the same
   Haystack Agent/tool boundary.
@@ -212,8 +217,8 @@ Evidence: `REPLACE`
 - [ ] Tool schemas are strict and limited to project search, configuration,
   meeting/decision lookup, governed analytics, source inspection, and
   clarification.
-- [ ] Agent limits are enforced: maximum steps, maximum tool invocations, and
-  wall-time budget.
+- [ ] Agent limits are enforced at 11 steps, 10 tool invocations, and a
+  180-second wall-time budget.
 - [ ] The visible trace contains tool/status/summary only and does not expose
   hidden chain-of-thought.
 - [ ] Shell, PowerShell, Python/code, unrestricted files, Web, MCP, unrestricted
@@ -242,10 +247,21 @@ not fill this section with an unmeasured percentage.
 - [ ] Citations map to exact imported source IDs and useful excerpts; page/
   section is shown when the parser provides it.
 - [ ] Deleted and cross-workspace sources never appear in results.
-- [ ] Retrieval hit, citation coverage/correctness, answer correctness,
-  tool-selection success, refusal success, and latency are recorded per case.
+- [ ] Structural behavior, tool selection, evidence coverage, refusal success,
+  and latency are recorded per case; these automatic checks are not labeled as
+  answer correctness.
+- [ ] Answer correctness and HVAC usefulness are adjudicated explicitly for all
+  52 cases against `expected`, with the review bound to the raw result and
+  benchmark SHA-256 hashes.
 - [ ] p50/p95 latency, failures, model calls, and index time are measured on the
   stated Windows/model configuration.
+- [ ] Final raw Agentic RAG evidence points to the immutable v35 result: 52/52
+  execution, 52/52 structural behavior, 52/52 tool contract and 44/44 exact
+  evidence contract; the independent 52-case review accepted 52/52 and is
+  bound to raw-result SHA
+  `f17bf6a25f333570ebb73daeb3c43bed13069438c19c32b5bf27a1208285fbca`.
+- [ ] Final wheel and sdist exclude `hidden_truth`; the wheel retains the
+  compact DuckDB and installs without the raw Agentic CSV/Parquet corpus.
 
 Evidence/results path: `REPLACE`
 
@@ -259,11 +275,22 @@ Evidence/results path: `REPLACE`
   limits.
 - [ ] Mutation, attach, extension, copy/export, external file readers, multiple
   statements, and disallowed tables/functions are rejected.
-- [ ] The Agent selects only a typed allowlisted analytics operation; it does
-  not execute model-generated SQL.
+- [ ] The Agent prefers typed allowlisted analytics operations for event,
+  quality and extreme-window work. Remaining model-written SQL is limited to
+  one flat, bounded, read-only SELECT through SQLGlot and the locked DuckDB
+  connection; any rejected SQL fails closed.
 - [ ] Latest reading, peak load, efficiency/COP, power, and temperature delta
   operations return expected synthetic results.
 - [ ] No-dataset workspace returns a clear `Dataset required` result.
+- [ ] Event intervals are verified as `[start_time, end_time)`, with the end
+  equal to the last sample plus the project sample interval.
+- [ ] Compressor command-feedback differences under 60 seconds remain
+  observations; 60 seconds or longer are formal events.
+- [ ] Alarm-code queries such as A311 return the matching asset, duration and
+  command/feedback evidence and do not treat the alarm code as an asset ID.
+- [ ] Two consecutive provider failures abort the live benchmark; `--resume`
+  validates benchmark, candidate, endpoint, model, revision and provenance
+  before reusing completed cases.
 
 Evidence: `REPLACE`
 
@@ -401,6 +428,13 @@ Evidence: `REPLACE`
 Reviewer report: `REPLACE`
 
 ## O. Commit, push, CI, and trial server
+
+- [ ] The retained 52-case live result has 52 completed cases and zero execution
+  failures; strict and HVAC-adjudicated results are stored as separate files.
+- [ ] Data-quality, control-event, alarm-event and metric-extreme tools pass
+  focused tests without widening model-written SQL policy or Agent budgets.
+- [ ] The handoff explains that the measured business-data footprint is small
+  and does not inherit a heavy platform's Docker/disk allowance.
 
 - [ ] All intended changes are committed in a new commit; published history is
   not amended.

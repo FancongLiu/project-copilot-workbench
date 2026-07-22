@@ -10,6 +10,7 @@ import uvicorn
 
 from project_copilot.web import create_app
 from project_copilot.ingestion import ImportedFile, ProjectIndexer
+from project_copilot.private_catalog import PrivateCatalogImporter
 from project_copilot.workspaces import WorkspaceManager
 
 
@@ -31,6 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--import-file", action="append", default=[])
     parser.add_argument("--reindex-workspace", metavar="PROJECT_ID")
     parser.add_argument("--list-workspaces", action="store_true")
+    parser.add_argument("--catalog-root", help="Read-only local project tree to index")
+    parser.add_argument(
+        "--public-worktree",
+        help="Public Git worktree that private catalog runtime must remain outside",
+    )
+    parser.add_argument("--catalog-project-id", default="private-local-project")
     return parser
 
 
@@ -54,12 +61,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.import_file,
             args.reindex_workspace,
             args.list_workspaces,
+            args.catalog_root,
         )
     ):
         if not args.runtime:
             parser.error("Workspace operations require --runtime")
         manager = WorkspaceManager(args.runtime)
         indexer = ProjectIndexer(manager)
+        if args.catalog_root:
+            if not args.public_worktree:
+                parser.error("--catalog-root requires --public-worktree")
+            summary = PrivateCatalogImporter(
+                source_root=args.catalog_root,
+                runtime_root=args.runtime,
+                public_worktree=args.public_worktree,
+            ).import_into(
+                manager=manager,
+                indexer=indexer,
+                project_id=args.catalog_project_id,
+                display_name=args.display_name or "Private local project",
+            )
+            print(json.dumps(asdict(summary), ensure_ascii=False))
         if args.create_workspace:
             if not args.display_name:
                 parser.error("--create-workspace requires --display-name")

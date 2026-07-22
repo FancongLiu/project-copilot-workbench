@@ -1,5 +1,6 @@
 import json
 import ssl
+from pathlib import Path
 
 import certifi
 import httpx
@@ -10,6 +11,7 @@ from project_copilot.company_api import (
     CompanyAPIError,
     CompanyAPISettings,
     CompanyModelClient,
+    load_codex_switch_settings,
 )
 from project_copilot.embeddings import OpenAIEmbeddingBackend
 
@@ -32,6 +34,66 @@ def test_company_api_settings_reject_plain_http_for_non_loopback_host() -> None:
             model="company-model",
             allowed_hosts=("ai.internal.example",),
         )
+
+
+def test_company_api_settings_repr_never_contains_api_key() -> None:
+    settings = CompanyAPISettings(
+        base_url="https://ai.internal.example/v1",
+        api_key="super-secret-placeholder",
+        model="company-model",
+        allowed_hosts=("ai.internal.example",),
+    )
+
+    assert "super-secret-placeholder" not in repr(settings)
+
+
+def test_codex_switch_settings_require_explicit_runtime_ack(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        """model_provider = "custom"
+model = "company-reasoning-model"
+
+[model_providers.custom]
+name = "Company"
+wire_api = "responses"
+base_url = "https://ai.internal.example/v1"
+experimental_bearer_token = "placeholder-secret"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("PROJECT_COPILOT_ACK_CODEX_SWITCH", raising=False)
+
+    with pytest.raises(CompanyAPIError, match="ACK_CODEX_SWITCH"):
+        load_codex_switch_settings(config)
+
+
+def test_codex_switch_settings_load_responses_provider_without_leaking_secret(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        """model_provider = "custom"
+model = "company-reasoning-model"
+
+[model_providers.custom]
+name = "Company"
+wire_api = "responses"
+base_url = "https://ai.internal.example/v1"
+experimental_bearer_token = "placeholder-secret"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PROJECT_COPILOT_ACK_CODEX_SWITCH", "true")
+
+    settings = load_codex_switch_settings(config)
+
+    assert settings.model == "company-reasoning-model"
+    assert settings.base_url == "https://ai.internal.example/v1"
+    assert settings.wire_api == "responses"
+    assert settings.allowed_hosts == ("ai.internal.example",)
+    assert "placeholder-secret" not in repr(settings)
 
 
 def test_company_model_sends_only_question_and_selected_evidence() -> None:

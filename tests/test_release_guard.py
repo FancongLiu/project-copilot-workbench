@@ -1,4 +1,5 @@
 import subprocess
+import json
 from pathlib import Path
 
 from project_copilot.release_guard import scan_public_tree
@@ -17,7 +18,7 @@ def test_release_guard_finds_secret_like_content_and_runtime_databases(
     findings = scan_public_tree(tmp_path)
 
     assert {finding.rule for finding in findings} == {
-        "secret-like-token",
+        "forbidden-private-path",
         "runtime-database",
     }
 
@@ -29,6 +30,27 @@ def test_release_guard_accepts_synthetic_public_tree(tmp_path: Path) -> None:
     )
 
     assert scan_public_tree(tmp_path) == []
+
+
+def test_release_guard_rejects_environment_codex_and_credential_patterns(
+    tmp_path: Path,
+) -> None:
+    paths = (
+        ".env.production",
+        ".envrc",
+        ".codex/config.toml",
+        "ops/service-token.json",
+        "project.local/private-runtime/index.json",
+    )
+    for relative in paths:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("placeholder", encoding="utf-8")
+
+    findings = scan_public_tree(tmp_path)
+
+    assert {finding.path for finding in findings} == set(paths)
+    assert {finding.rule for finding in findings} == {"forbidden-private-path"}
 
 
 def test_release_guard_rejects_oversized_and_unapproved_binary_files(
@@ -82,6 +104,34 @@ def test_release_guard_rejects_arbitrary_binary_content(tmp_path: Path) -> None:
 
     assert [(finding.path, finding.rule) for finding in findings] == [
         ("payload.bin", "unapproved-binary")
+    ]
+
+
+def test_release_guard_allows_only_the_reviewed_synthetic_direction_database(
+    tmp_path: Path,
+) -> None:
+    example = tmp_path / "examples" / "agentic_hvac_bakeoff"
+    datasets = example / "datasets"
+    datasets.mkdir(parents=True)
+    (example / "SYNTHETIC_DATA_PROVENANCE.md").write_text(
+        "This dataset is fully synthetic and not engineering guidance.",
+        encoding="utf-8",
+    )
+    (example / "manifest.json").write_text(
+        json.dumps({"fully_synthetic": True}),
+        encoding="utf-8",
+    )
+    duckdb_header = b"12345678DUCK" + b"\0" * 32
+    (datasets / "hvac_bakeoff.duckdb").write_bytes(duckdb_header)
+    (datasets / "unreviewed.duckdb").write_bytes(b"not a real database")
+
+    findings = scan_public_tree(tmp_path)
+
+    assert [(finding.path, finding.rule) for finding in findings] == [
+        (
+            "examples/agentic_hvac_bakeoff/datasets/unreviewed.duckdb",
+            "runtime-database",
+        )
     ]
 
 

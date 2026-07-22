@@ -10,6 +10,13 @@ The public repository contains only generic code and synthetic HVAC data. Real
 Project Packages, company model names, internal URLs, certificates, credentials,
 runtime indexes, logs, and evaluation results remain on the company PC.
 
+> **Current UI contract (2026-07-17):** `/` is the single engineer-facing
+> Chat for the active workspace. Uploads beside the composer are indexed
+> automatically and citations retain original filenames. `/workbench`
+> redirects to `/`; workspace-scoped APIs and the CLI remain available for
+> administration and acceptance automation. Keep the private runtime outside
+> both the Git checkout and immutable release directory.
+
 ## Supported deployment profiles
 
 | Profile | Status | Use |
@@ -518,13 +525,16 @@ Expected: HTTP 200, `status=ok`, `project_id=synthetic-hvac-demo`, and
 
 ## 6. Company OpenAI-compatible endpoint
 
-The production Agent path is enabled only when all of these are present:
+The company model path is enabled only when all of these are present. The root
+`/` Chat reads the active imported workspace; the workspace-scoped API remains
+available for automated acceptance and diagnostics.
 
 | Setting | Meaning |
 |---|---|
 | `PROJECT_COPILOT_MODEL_MODE=company` | Select the real company model path |
 | `PROJECT_COPILOT_OPENAI_BASE_URL` | Full OpenAI-compatible API base, normally ending in `/v1` |
 | `PROJECT_COPILOT_OPENAI_MODEL` | Company-approved model/deployment identifier |
+| `PROJECT_COPILOT_OPENAI_WIRE_API` | `responses` for the Agentic RAG direction workflow; `chat_completions` only for a reviewed legacy endpoint |
 | `PROJECT_COPILOT_OPENAI_API_KEY` | Secret injected at process launch; never committed or stored in the example file |
 | `PROJECT_COPILOT_ALLOWED_HOSTS` | Comma-separated exact hostnames; no URL paths or wildcard domains |
 | `PROJECT_COPILOT_CA_BUNDLE` | Optional PEM bundle for an internal/private CA |
@@ -543,6 +553,7 @@ $env:PROJECT_COPILOT_OPENAI_API_KEY = Get-Secret `
 . "D:\ProjectCopilot\releases\REPLACE_WITH_COMMIT\company-v2.example.ps1" `
   -OpenAIBaseUrl "https://ai-gateway.example.invalid/v1" `
   -OpenAIModel "approved-model-id" `
+  -OpenAIWireApi "responses" `
   -AllowedHosts @("ai-gateway.example.invalid") `
   -CaBundle "C:\CompanyPKI\company-ca-bundle.pem"
 ```
@@ -635,6 +646,33 @@ $Runtime = "D:\ProjectCopilot\runtime"
 
 Open `http://127.0.0.1:8788`. The built-in app has no multi-user identity or
 authorization system. Loopback binding is part of the security boundary.
+
+For an imported company project, open `http://127.0.0.1:8788/`, verify the
+active workspace, upload or catalog the approved sources, and ask the question
+in the same Chat. `/workbench` redirects to this page.
+
+### Disk planning
+
+Do not size the company host from RAGFlow's complete Docker allowance unless
+RAGFlow is actually selected. The public source, configuration and synthetic
+business-data footprint measured about 51 MB; the developer checkout was about
+888 MB only because it included a 763 MB virtual environment and 74 MB of test
+artifacts. The final wheel is 4,610,767 bytes (about 4.6 MB). Both wheel and
+sdist exclude benchmark `hidden_truth`. Size the company directories from
+the approved wheel, actual Project
+Packages, immutable generations, logs, backups and rollback retention. Keep at
+least two verified release/runtime generations plus the approved backup, and
+record the measured result in the deployment handback.
+
+The final bundled-synthetic v35 benchmark completed 52/52 requests and passed
+52/52 behavior, 52/52 tool and 44/44 evidence contracts. Keep its independent
+52-case HVAC adjudication beside the raw JSON; final v35 accepted 52/52 and is
+bound to raw-result SHA
+`f17bf6a25f333570ebb73daeb3c43bed13069438c19c32b5bf27a1208285fbca`.
+Automatic contract checks are
+not an answer-correctness percentage. During a benchmark, two consecutive
+provider failures must abort and leave a resumable checkpoint. Resume only
+when benchmark, candidate, endpoint, model, revision and provenance match.
 
 ## 8. Project Package import and re-index
 

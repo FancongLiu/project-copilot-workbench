@@ -53,6 +53,7 @@ jobs:
           licensecheck --license apache --zero --format json
           --file license-report.json
       - run: python -m build
+      - run: python scripts/verify_distribution_contents.py dist
       - run: python -m venv wheel-smoke
       - run: wheel-smoke/bin/python -m pip install --upgrade pip==26.1.2
       - run: wheel-smoke/bin/python -m pip install --require-hashes -r requirements.runtime.lock
@@ -152,3 +153,5 @@ jobs:
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>项目知识与数据助手</title>
+    <link rel="stylesheet" href="/static/direction.css">
+    {% if show_graph %}<script src="/static/vendor/cytoscape-3.34.0.min.js" defer></script>{% endif %}
+    <script src="/static/vendor/dompurify/purify.min.js" defer></script>
+    <script src="/static/vendor/marked/marked.umd.js" defer></script>
+    <script src="/static/direction.js" defer></script>
+  </head>
+  <body>
+    <main class="direction-shell" data-testid="direction-chat" data-architecture="{{ architecture }}" data-workspace-name="{{ workspace_name }}" data-source-count="{{ source_count }}">
+      <header class="direction-header">
+        <div>
+          <span class="direction-kicker">PROJECT COPILOT</span>
+          <h1>项目知识与数据助手</h1>
+          <p>像问同事一样，查询项目文档、机组配置和运行数据。</p>
+        </div>
+        <div class="header-actions">
+          {% if show_version_nav %}<a class="version-link" href="/versions">四版对比</a>{% endif %}
+          {% if model_backed %}
+          <span class="demo-badge model-badge">真实模型 · 只读分析</span>
+          {% else %}
+          <span class="demo-badge">离线方向演示</span>
+          {% endif %}
+        </div>
+      </header>
+
+      <div class="context-strip" aria-label="当前分析范围">
+        <span data-testid="active-project">{{ workspace_name }}</span>
+        <span data-testid="active-source-count">{{ source_count }} 个文件</span>
+        <span>{{ scope_label }}</span>
+        {% if show_version_nav %}<span>{{ architecture_name }}</span>{% endif %}
+        {% if model_backed %}<span>已批准模型服务</span>{% endif %}
+      </div>
+
+      <div class="work-area">
+        <section id="conversation" class="conversation" aria-label="对话">
+          <article class="message assistant-message">
+            <div class="avatar" aria-hidden="true">AI</div>
+            <div class="message-body">
+              <p>我可以把知识依据和数据计算放在同一个回答里。先试试下面的问题：</p>
+              <div class="suggestions" aria-label="示例问题">
+                <button type="button" data-workflow="project-overview" data-question="这个项目当前的目标和未完成事项是什么？">查询项目目标</button>
+                <button type="button" data-workflow="configuration-review" data-question="最近有哪些配置、决定或变更？">核对配置与变更</button>
+                <button type="button" data-workflow="data-quality-efficiency" data-question="检查当前数据质量，并说明哪些分析结果可信、哪些需要谨慎。">检查数据质量</button>
+              </div>
+            </div>
+          </article>
+          <div id="messages" aria-live="polite"></div>
+        </section>
+
+        {% if architecture == "evidence" %}
+        <aside id="evidence-workbench" class="evidence-workbench" data-testid="evidence-workbench" hidden>
+          <header>
+            <div><strong>回答依据</strong><small>原始文件名、命中原文与检索路径</small></div>
+            <button id="evidence-workbench-close" type="button" aria-label="关闭回答依据">关闭</button>
+          </header>
+          <div id="evidence-workbench-content"></div>
+        </aside>
+        {% endif %}
+
+        {% if architecture == "canvas" %}
+        <aside id="artifact-canvas" class="artifact-canvas" data-testid="artifact-canvas" hidden>
+          <header>
+            <div><strong>工程成果</strong><small>完整分析、表格、图表与依据</small></div>
+            <button id="artifact-canvas-close" type="button" aria-label="关闭工程成果">关闭</button>
+          </header>
+          <div id="artifact-canvas-content"></div>
+        </aside>
+        {% endif %}
+
+        {% if show_graph %}
+        <aside id="project-map" class="project-map" data-testid="project-map" data-expanded="false" hidden>
+          <header class="project-map-header">
+            <div><strong>资料关系</strong><small>本次回答涉及的文件与数据</small></div>
+            <div class="project-map-actions">
+              <button id="project-map-expand" type="button" aria-label="展开完整资料图谱" aria-expanded="false">展开</button>
+              <button id="project-map-close" type="button" aria-label="关闭资料图谱">关闭</button>
+            </div>
+          </header>
+          <div id="project-graph" class="project-graph" aria-label="交互式资料关系图"></div>
+          <div class="project-map-legend"><span><i class="legend-dot"></i>资料</span><span><i class="legend-dot is-data"></i>数据</span><span><i class="legend-dot is-cited"></i>本次引用</span></div>
+        </aside>
+        {% endif %}
+
+      </div>
+
+      {% if architecture == "conversation" %}
+      <section id="prompt-queue" class="prompt-queue" data-testid="prompt-queue" hidden>
+        <strong>待发送问题</strong>
+        <div id="prompt-queue-items"></div>
+      </section>
+      {% endif %}
+
+      <form id="direction-form" class="composer">
+        {% if uploads_enabled %}
+        <label class="upload-button" for="direction-files" title="&#19978;&#20256;&#25991;&#20214;" aria-label="&#19978;&#20256;&#25991;&#20214;">
+          <span aria-hidden="true">+</span>
+          <span class="upload-button-label">&#19978;&#20256;</span>
+        </label>
+        <input id="direction-files" class="sr-only" type="file" multiple accept=".md,.txt,.pdf,.docx,.pptx,.xlsx,.csv,.json,.html,.htm,.odt,.ods,.odp,.zip">
+        {% endif %}
+        <label class="sr-only" for="direction-question">输入问题</label>
+        <textarea id="direction-question" rows="2" maxlength="1000" required placeholder="输入你想查询的项目问题……"></textarea>
+        <button type="submit">发送</button>
+      </form>
+      <p id="upload-status" class="upload-status" role="status" aria-live="polite"></p>
+      {% if model_backed %}
+      <p class="demo-note">模型：{{ model_name }}。回答只使用合成项目资料和只读数据库，不会控制现场设备。<span class="sr-only">{{ egress_display }}</span></p>
+      {% else %}
+      <p class="demo-note">本页用合成数据验证产品方向；开放式理解能力需要接入公司批准的大模型后评测。</p>
+      {% endif %}
+    </main>
+  </body>
+</html>

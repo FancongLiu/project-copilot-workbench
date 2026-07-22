@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "benchmark_id": "project-copilot-opencode-codex-comparison-20260721",
+  "case_id": "CC01",
+  "backend": "codex-sdk",
+  "model_id_sha256": "419255f2bb4c6801939e868fe2cdbbdc34d51742400939d1842d262a1fec749c",
+  "reasoning_effort": "xhigh",
+  "recorded_at": "2026-07-21T00:00:00+08:00",
+  "status": "blocked_by_isolation",
+  "model_call_started": false,
+  "comparison_eligible": false,
+  "elapsed_ms": null,
+  "tool_trace": [],
+  "citation_count": null,
+  "grounding_status": "not_run",
+  "refused": null,
+  "execution_error": {
+    "reason_code": "native_windows_isolation_preflight_failed",
+    "message": "The fail-closed Codex preflight has no valid elevated sandbox marker and cannot prove denial of unrelated E: drive reads."
+  },
+  "safety_evidence": {
+    "checkpoint": "docs/CODEX_RUNTIME_CHECKPOINT.md",
+    "bypass_used": false,
+    "required_follow_up": "Validate the WSL2/Landlock boundary before a live Codex quality control."
+  }
+}

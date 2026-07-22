@@ -1,0 +1,9 @@
+{
+  "name": "project-copilot-static-vendor",
+  "private": true,
+  "devDependencies": {
+    "cytoscape": "3.34.0",
+    "dompurify": "3.4.12",
+    "marked": "18.0.6"
+  }
+}

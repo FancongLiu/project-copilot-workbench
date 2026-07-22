@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-07-20T17:45:14.802462+00:00",
+  "adapter_revision": "working_tree after v1 SDK and grounding-table fixes",
+  "records": [
+    {
+      "case": "simple",
+      "status": "grounded_replay",
+      "private_payload_sha256": "e07ec881d755ae40655ba6d529b147961172a90da140711e07a121fa8e9fe65c",
+      "private_payload_published": false,
+      "model_turn_elapsed_ms": 18781,
+      "grounding_status": "grounded",
+      "refused": false,
+      "clarification": false,
+      "tool_trace": [
+        "inspect_configuration_history",
+        "search-project-knowledge",
+        "schema",
+        "query_hvac_database"
+      ],
+      "tool_count": 4,
+      "citation_filenames": [
+        "telemetry.csv",
+        "config_history.csv",
+        "asset-register.md",
+        "superseded-unit-configuration.md",
+        "change-register.md",
+        "controls-review.md",
+        "current-unit-configuration.md"
+      ],
+      "citation_count": 7,
+      "table_count": 2,
+      "chart_count": 0,
+      "answer_sha256": "d2f352346b3b1a0a9cae4637d6c2262d43eece18a64cff3b51433d7da73f56ca",
+      "answer_prefix": "直接结论：HP-02 最新受治理遥测记录中的电子膨胀阀命令值为 **44.0459%**，时间为 **2026-01-17 23:59:50 +08:00**。但项目配置历史中未检索到 HP-02 的正式电子膨胀阀设定参数，因此无法确认该值就是批准配置意义上的固定“设定值”；它可确认是最新遥测中的 `eev_cmd_pct` 值。"
+    },
+    {
+      "case": "first_complex",
+      "status": "grounded_replay",
+      "private_payload_sha256": "cd42bbd2dec8c3e635dcbd072b803aaf9039a8444dd564a113ebb5ec383695e0",
+      "private_payload_published": false,
+      "model_turn_elapsed_ms": 57861,
+      "grounding_status": "grounded",
+      "refused": false,
+      "clarification": false,
+      "tool_trace": [
+        "data-quality",
+        "cop-ranking",
+        "search-project-knowledge",
+        "inspect_configuration_history",
+        "inspect_configuration_change_effect",
+        "inspect_hvac_snapshot"
+      ],
+      "tool_count": 6,
+      "citation_filenames": [
+        "telemetry.csv",
+        "project-overview.md",
+        "data-analysis-sop.md",
+        "asset-register.md",
+        "config_history.csv",
+        "controls-review.md",
+        "change-register.md",
+        "current-unit-configuration.md",
+        "service-work-orders.md",
+        "superseded-unit-configuration.md"
+      ],
+      "citation_count": 10,
+      "table_count": 4,
+      "chart_count": 2,
+      "answer_sha256": "19fc8c63bfa154b4b263c8c9d14446fbb4c68b876bdca7812b8c73f8595d9300",
+      "answer_prefix": "结论：在 2026-01-15 至 2026-01-17（Asia/Shanghai）快照内，按负荷加权 COP 排名为 **HP-03 > HP-02 > HP-04 > HP-01**。该排名只能作为本快照运行综合能效的比较结果，**不能直接代表机组固有效率**：四台机组型号、区域和控制器不同，HP-02 在窗口中途发生送风设定变更，且各机组存在缺失、重复、乱序、冻结传感器或控制异常等数据与运行状态差异。HP-04 的较低排名尤其应结合 2026-01-17 的室外风机命令无反馈及服务工单审慎解释；当前证据不足以确认其物理根因。统计口径为窗口内受控遥测聚合的负荷加权 COP，即总制冷/热输出样本量除以总电功率样本量；不使用简单的逐点 COP 算术平均。数据质量方面，HP-01、HP-03、HP-04 覆盖率为 100.0%，HP-02 为 99.768519%，缺失 60 个样本；同时发现 HP-03 有 30 个重复时间戳、HP-04 有 59 个乱序事件、HP-02 有 90 个样本持续 900 秒的冻结传感器元组。因此，排名可用于该快照的工程筛查，但不宜作为铭牌效率、同工况性"
+    }
+  ]
+}
