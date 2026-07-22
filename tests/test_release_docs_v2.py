@@ -120,6 +120,13 @@ def test_documents_ci_uses_one_hash_locked_environment() -> None:
     assert "commits =" not in gitleaks
 
 
+def test_secrets_ci_passes_github_token_to_gitleaks() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    secrets_job = workflow.split("\n  secrets:\n", 1)[1]
+
+    assert "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in secrets_job
+
+
 def test_documents_ci_lock_pins_smoke_and_parser_dependencies() -> None:
     lock = (ROOT / "requirements.documents-ci.lock").read_text(encoding="utf-8")
 
